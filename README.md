@@ -102,6 +102,12 @@ Frontend Avaturn options are baked into the build via the root `.env` file:
 - `VITE_AVATURN_SUBDOMAIN`
 - `VITE_AVATURN_DISABLE_BACKEND_FALLBACK`
 - `VITE_AVATURN_USER_ID`
+- `VITE_API_BASE_URL` (optional direct API URL, e.g. `https://avaturn-threejs.onrender.com/api`)
+
+Frontend API proxy destination:
+
+- `API_ORIGIN` (for example `https://avaturn-threejs.onrender.com` on Render)
+- Local Docker default remains `http://backend:3001` via `docker-compose.yml`
 
 To stop containers directly with Docker Compose:
 
@@ -125,6 +131,8 @@ docker compose down -v
 | `PORT` | `3001` | Backend port |
 | `AVATURN_API_TOKEN` | _required_ | Avaturn API token used by the backend |
 | `AVATURN_API_BASE_URL` | `https://api.avaturn.me/api/v1` | Avaturn API base URL |
+| `API_ORIGIN` | `http://backend:3001` (local) | Frontend Nginx proxy target for `/api` |
+| `VITE_API_BASE_URL` | _optional_ | Frontend direct API base URL (bypasses same-origin `/api` calls) |
 | `VITE_AVATURN_DIRECT_URL` | _optional_ | Frontend direct Avaturn session URL |
 | `VITE_AVATURN_SUBDOMAIN` | _optional_ | Frontend Avaturn subdomain |
 | `VITE_AVATURN_DISABLE_BACKEND_FALLBACK` | `false` | Disable backend fallback in the frontend |

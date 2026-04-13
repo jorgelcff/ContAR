@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+const configuredApiBase = String(import.meta.env.VITE_API_BASE_URL || '')
+  .trim()
+  .replace(/\/+$/, '');
+const apiBaseUrl = configuredApiBase || '/api';
+
+const api = axios.create({ baseURL: apiBaseUrl });
 export const AUTH_TOKEN_KEY = 'auth:token';
 export const AVATURN_LAST_SESSION_URL_KEY = 'avaturn:lastSessionUrl';
 export const AVATURN_LAST_SESSION_TOKEN_KEY = 'avaturn:lastSessionToken';

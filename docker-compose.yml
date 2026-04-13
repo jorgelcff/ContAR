@@ -31,12 +31,13 @@ services:
         VITE_AVATURN_SUBDOMAIN: ${VITE_AVATURN_SUBDOMAIN:-}
         VITE_AVATURN_DISABLE_BACKEND_FALLBACK: ${VITE_AVATURN_DISABLE_BACKEND_FALLBACK:-false}
         VITE_AVATURN_USER_ID: ${VITE_AVATURN_USER_ID:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     container_name: avaturn-frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      BACKEND_URL: backend:3001
+      API_ORIGIN: ${API_ORIGIN:-http://backend:3001}
     ports:
       - "5173:80"
 

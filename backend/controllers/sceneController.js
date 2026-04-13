@@ -34,7 +34,7 @@ async function saveScene(req, res) {
     const scene = await Scene.findOneAndUpdate(
       { sceneId: id },
       { sceneId: id, metadata, content },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
     res.json({ sceneId: scene.sceneId });

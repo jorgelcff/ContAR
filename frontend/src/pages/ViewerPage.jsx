@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getScene } from '../api/sceneApi';
 import Header from '../components/ui/Header';
@@ -17,6 +17,9 @@ export default function ViewerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const speechPlayedRef = useRef(false);
+  const arHref = scene?.content?.avatar?.modelUrl
+    ? `/ar?mode=surface&modelUrl=${encodeURIComponent(scene.content.avatar.modelUrl)}`
+    : '/ar';
 
   // Derive transform object that SceneCanvas expects
   const transform = scene
@@ -80,7 +83,15 @@ export default function ViewerPage() {
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
       <Header />
       <div className="shrink-0 px-4 py-2 bg-gray-800 border-b border-gray-700">
-        <h2 className="font-medium">{scene?.metadata?.title || t('viewerTitle')}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-medium">{scene?.metadata?.title || t('viewerTitle')}</h2>
+          <Link
+            to={arHref}
+            className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600"
+          >
+            {t('openSurfaceAr')}
+          </Link>
+        </div>
       </div>
       <div className="flex-1 overflow-hidden">
         <SceneCanvas

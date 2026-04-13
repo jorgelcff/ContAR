@@ -1,10 +1,57 @@
 import axios from 'axios';
 
 const api = axios.create({ baseURL: '/api' });
+export const AUTH_TOKEN_KEY = 'auth:token';
+export const AVATURN_LAST_SESSION_URL_KEY = 'avaturn:lastSessionUrl';
+export const AVATURN_LAST_SESSION_TOKEN_KEY = 'avaturn:lastSessionToken';
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export function getStoredAuthToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY) || '';
+}
+
+export function logoutUser() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+export async function registerUser(name, email, password) {
+  const { data } = await api.post('/auth/register', { name, email, password });
+  if (data?.token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+  }
+  return data;
+}
+
+export async function loginUser(email, password) {
+  const { data } = await api.post('/auth/login', { email, password });
+  if (data?.token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+  }
+  return data;
+}
+
+export async function getCurrentUser() {
+  const { data } = await api.get('/auth/me');
+  return data;
+}
 
 /** Save or update a scene. Returns { sceneId }. */
 export async function saveScene(payload) {
   const { data } = await api.post('/scene', payload);
+  return data;
+}
+
+/** Save or update a story. Returns { storyId, sceneCount }. */
+export async function saveStory(payload) {
+  const { data } = await api.post('/story', payload);
   return data;
 }
 
@@ -14,8 +61,49 @@ export async function getScene(id) {
   return data;
 }
 
+/** Load a story by ID. */
+export async function getStory(id) {
+  const { data } = await api.get(`/story/${id}`);
+  return data;
+}
+
+/** Load a public story by ID (share link). */
+export async function getPublicStory(id) {
+  const { data } = await api.get(`/story/public/${id}`);
+  return data;
+}
+
+/** List latest stories. */
+export async function listStories() {
+  const { data } = await api.get('/story');
+  return data;
+}
+
 /** Store an avatar URL reference. Returns { avatarId }. */
 export async function saveAvatar(modelUrl) {
   const { data } = await api.post('/avatar', { modelUrl });
+  return data;
+}
+
+/** Create a short-lived Avaturn session URL. */
+export async function createAvaturnSession(payload) {
+  const { data } = await api.post('/avatar/session', payload || {});
+  return data;
+}
+
+/** Read last session URL stored by frontend. */
+export function getStoredAvaturnSessionUrl() {
+  return localStorage.getItem(AVATURN_LAST_SESSION_URL_KEY) || '';
+}
+
+/** Read last session token-like value stored by frontend (if present in URL). */
+export function getStoredAvaturnSessionToken() {
+  return localStorage.getItem(AVATURN_LAST_SESSION_TOKEN_KEY) || '';
+}
+
+/** List avatars from an Avaturn user ID. */
+export async function listAvaturnAvatars(avaturnUserId) {
+  const query = avaturnUserId ? `?avaturnUserId=${encodeURIComponent(avaturnUserId)}` : '';
+  const { data } = await api.get(`/avatar/list${query}`);
   return data;
 }

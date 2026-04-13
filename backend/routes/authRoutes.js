@@ -1,17 +1,18 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { saveScene, getScene } = require('../controllers/sceneController');
+const { register, login, me } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-router.post('/', limiter, requireAuth, saveScene);
-router.get('/:id', limiter, getScene);
+router.post('/register', limiter, register);
+router.post('/login', limiter, login);
+router.get('/me', limiter, requireAuth, me);
 
 module.exports = router;

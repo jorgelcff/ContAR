@@ -6,15 +6,35 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import SpeechBubble from './SpeechBubble';
 
+function normalizeAvatarUrl(url) {
+  if (typeof url !== 'string') return '';
+
+  const value = url.trim();
+  if (!value) return '';
+
+  // Keep already encoded HTTP(S) URLs untouched to avoid double-encoding.
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  // Data URLs may be returned by the SDK depending on export settings.
+  if (/^data:/i.test(value)) {
+    return value;
+  }
+
+  return value;
+}
+
 /**
  * SceneCanvas — Three.js scene wrapped in a React component.
  *
  * Props:
  *   avatarUrl   – GLB model URL to load (changes trigger a reload)
  *   transform   – { positionX, positionY, positionZ, rotationY (deg), scale }
+ *   posePreset  – idle | walk | run | dance | neutral | wave | hands_on_hips | salute | arms_crossed | t_pose
  *   speechText  – text to display in the speech bubble above the avatar's head
  */
-export default function SceneCanvas({ avatarUrl, transform, speechText }) {
+export default function SceneCanvas({ avatarUrl, transform, posePreset, speechText }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -25,10 +45,18 @@ export default function SceneCanvas({ avatarUrl, transform, speechText }) {
   const clockRef = useRef(new THREE.Clock());
   const animFrameRef = useRef(null);
   const idleClipRef = useRef(null);
+  const avatarClipsRef = useRef([]);
+  const posePresetRef = useRef(posePreset);
   const loaderRef = useRef(null);
+  const activeAvatarLoadIdRef = useRef(0);
 
   // Expose renderer/camera to SpeechBubble via state once scene is ready
   const [renderCtx, setRenderCtx] = useState(null);
+  const [avatarLoadError, setAvatarLoadError] = useState('');
+
+  useEffect(() => {
+    posePresetRef.current = posePreset;
+  }, [posePreset]);
 
   /* ── Scene initialisation (once) ─────────────────────────────────── */
   useEffect(() => {
@@ -113,6 +141,7 @@ export default function SceneCanvas({ avatarUrl, transform, speechText }) {
     );
     const gltfLoader = new GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
+    gltfLoader.setCrossOrigin('anonymous');
     loaderRef.current = gltfLoader;
 
     // Pre-load idle animation clip
@@ -123,7 +152,13 @@ export default function SceneCanvas({ avatarUrl, transform, speechText }) {
           idleClipRef.current = gltf.animations[0];
           // Apply to already-loaded avatar if it arrived first
           if (avatarRef.current && mixerRef.current) {
-            mixerRef.current.clipAction(idleClipRef.current).play();
+            applyPosePreset(
+              avatarRef.current,
+              mixerRef.current,
+              idleClipRef.current,
+              avatarClipsRef.current,
+              posePresetRef.current
+            );
           }
         }
       },
@@ -162,11 +197,21 @@ export default function SceneCanvas({ avatarUrl, transform, speechText }) {
       }
       setRenderCtx(null);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── Avatar loading (when URL changes) ───────────────────────────── */
   useEffect(() => {
     if (!avatarUrl || !sceneRef.current || !loaderRef.current) return;
+    const modelUrl = normalizeAvatarUrl(avatarUrl);
+    const loadId = ++activeAvatarLoadIdRef.current;
+    let cancelled = false;
+
+    if (!modelUrl) {
+      Promise.resolve().then(() => {
+        setAvatarLoadError('Avatar URL is empty or invalid.');
+      });
+      return;
+    }
 
     // Remove old avatar
     if (avatarRef.current) {
@@ -174,12 +219,19 @@ export default function SceneCanvas({ avatarUrl, transform, speechText }) {
       mixerRef.current?.stopAllAction();
       mixerRef.current = null;
       avatarRef.current = null;
+      avatarClipsRef.current = [];
     }
 
     loaderRef.current.load(
-      avatarUrl,
+      modelUrl,
       (gltf) => {
+        if (cancelled || loadId !== activeAvatarLoadIdRef.current) {
+          disposeObject3D(gltf.scene);
+          return;
+        }
+
         const model = gltf.scene;
+        setAvatarLoadError('');
 
         // Enable shadows on every mesh
         model.traverse((node) => {
@@ -198,17 +250,28 @@ export default function SceneCanvas({ avatarUrl, transform, speechText }) {
         // Set up animation mixer
         const mixer = new THREE.AnimationMixer(model);
         mixerRef.current = mixer;
-
-        if (idleClipRef.current) {
-          mixer.clipAction(idleClipRef.current).play();
-        } else if (gltf.animations?.length) {
-          mixer.clipAction(gltf.animations[0]).play();
+        avatarClipsRef.current = Array.isArray(gltf.animations) ? gltf.animations : [];
+        if (!idleClipRef.current && gltf.animations?.length) {
+          idleClipRef.current = gltf.animations[0];
         }
+
+        applyPosePreset(model, mixer, idleClipRef.current, avatarClipsRef.current, posePreset);
       },
       undefined,
-      (err) => console.error('GLTFLoader error:', err)
+      (err) => {
+        if (cancelled || loadId !== activeAvatarLoadIdRef.current) {
+          return;
+        }
+        console.error('GLTFLoader error:', err);
+        const details = err?.message || err?.target?.statusText || 'Unknown load error';
+        setAvatarLoadError(`Failed to load avatar model from URL: ${details}`);
+      }
     );
-  }, [avatarUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return () => {
+      cancelled = true;
+    };
+  }, [avatarUrl, posePreset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Transform updates (live sliders) ────────────────────────────── */
   useEffect(() => {
@@ -216,8 +279,24 @@ export default function SceneCanvas({ avatarUrl, transform, speechText }) {
     applyTransform(avatarRef.current, transform);
   }, [transform]);
 
+  useEffect(() => {
+    if (!avatarRef.current) return;
+    applyPosePreset(
+      avatarRef.current,
+      mixerRef.current,
+      idleClipRef.current,
+      avatarClipsRef.current,
+      posePreset
+    );
+  }, [posePreset]);
+
   return (
     <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden">
+      {avatarLoadError && (
+        <div className="absolute top-3 left-3 right-3 z-20 rounded-md border border-red-600 bg-red-950/90 px-3 py-2 text-xs text-red-200">
+          {avatarLoadError}
+        </div>
+      )}
       {renderCtx && (
         <SpeechBubble
           text={speechText}
@@ -237,4 +316,165 @@ function applyTransform(model, t) {
   model.position.set(t.positionX ?? 0, t.positionY ?? 0, t.positionZ ?? 0);
   model.rotation.y = ((t.rotationY ?? 0) * Math.PI) / 180;
   model.scale.setScalar(t.scale ?? 1);
+}
+
+function disposeObject3D(object) {
+  if (!object) return;
+
+  object.traverse((node) => {
+    if (!node?.isMesh) return;
+    node.geometry?.dispose?.();
+
+    const { material } = node;
+    if (Array.isArray(material)) {
+      material.forEach((mat) => mat?.dispose?.());
+    } else {
+      material?.dispose?.();
+    }
+  });
+}
+
+function applyPosePreset(model, mixer, idleClip, avatarClips, posePreset) {
+  const normalized = String(posePreset || 'idle').toLowerCase();
+
+  if (mixer) {
+    mixer.stopAllAction();
+  }
+
+  ensureRestPoseSnapshot(model);
+  resetToRestPose(model);
+
+  const animatedPresets = ['idle', 'walk', 'run', 'dance'];
+  if (animatedPresets.includes(normalized)) {
+    if (mixer) {
+      const clip = pickAnimationClip(normalized, idleClip, avatarClips);
+      if (clip) {
+        mixer.clipAction(clip).play();
+      }
+    }
+    return;
+  }
+
+  if (normalized === 'wave') {
+    applyWavePose(model);
+  } else if (normalized === 'hands_on_hips') {
+    applyHandsOnHipsPose(model);
+  } else if (normalized === 'salute') {
+    applySalutePose(model);
+  } else if (normalized === 'arms_crossed') {
+    applyArmsCrossedPose(model);
+  } else if (normalized === 't_pose') {
+    applyTPose(model);
+  }
+
+  model.updateMatrixWorld(true);
+}
+
+function pickAnimationClip(preset, idleClip, avatarClips = []) {
+  const keywordsByPreset = {
+    idle: [/idle/, /stand/],
+    walk: [/walk/],
+    run: [/run/, /jog/],
+    dance: [/dance/],
+  };
+
+  const patterns = keywordsByPreset[preset] || [];
+  const clips = Array.isArray(avatarClips) ? avatarClips : [];
+
+  const fromAvatar = clips.find((clip) => {
+    const name = String(clip?.name || '').toLowerCase();
+    return patterns.some((re) => re.test(name));
+  });
+  if (fromAvatar) return fromAvatar;
+
+  if (preset === 'idle' && idleClip) return idleClip;
+  return null;
+}
+
+function ensureRestPoseSnapshot(model) {
+  model.traverse((node) => {
+    if (!node?.isBone) return;
+    if (!node.userData.__restQuat) {
+      node.userData.__restQuat = node.quaternion.clone();
+    }
+  });
+}
+
+function resetToRestPose(model) {
+  model.traverse((node) => {
+    if (!node?.isBone || !node.userData.__restQuat) return;
+    node.quaternion.copy(node.userData.__restQuat);
+  });
+}
+
+function findBone(model, patterns) {
+  let result = null;
+
+  model.traverse((node) => {
+    if (result || !node?.isBone) return;
+    const name = String(node.name || '').toLowerCase();
+    if (patterns.some((re) => re.test(name))) {
+      result = node;
+    }
+  });
+
+  return result;
+}
+
+function rotateBoneDeg(bone, x = 0, y = 0, z = 0) {
+  if (!bone) return;
+  bone.rotateX((x * Math.PI) / 180);
+  bone.rotateY((y * Math.PI) / 180);
+  bone.rotateZ((z * Math.PI) / 180);
+}
+
+function applyWavePose(model) {
+  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+  const rightHand = findBone(model, [/righthand/, /hand_r/, /mixamorigrighthand/]);
+
+  rotateBoneDeg(rightUpperArm, -45, 0, -65);
+  rotateBoneDeg(rightForeArm, -20, 0, -35);
+  rotateBoneDeg(rightHand, 10, 0, -20);
+}
+
+function applyHandsOnHipsPose(model) {
+  const leftUpperArm = findBone(model, [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const leftForeArm = findBone(model, [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+
+  rotateBoneDeg(leftUpperArm, 0, 0, 45);
+  rotateBoneDeg(rightUpperArm, 0, 0, -45);
+  rotateBoneDeg(leftForeArm, -30, 0, -30);
+  rotateBoneDeg(rightForeArm, -30, 0, 30);
+}
+
+function applySalutePose(model) {
+  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+  const rightHand = findBone(model, [/righthand/, /hand_r/, /mixamorigrighthand/]);
+
+  rotateBoneDeg(rightUpperArm, -35, 0, -40);
+  rotateBoneDeg(rightForeArm, -70, 0, 20);
+  rotateBoneDeg(rightHand, -10, 0, 25);
+}
+
+function applyArmsCrossedPose(model) {
+  const leftUpperArm = findBone(model, [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const leftForeArm = findBone(model, [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+
+  rotateBoneDeg(leftUpperArm, 0, 0, 20);
+  rotateBoneDeg(rightUpperArm, 0, 0, -20);
+  rotateBoneDeg(leftForeArm, -70, 0, -35);
+  rotateBoneDeg(rightForeArm, -70, 0, 35);
+}
+
+function applyTPose(model) {
+  const leftUpperArm = findBone(model, [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  rotateBoneDeg(leftUpperArm, 0, 0, 90);
+  rotateBoneDeg(rightUpperArm, 0, 0, -90);
 }

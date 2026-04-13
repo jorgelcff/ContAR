@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>AR - Marcador</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; font-family: Arial, sans-serif; background: #000; overflow: hidden; }
+      a-scene { width: 100%; height: 100%; }
+      #panel {
+        position: fixed;
+        left: 50%;
+        bottom: 12px;
+        transform: translateX(-50%);
+        width: min(94vw, 480px);
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.82);
+        border: 1px solid #22d3ee;
+        border-radius: 14px;
+        color: #e5faff;
+        padding: 12px;
+        backdrop-filter: blur(8px);
+      }
+      #panel .row { display: grid; gap: 8px; margin-top: 8px; }
+      #panel label { font-size: 12px; color: #9de7f4; }
+      #panel input[type="text"], #panel input[type="file"], #panel input[type="range"] { width: 100%; }
+      #panel input[type="text"] {
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,.06);
+        color: #fff;
+        padding: 10px 12px;
+      }
+      #panel .buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+      #panel button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #fff;
+        background: #0a84ff;
+      }
+      #panel button.secondary { background: #334155; }
+      #panel .hint { margin-top: 8px; font-size: 12px; color: #94a3b8; }
+      #status {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1000;
+        background: rgba(0,0,0,.75);
+        color: #34d399;
+        border: 1px solid rgba(52,211,153,.4);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 12px;
+        line-height: 1.5;
+        max-width: 72vw;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">Inicializando AR de marcador...</div>
+
+    <div id="panel">
+      <div class="row">
+        <label for="modelInput">Modelo (.glb)</label>
+        <input id="modelInput" type="file" accept=".glb,.gltf" />
+      </div>
+      <div class="row">
+        <label for="markerInput">Marcador (.patt)</label>
+        <input id="markerInput" type="file" accept=".patt" />
+      </div>
+      <div class="row">
+        <label for="scaleInput">Escala</label>
+        <input id="scaleInput" type="range" min="0.1" max="2.0" step="0.01" value="0.4" />
+      </div>
+      <div class="buttons">
+        <button id="playBtn">Ouvir fala</button>
+        <button id="resetBtn" class="secondary">Reiniciar</button>
+      </div>
+      <div class="hint">Dica: carregue um marcador customizado e um modelo GLB. O modelo fica preso ao marcador quando ele for detectado.</div>
+    </div>
+
+    <a-scene
+      embedded
+      vr-mode-ui="enabled: false"
+      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+      renderer="logarithmicDepthBuffer: true;"
+    >
+      <a-assets>
+        <a-asset-item id="modelAsset" src=""></a-asset-item>
+      </a-assets>
+
+      <a-marker type="pattern" url="" emitevents="true" id="custom-marker">
+        <a-gltf-model id="avatar-model" src="#modelAsset" position="0 0 0" scale="0.4 0.4 0.4" rotation="0 0 0"></a-gltf-model>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+
+    <audio id="voiceAudio" preload="auto"></audio>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const modelInput = document.getElementById('modelInput');
+      const markerInput = document.getElementById('markerInput');
+      const scaleInput = document.getElementById('scaleInput');
+      const playBtn = document.getElementById('playBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const markerEl = document.getElementById('custom-marker');
+      const avatarModel = document.getElementById('avatar-model');
+      const modelAsset = document.getElementById('modelAsset');
+      const audioEl = document.getElementById('voiceAudio');
+
+      const params = new URLSearchParams(window.location.search);
+      const initialModelUrl = params.get('modelUrl') || '';
+      const initialMarkerUrl = params.get('markerUrl') || '';
+
+      let modelBlobUrl = '';
+      let markerBlobUrl = '';
+
+      const setStatus = (text) => { statusEl.textContent = text; };
+
+      const applyScale = (value) => {
+        const next = Number(value) || 0.4;
+        avatarModel.setAttribute('scale', `${next} ${next} ${next}`);
+      };
+
+      const loadRemoteModel = (url) => {
+        if (!url) return;
+        modelAsset.setAttribute('src', url);
+        avatarModel.setAttribute('src', '#modelAsset');
+        setStatus('Modelo remoto carregado. Aponte a câmera para o marcador.');
+      };
+
+      const loadRemoteMarker = (url) => {
+        if (!url) return;
+        markerEl.setAttribute('url', url);
+        setStatus('Marcador remoto carregado.');
+      };
+
+      if (initialModelUrl) loadRemoteModel(initialModelUrl);
+      if (initialMarkerUrl) loadRemoteMarker(initialMarkerUrl);
+
+      modelInput.addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        if (modelBlobUrl) URL.revokeObjectURL(modelBlobUrl);
+        modelBlobUrl = URL.createObjectURL(file);
+        modelAsset.setAttribute('src', modelBlobUrl);
+        avatarModel.setAttribute('src', '#modelAsset');
+        setStatus('Modelo local carregado.');
+      });
+
+      markerInput.addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        if (markerBlobUrl) URL.revokeObjectURL(markerBlobUrl);
+        markerBlobUrl = URL.createObjectURL(file);
+        markerEl.setAttribute('url', markerBlobUrl);
+        setStatus('Marcador local carregado.');
+      });
+
+      scaleInput.addEventListener('input', (event) => {
+        applyScale(event.target.value);
+      });
+
+      playBtn.addEventListener('click', () => {
+        const audio = audioEl;
+        if (!audio.src) {
+          setStatus('Carregue um áudio no código se quiser reprodução de fala.');
+          return;
+        }
+        audio.currentTime = 0;
+        audio.play().then(() => {
+          setStatus('Áudio reproduzindo.');
+        }).catch(() => {
+          setStatus('O navegador bloqueou a reprodução automática.');
+        });
+      });
+
+      resetBtn.addEventListener('click', () => {
+        markerEl.setAttribute('url', initialMarkerUrl || markerEl.getAttribute('url') || '');
+        avatarModel.setAttribute('src', '#modelAsset');
+        applyScale(scaleInput.value);
+        setStatus('Reiniciado.');
+      });
+
+      applyScale(scaleInput.value);
+      setStatus('Aponte a câmera para o marcador e carregue um .glb se necessário.');
+    </script>
+  </body>
+</html>

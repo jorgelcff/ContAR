@@ -1,0 +1,42 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: avaturn-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: ./backend
+    container_name: avaturn-backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    env_file:
+      - ./backend/.env
+    environment:
+      PORT: 3001
+      MONGODB_URI: mongodb://mongo:27017/avaturn3d
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_AVATURN_DIRECT_URL: ${VITE_AVATURN_DIRECT_URL:-}
+        VITE_AVATURN_SUBDOMAIN: ${VITE_AVATURN_SUBDOMAIN:-}
+        VITE_AVATURN_DISABLE_BACKEND_FALLBACK: ${VITE_AVATURN_DISABLE_BACKEND_FALLBACK:-false}
+        VITE_AVATURN_USER_ID: ${VITE_AVATURN_USER_ID:-}
+    container_name: avaturn-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  mongo_data:

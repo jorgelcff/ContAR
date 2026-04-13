@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 const DEFAULT_TRANSFORM = {
   positionX: 0,
@@ -8,15 +8,38 @@ const DEFAULT_TRANSFORM = {
   scale: 1,
 };
 
+const LAST_AVATAR_URL_KEY = 'avaturn:lastAvatarUrl';
+
+function getInitialAvatarUrl() {
+  try {
+    return localStorage.getItem(LAST_AVATAR_URL_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Central state hook for the scene editor.
  * Keeps avatar URL, transform, speech text, and title in sync.
  */
 export default function useScene() {
-  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState(getInitialAvatarUrl);
   const [transform, setTransform] = useState(DEFAULT_TRANSFORM);
+  const [posePreset, setPosePreset] = useState('idle');
   const [speechText, setSpeechText] = useState('');
   const [sceneTitle, setSceneTitle] = useState('');
+
+  useEffect(() => {
+    try {
+      if (avatarUrl) {
+        localStorage.setItem(LAST_AVATAR_URL_KEY, avatarUrl);
+      } else {
+        localStorage.removeItem(LAST_AVATAR_URL_KEY);
+      }
+    } catch {
+      // Ignore storage errors in restricted environments.
+    }
+  }, [avatarUrl]);
 
   const updateTransform = useCallback((key, value) => {
     setTransform((prev) => ({ ...prev, [key]: value }));
@@ -29,6 +52,7 @@ export default function useScene() {
       content: {
         avatar: {
           modelUrl: avatarUrl,
+          posePreset,
           transform: {
             position: [transform.positionX, transform.positionY, transform.positionZ],
             rotation: [0, (transform.rotationY * Math.PI) / 180, 0],
@@ -42,7 +66,7 @@ export default function useScene() {
         },
       },
     }),
-    [avatarUrl, transform, speechText, sceneTitle]
+    [avatarUrl, posePreset, transform, speechText, sceneTitle]
   );
 
   return {
@@ -50,6 +74,8 @@ export default function useScene() {
     setAvatarUrl,
     transform,
     updateTransform,
+    posePreset,
+    setPosePreset,
     speechText,
     setSpeechText,
     sceneTitle,

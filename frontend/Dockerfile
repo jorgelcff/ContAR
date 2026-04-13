@@ -12,21 +12,20 @@ ENV VITE_AVATURN_SUBDOMAIN=${VITE_AVATURN_SUBDOMAIN}
 ENV VITE_AVATURN_DISABLE_BACKEND_FALLBACK=${VITE_AVATURN_DISABLE_BACKEND_FALLBACK}
 ENV VITE_AVATURN_USER_ID=${VITE_AVATURN_USER_ID}
 
-COPY package*.json ./
-RUN npm ci
-
 COPY . .
+RUN if [ ! -f package.json ] && [ -f frontend/package.json ]; then cp -R frontend/. /app/; fi
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 RUN npm run build
 
 FROM nginx:1.27-alpine
 
 RUN apk add --no-cache gettext
 
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+COPY --from=build /app/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 
-ENV BACKEND_URL=backend:3001
+ENV API_ORIGIN=https://avaturn-threejs.onrender.com
 
-CMD ["sh", "-c", "envsubst '$BACKEND_URL' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "envsubst '$API_ORIGIN' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]

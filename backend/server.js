@@ -11,6 +11,11 @@ const authRoutes = require('./routes/authRoutes');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/avaturn3d';
+const TRUST_PROXY = process.env.TRUST_PROXY || '1';
+
+// Render and other managed platforms sit behind reverse proxies.
+// This allows rate limiters and request IP detection to use X-Forwarded-For safely.
+app.set('trust proxy', TRUST_PROXY);
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
@@ -21,6 +26,7 @@ app.use('/api/story', storyRoutes);
 app.use('/api/auth', authRoutes);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Connect to MongoDB — server starts regardless of DB availability
 mongoose

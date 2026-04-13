@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 
 function getAuthSecret() {
@@ -23,8 +24,16 @@ function sanitizeUser(user) {
   };
 }
 
+function ensureDatabaseReady(res) {
+  if (mongoose.connection.readyState === 1) return true;
+  res.status(503).json({ error: 'Database unavailable. Try again in a few seconds.' });
+  return false;
+}
+
 async function register(req, res) {
   try {
+    if (!ensureDatabaseReady(res)) return;
+
     const name = String(req.body?.name || '').trim();
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
@@ -55,6 +64,8 @@ async function register(req, res) {
 
 async function login(req, res) {
   try {
+    if (!ensureDatabaseReady(res)) return;
+
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
 
@@ -64,6 +75,11 @@ async function login(req, res) {
 
     const user = await User.findOne({ email });
     if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Guard against legacy or malformed records that don't have a valid hash.
+    if (typeof user.passwordHash !== 'string' || !user.passwordHash) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -82,6 +98,8 @@ async function login(req, res) {
 
 async function me(req, res) {
   try {
+    if (!ensureDatabaseReady(res)) return;
+
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

@@ -74,6 +74,7 @@ Common actions:
 - `.\deploy.cmd -Action status` to inspect running containers
 - `.\deploy.cmd -Action logs` to follow logs
 
+
 On Ubuntu/Linux, use:
 
 ```bash
@@ -89,17 +90,6 @@ Common actions:
 - `./deploy.sh -Action status` to inspect running containers
 - `./deploy.sh -Action logs` to follow logs
 
-## Render Blueprint
-
-This repository now includes a Render Blueprint at [render.yaml](render.yaml) so you can deploy the app as two Docker services on Render:
-
-- `avaturn-backend` for the API
-- `avaturn-frontend` for the web UI
-
-Important: MongoDB is not provisioned by the Blueprint. You must set `MONGODB_URI` to a MongoDB Atlas URI or another external MongoDB instance when creating the Blueprint.
-
-The frontend proxies `/api` to the backend through Render's private service network, so the same app code works without changing the frontend API paths.
-
 Services and URLs:
 
 - Frontend: `http://localhost:5173`
@@ -113,7 +103,7 @@ Frontend Avaturn options are baked into the build via the root `.env` file:
 - `VITE_AVATURN_DISABLE_BACKEND_FALLBACK`
 - `VITE_AVATURN_USER_ID`
 
-To stop containers:
+To stop containers directly with Docker Compose:
 
 ```bash
 docker compose down
@@ -124,6 +114,8 @@ To also remove MongoDB persisted volume:
 ```bash
 docker compose down -v
 ```
+
+
 
 ## Environment Variables
 

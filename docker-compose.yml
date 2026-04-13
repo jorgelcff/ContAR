@@ -35,6 +35,8 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    environment:
+      BACKEND_URL: backend:3001
     ports:
       - "5173:80"
 

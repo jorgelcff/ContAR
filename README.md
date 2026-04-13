@@ -89,6 +89,17 @@ Common actions:
 - `./deploy.sh -Action status` to inspect running containers
 - `./deploy.sh -Action logs` to follow logs
 
+## Render Blueprint
+
+This repository now includes a Render Blueprint at [render.yaml](render.yaml) so you can deploy the app as two Docker services on Render:
+
+- `avaturn-backend` for the API
+- `avaturn-frontend` for the web UI
+
+Important: MongoDB is not provisioned by the Blueprint. You must set `MONGODB_URI` to a MongoDB Atlas URI or another external MongoDB instance when creating the Blueprint.
+
+The frontend proxies `/api` to the backend through Render's private service network, so the same app code works without changing the frontend API paths.
+
 Services and URLs:
 
 - Frontend: `http://localhost:5173`

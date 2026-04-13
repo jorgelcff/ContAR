@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: avaturn-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: MONGODB_URI
+        sync: false
+      - key: AUTH_JWT_SECRET
+        generateValue: true
+      - key: AVATURN_API_TOKEN
+        sync: false
+      - key: AVATURN_API_BASE_URL
+        value: https://api.avaturn.me/api/v1
+
+  - type: web
+    name: avaturn-frontend
+    runtime: docker
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: frontend
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: BACKEND_URL
+        fromService:
+          name: avaturn-backend
+          type: web
+          property: hostport
+      - key: VITE_AVATURN_DIRECT_URL
+        sync: false
+      - key: VITE_AVATURN_SUBDOMAIN
+        sync: false
+      - key: VITE_AVATURN_DISABLE_BACKEND_FALLBACK
+        value: "false"
+      - key: VITE_AVATURN_USER_ID
+        sync: false

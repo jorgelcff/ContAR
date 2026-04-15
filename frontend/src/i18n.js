@@ -87,6 +87,7 @@ const resources = {
       viewerTitle: 'Scene Viewer',
       language: 'Language',
       noAvatarHint: 'Paste a GLB URL or open Avaturn above.',
+      markerUrlPlaceholder: 'Marker URL (.patt) for this scene',
     },
   },
   pt: {
@@ -174,6 +175,7 @@ const resources = {
       viewerTitle: 'Visualizador de Cena',
       language: 'Idioma',
       noAvatarHint: 'Cole uma URL GLB ou abra o Avaturn acima.',
+      markerUrlPlaceholder: 'URL do marcador (.patt) para esta cena',
     },
   },
 };

@@ -6,6 +6,7 @@ const StorySceneSchema = new mongoose.Schema(
     order: { type: Number, required: true, min: 0 },
     transitionText: { type: String, default: '' },
     durationSeconds: { type: Number, default: 0, min: 0 },
+    markerUrl: { type: String, default: '' },
   },
   { _id: false }
 );

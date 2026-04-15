@@ -101,6 +101,8 @@ function SurfaceARScene({ modelUrl, onBack }) {
     }
 
     const scene = new THREE.Scene();
+    // Keep background transparent so the camera feed shows through in AR mode.
+    // It will be set to a dark color only when not in an XR session.
     scene.background = new THREE.Color(0x05070c);
     sceneRef.current = scene;
 
@@ -164,6 +166,9 @@ function SurfaceARScene({ modelUrl, onBack }) {
     let hitTestSourceRequested = false;
 
     renderer.xr.addEventListener('sessionstart', () => {
+      // In AR mode the background must be null so the camera feed is visible.
+      scene.background = null;
+
       const session = renderer.xr.getSession();
       if (!session || hitTestSourceRequested) return;
       hitTestSourceRequested = true;
@@ -173,6 +178,8 @@ function SurfaceARScene({ modelUrl, onBack }) {
         hitTestSourceRef.current = null;
         referenceSpaceRef.current = null;
         reticle.visible = false;
+        // Restore background when leaving AR.
+        scene.background = new THREE.Color(0x05070c);
       });
 
       session.requestReferenceSpace('viewer').then((viewerSpace) => {

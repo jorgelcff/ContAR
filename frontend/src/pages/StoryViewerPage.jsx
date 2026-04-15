@@ -107,6 +107,7 @@ export default function StoryViewerPage() {
   }, [index, storyScenes]);
 
   const currentSceneId = storyScenes[index]?.sceneId || '';
+  const currentMarkerUrl = storyScenes[index]?.markerUrl || '';
 
   useEffect(() => {
     let active = true;
@@ -147,6 +148,11 @@ export default function StoryViewerPage() {
   const arHref = sceneData?.content?.avatar?.modelUrl
     ? `/ar?mode=surface&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}`
     : '/ar';
+  const arMarkerHref = sceneData?.content?.avatar?.modelUrl && currentMarkerUrl
+    ? `/ar?mode=marker&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}&markerUrl=${encodeURIComponent(currentMarkerUrl)}`
+    : sceneData?.content?.avatar?.modelUrl
+      ? `/ar?mode=marker&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}`
+      : '/ar?mode=marker';
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
@@ -171,6 +177,12 @@ export default function StoryViewerPage() {
                 className="px-3 py-1.5 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold"
               >
                 {t('openSurfaceAr')}
+              </Link>
+              <Link
+                to={arMarkerHref}
+                className="px-3 py-1.5 rounded bg-fuchsia-700 hover:bg-fuchsia-600 text-xs font-semibold"
+              >
+                {t('openMarkerAr')}
               </Link>
               <button
                 onClick={() => setIsPlaying((prev) => !prev)}
@@ -230,6 +242,12 @@ export default function StoryViewerPage() {
                     className="px-3 py-2 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold"
                   >
                     AR
+                  </Link>
+                  <Link
+                    to={arMarkerHref}
+                    className="px-3 py-2 rounded bg-fuchsia-700 hover:bg-fuchsia-600 text-xs font-semibold"
+                  >
+                    Marker
                   </Link>
                   <button
                     onClick={() => setIsPlaying((prev) => !prev)}

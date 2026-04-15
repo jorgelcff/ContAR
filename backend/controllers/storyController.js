@@ -25,6 +25,7 @@ function sanitizeStoryScenes(rawScenes) {
         order,
         transitionText: safeString(item?.transitionText) || '',
         durationSeconds,
+        markerUrl: safeString(item?.markerUrl) || '',
       };
     })
     .filter(Boolean)

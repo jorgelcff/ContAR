@@ -49,6 +49,13 @@ export default function StoryBuilderPanel({
                 placeholder={t('transitionText')}
                 className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-blue-500"
               />
+              <input
+                type="text"
+                value={item.markerUrl || ''}
+                onChange={(e) => onStorySceneChange(index, 'markerUrl', e.target.value)}
+                placeholder={t('markerUrlPlaceholder')}
+                className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-fuchsia-500"
+              />
               <div className="flex gap-2 items-center">
                 <input
                   type="number"

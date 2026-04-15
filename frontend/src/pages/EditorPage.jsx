@@ -58,6 +58,7 @@ export default function EditorPage() {
                 sceneId: item?.sceneId || '',
                 transitionText: item?.transitionText || '',
                 durationSeconds: Number(item?.durationSeconds) || 0,
+                markerUrl: item?.markerUrl || '',
               }))
           : [];
         setStoryScenes(scenes);
@@ -114,7 +115,7 @@ export default function EditorPage() {
 
     setStoryScenes((prev) => [
       ...prev,
-      { sceneId, transitionText: '', durationSeconds: 8 },
+      { sceneId, transitionText: '', durationSeconds: 8, markerUrl: '' },
     ]);
     return true;
   };
@@ -210,6 +211,7 @@ export default function EditorPage() {
           order: index,
           transitionText: item.transitionText || '',
           durationSeconds: Number(item.durationSeconds) || 0,
+          markerUrl: item.markerUrl || '',
         })),
       };
 

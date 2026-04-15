@@ -155,7 +155,10 @@ export default function useAudio() {
       if (ctx.state === 'suspended') await ctx.resume();
 
       const micSrc = ctx.createMediaStreamSource(stream);
-      // Disconnect analyser from destination to avoid mic feedback in speakers
+      // Intentionally disconnect analyser from the AudioContext destination while
+      // recording.  Without this, the mic input would be routed to speakers,
+      // causing an audible echo / feedback loop.  The analyser is reconnected
+      // to destination once recording stops so playback works normally.
       try { analyserRef.current.disconnect(); } catch { /* ignore */ }
       micSrc.connect(analyserRef.current);
       micSourceRef.current = micSrc;

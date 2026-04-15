@@ -198,8 +198,10 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
           sum += v * v;
         }
         const rms = Math.sqrt(sum / binCount);
-        // Amplify and clamp to [0, 1]
-        const mouthOpen = Math.min(1, rms * 10);
+        // Scale RMS to a 0–1 mouth-open value.  Typical speech RMS is ~0.05–0.15,
+        // so a multiplier of 10 maps that range comfortably to 0.5–1.0.
+        const AUDIO_AMPLITUDE_MULTIPLIER = 10;
+        const mouthOpen = Math.min(1, rms * AUDIO_AMPLITUDE_MULTIPLIER);
         morphs.forEach(({ mesh, index }) => {
           if (mesh.morphTargetInfluences) {
             mesh.morphTargetInfluences[index] = mouthOpen;
@@ -292,25 +294,28 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
         sceneRef.current.add(model);
         avatarRef.current = model;
 
-        // Discover mouth morph targets for lip sync
+        // Discover mouth morph targets for lip sync.
+        // Primary: specific open-mouth / jaw targets (ARKit & RPM naming conventions).
+        const MOUTH_OPEN_PATTERN = /jaw.*open|mouth.*open|^jawOpen$|^mouthOpen$/i;
+        // RPM viseme targets that correspond to open-mouth phonemes (aa, O, oh).
+        const VISEME_OPEN_PATTERN = /viseme.*(aa|oh|O)/i;
         const mouthMorphs = [];
-        const mouthPattern = /jaw.*open|mouth.*open|viseme.*(aa|A|O|oh|oh_|open)|^mouthOpen$/i;
         model.traverse((node) => {
           if (node.isMesh && node.morphTargetDictionary) {
             Object.entries(node.morphTargetDictionary).forEach(([name, index]) => {
-              if (mouthPattern.test(name)) {
+              if (MOUTH_OPEN_PATTERN.test(name) || VISEME_OPEN_PATTERN.test(name)) {
                 mouthMorphs.push({ mesh: node, index });
               }
             });
           }
         });
-        // Fallback: if no specific mouth targets found, look for any jaw/mouth morph
+        // Fallback: if no specific mouth targets found, look for any jaw/mouth/lip morph
         if (mouthMorphs.length === 0) {
-          const fallbackPattern = /jaw|mouth|lip/i;
+          const MOUTH_FALLBACK_PATTERN = /jaw|mouth|lip/i;
           model.traverse((node) => {
             if (node.isMesh && node.morphTargetDictionary) {
               Object.entries(node.morphTargetDictionary).forEach(([name, index]) => {
-                if (fallbackPattern.test(name)) {
+                if (MOUTH_FALLBACK_PATTERN.test(name)) {
                   mouthMorphs.push({ mesh: node, index });
                 }
               });

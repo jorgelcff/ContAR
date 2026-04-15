@@ -5,23 +5,16 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import SpeechBubble from './SpeechBubble';
+import { AnimationController } from '../../controllers/AnimationController';
+import { AudioController } from '../../controllers/AudioController';
+import { LipSyncController } from '../../controllers/LipSyncController';
 
 function normalizeAvatarUrl(url) {
   if (typeof url !== 'string') return '';
-
   const value = url.trim();
   if (!value) return '';
-
-  // Keep already encoded HTTP(S) URLs untouched to avoid double-encoding.
-  if (/^https?:\/\//i.test(value)) {
-    return value;
-  }
-
-  // Data URLs may be returned by the SDK depending on export settings.
-  if (/^data:/i.test(value)) {
-    return value;
-  }
-
+  if (/^https?:\/\//i.test(value)) return value;
+  if (/^data:/i.test(value)) return value;
   return value;
 }
 
@@ -29,19 +22,34 @@ function normalizeAvatarUrl(url) {
  * SceneCanvas — Three.js scene wrapped in a React component.
  *
  * Props:
- *   avatarUrl   – GLB model URL to load (changes trigger a reload)
- *   transform   – { positionX, positionY, positionZ, rotationY (deg), scale }
- *   posePreset  – idle | walk | run | dance | neutral | wave | hands_on_hips | salute | arms_crossed | t_pose
- *   speechText  – text to display in the speech bubble above the avatar's head
+ *   avatarUrl                – GLB model URL (changes trigger a reload)
+ *   transform                – { positionX, positionY, positionZ, rotationY (deg), scale }
+ *   posePreset               – idle | walk | run | dance | neutral | wave | hands_on_hips | salute | arms_crossed | t_pose
+ *   speechText               – text for speech bubble above avatar
+ *   audioUrl                 – audio file URL (mp3, wav, …)
+ *   audioIsPlaying           – controlled play/pause boolean
+ *   morphOverrides           – { [morphTargetName]: 0–1 } for debug sliders
+ *   onMorphTargetsDiscovered – (targets: { name, value }[]) => void
  */
-export default function SceneCanvas({ avatarUrl, transform, posePreset, speechText }) {
+export default function SceneCanvas({
+  avatarUrl,
+  transform,
+  posePreset,
+  speechText,
+  audioUrl,
+  audioIsPlaying,
+  morphOverrides,
+  onMorphTargetsDiscovered,
+}) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
   const controlsRef = useRef(null);
   const avatarRef = useRef(null);
-  const mixerRef = useRef(null);
+  const animControllerRef = useRef(null);
+  const audioControllerRef = useRef(null);
+  const lipSyncRef = useRef(null);
   const clockRef = useRef(new THREE.Clock());
   const animFrameRef = useRef(null);
   const idleClipRef = useRef(null);
@@ -49,23 +57,24 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
   const posePresetRef = useRef(posePreset);
   const loaderRef = useRef(null);
   const activeAvatarLoadIdRef = useRef(0);
+  const isVisibleRef = useRef(true);
+  const morphOverridesRef = useRef(morphOverrides || {});
 
-  // Expose renderer/camera to SpeechBubble via state once scene is ready
   const [renderCtx, setRenderCtx] = useState(null);
   const [avatarLoadError, setAvatarLoadError] = useState('');
 
-  useEffect(() => {
-    posePresetRef.current = posePreset;
-  }, [posePreset]);
+  // Keep refs in sync with latest prop values so the render loop is always current.
+  useEffect(() => { posePresetRef.current = posePreset; }, [posePreset]);
+  useEffect(() => { morphOverridesRef.current = morphOverrides || {}; }, [morphOverrides]);
 
   /* ── Scene initialisation (once) ─────────────────────────────────── */
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Renderer
+    // Renderer — cap devicePixelRatio at 2 to reduce GPU pressure on high-DPI screens
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -123,7 +132,7 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // HDR environment map
+    // HDR environment (silently ignored if not found)
     new RGBELoader().load(
       '/brown_photostudio_01.hdr',
       (texture) => {
@@ -131,14 +140,12 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
         scene.environment = texture;
       },
       undefined,
-      () => {} // silently ignore if not found
+      () => {}
     );
 
-    // Shared GLTF + DRACO loader
+    // Shared GLTF + DRACO loader (supports compressed .glb)
     const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath(
-      'https://www.gstatic.com/draco/versioned/decoders/1.5.6/'
-    );
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
     const gltfLoader = new GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
     gltfLoader.setCrossOrigin('anonymous');
@@ -150,11 +157,11 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
       (gltf) => {
         if (gltf.animations?.length) {
           idleClipRef.current = gltf.animations[0];
-          // Apply to already-loaded avatar if it arrived first
-          if (avatarRef.current && mixerRef.current) {
+          if (avatarRef.current && animControllerRef.current) {
+            animControllerRef.current.addClips([idleClipRef.current]);
             applyPosePreset(
               avatarRef.current,
-              mixerRef.current,
+              animControllerRef.current,
               idleClipRef.current,
               avatarClipsRef.current,
               posePresetRef.current
@@ -166,16 +173,31 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
       () => {}
     );
 
-    // Render loop
+    // Audio controller (singleton for this scene instance)
+    audioControllerRef.current = new AudioController();
+
+    // ── Render loop ────────────────────────────────────────────────────────
     const animate = () => {
+      if (!isVisibleRef.current) return; // renderer paused while off-screen
       animFrameRef.current = requestAnimationFrame(animate);
-      mixerRef.current?.update(clockRef.current.getDelta());
+
+      const delta = clockRef.current.getDelta();
+      animControllerRef.current?.update(delta);
+
+      // Apply manual morph overrides AFTER mixer update so they always win
+      const overrides = morphOverridesRef.current;
+      if (lipSyncRef.current && overrides) {
+        for (const [name, value] of Object.entries(overrides)) {
+          lipSyncRef.current.setMorphValue(name, value);
+        }
+      }
+
       controls.update();
       renderer.render(scene, camera);
     };
     animate();
 
-    // Responsive resize
+    // ── Responsive resize ──────────────────────────────────────────────────
     const resizeObserver = new ResizeObserver(() => {
       const w = container.clientWidth;
       const h = container.clientHeight;
@@ -185,13 +207,31 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
     });
     resizeObserver.observe(container);
 
+    // ── Viewport visibility — pause render when canvas is off-screen ───────
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        const wasVisible = isVisibleRef.current;
+        isVisibleRef.current = entry.isIntersecting;
+        if (!wasVisible && entry.isIntersecting) {
+          // Reset the clock so the first frame after un-pausing has a normal delta
+          clockRef.current.getDelta();
+          animate();
+        }
+      },
+      { threshold: 0.01 }
+    );
+    intersectionObserver.observe(container);
+
     setRenderCtx({ renderer, camera });
 
     return () => {
       cancelAnimationFrame(animFrameRef.current);
       resizeObserver.disconnect();
+      intersectionObserver.disconnect();
       controls.dispose();
       renderer.dispose();
+      audioControllerRef.current?.dispose();
+      audioControllerRef.current = null;
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
@@ -207,17 +247,17 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
     let cancelled = false;
 
     if (!modelUrl) {
-      Promise.resolve().then(() => {
-        setAvatarLoadError('Avatar URL is empty or invalid.');
-      });
+      Promise.resolve().then(() => setAvatarLoadError('Avatar URL is empty or invalid.'));
       return;
     }
 
-    // Remove old avatar
+    // Remove old avatar and its controllers
     if (avatarRef.current) {
       sceneRef.current.remove(avatarRef.current);
-      mixerRef.current?.stopAllAction();
-      mixerRef.current = null;
+      animControllerRef.current?.dispose();
+      animControllerRef.current = null;
+      lipSyncRef.current?.dispose();
+      lipSyncRef.current = null;
       avatarRef.current = null;
       avatarClipsRef.current = [];
     }
@@ -233,7 +273,6 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
         const model = gltf.scene;
         setAvatarLoadError('');
 
-        // Enable shadows on every mesh
         model.traverse((node) => {
           if (node.isMesh) {
             node.castShadow = true;
@@ -241,36 +280,39 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
           }
         });
 
-        // Apply current transform
         applyTransform(model, transform);
-
         sceneRef.current.add(model);
         avatarRef.current = model;
 
-        // Set up animation mixer
-        const mixer = new THREE.AnimationMixer(model);
-        mixerRef.current = mixer;
-        avatarClipsRef.current = Array.isArray(gltf.animations) ? gltf.animations : [];
-        if (!idleClipRef.current && gltf.animations?.length) {
-          idleClipRef.current = gltf.animations[0];
+        // AnimationController — crossfade + blink + breathing
+        const clips = Array.isArray(gltf.animations) ? gltf.animations : [];
+        avatarClipsRef.current = clips;
+        if (!idleClipRef.current && clips.length) {
+          idleClipRef.current = clips[0];
         }
+        const animCtrl = new AnimationController(model, clips);
+        if (idleClipRef.current) animCtrl.addClips([idleClipRef.current]);
+        animControllerRef.current = animCtrl;
 
-        applyPosePreset(model, mixer, idleClipRef.current, avatarClipsRef.current, posePreset);
+        applyPosePreset(model, animCtrl, idleClipRef.current, clips, posePreset);
+
+        // LipSyncController — morph target discovery + control
+        const lipSync = new LipSyncController(model);
+        lipSyncRef.current = lipSync;
+        if (onMorphTargetsDiscovered) {
+          onMorphTargetsDiscovered(lipSync.getAll());
+        }
       },
       undefined,
       (err) => {
-        if (cancelled || loadId !== activeAvatarLoadIdRef.current) {
-          return;
-        }
+        if (cancelled || loadId !== activeAvatarLoadIdRef.current) return;
         console.error('GLTFLoader error:', err);
         const details = err?.message || err?.target?.statusText || 'Unknown load error';
         setAvatarLoadError(`Failed to load avatar model from URL: ${details}`);
       }
     );
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [avatarUrl, posePreset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Transform updates (live sliders) ────────────────────────────── */
@@ -279,16 +321,32 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
     applyTransform(avatarRef.current, transform);
   }, [transform]);
 
+  /* ── Pose preset changes ──────────────────────────────────────────── */
   useEffect(() => {
     if (!avatarRef.current) return;
     applyPosePreset(
       avatarRef.current,
-      mixerRef.current,
+      animControllerRef.current,
       idleClipRef.current,
       avatarClipsRef.current,
       posePreset
     );
   }, [posePreset]);
+
+  /* ── Audio URL changes ────────────────────────────────────────────── */
+  useEffect(() => {
+    audioControllerRef.current?.load(audioUrl || '');
+  }, [audioUrl]);
+
+  /* ── Audio play / pause ───────────────────────────────────────────── */
+  useEffect(() => {
+    if (!audioControllerRef.current) return;
+    if (audioIsPlaying) {
+      audioControllerRef.current.play();
+    } else {
+      audioControllerRef.current.pause();
+    }
+  }, [audioIsPlaying]);
 
   return (
     <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden">
@@ -320,11 +378,9 @@ function applyTransform(model, t) {
 
 function disposeObject3D(object) {
   if (!object) return;
-
   object.traverse((node) => {
     if (!node?.isMesh) return;
     node.geometry?.dispose?.();
-
     const { material } = node;
     if (Array.isArray(material)) {
       material.forEach((mat) => mat?.dispose?.());
@@ -334,22 +390,24 @@ function disposeObject3D(object) {
   });
 }
 
-function applyPosePreset(model, mixer, idleClip, avatarClips, posePreset) {
+/**
+ * Apply a pose preset.  Animated presets use AnimationController.play() for
+ * smooth crossfade; static presets manipulate bone quaternions directly.
+ */
+function applyPosePreset(model, animCtrl, idleClip, avatarClips, posePreset) {
   const normalized = String(posePreset || 'idle').toLowerCase();
 
-  if (mixer) {
-    mixer.stopAllAction();
-  }
+  if (animCtrl) animCtrl.stopAll();
 
   ensureRestPoseSnapshot(model);
   resetToRestPose(model);
 
   const animatedPresets = ['idle', 'walk', 'run', 'dance'];
   if (animatedPresets.includes(normalized)) {
-    if (mixer) {
+    if (animCtrl) {
       const clip = pickAnimationClip(normalized, idleClip, avatarClips);
       if (clip) {
-        mixer.clipAction(clip).play();
+        animCtrl.play(clip, 0.4);
       }
     }
     return;
@@ -409,15 +467,11 @@ function resetToRestPose(model) {
 
 function findBone(model, patterns) {
   let result = null;
-
   model.traverse((node) => {
     if (result || !node?.isBone) return;
     const name = String(node.name || '').toLowerCase();
-    if (patterns.some((re) => re.test(name))) {
-      result = node;
-    }
+    if (patterns.some((re) => re.test(name))) result = node;
   });
-
   return result;
 }
 
@@ -432,7 +486,6 @@ function applyWavePose(model) {
   const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
   const rightHand = findBone(model, [/righthand/, /hand_r/, /mixamorigrighthand/]);
-
   rotateBoneDeg(rightUpperArm, -45, 0, -65);
   rotateBoneDeg(rightForeArm, -20, 0, -35);
   rotateBoneDeg(rightHand, 10, 0, -20);
@@ -443,7 +496,6 @@ function applyHandsOnHipsPose(model) {
   const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   const leftForeArm = findBone(model, [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
   const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-
   rotateBoneDeg(leftUpperArm, 0, 0, 45);
   rotateBoneDeg(rightUpperArm, 0, 0, -45);
   rotateBoneDeg(leftForeArm, -30, 0, -30);
@@ -454,7 +506,6 @@ function applySalutePose(model) {
   const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
   const rightHand = findBone(model, [/righthand/, /hand_r/, /mixamorigrighthand/]);
-
   rotateBoneDeg(rightUpperArm, -35, 0, -40);
   rotateBoneDeg(rightForeArm, -70, 0, 20);
   rotateBoneDeg(rightHand, -10, 0, 25);
@@ -465,7 +516,6 @@ function applyArmsCrossedPose(model) {
   const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   const leftForeArm = findBone(model, [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
   const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-
   rotateBoneDeg(leftUpperArm, 0, 0, 20);
   rotateBoneDeg(rightUpperArm, 0, 0, -20);
   rotateBoneDeg(leftForeArm, -70, 0, -35);

@@ -87,6 +87,10 @@ const resources = {
       viewerTitle: 'Scene Viewer',
       language: 'Language',
       noAvatarHint: 'Paste a GLB URL or open Avaturn above.',
+      audio: 'Audio',
+      audioUrlPlaceholder: 'Audio URL (mp3, wav…)',
+      morphTargetsDebug: 'Morph Targets (Debug)',
+      morphTargetsFallback: 'This model has no morph targets.',
     },
   },
   pt: {
@@ -174,6 +178,10 @@ const resources = {
       viewerTitle: 'Visualizador de Cena',
       language: 'Idioma',
       noAvatarHint: 'Cole uma URL GLB ou abra o Avaturn acima.',
+      audio: 'Áudio',
+      audioUrlPlaceholder: 'URL do áudio (mp3, wav…)',
+      morphTargetsDebug: 'Morph Targets (Debug)',
+      morphTargetsFallback: 'Este modelo não possui morph targets.',
     },
   },
 };

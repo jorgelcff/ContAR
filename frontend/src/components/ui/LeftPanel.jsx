@@ -38,10 +38,18 @@ export default function LeftPanel({
   publishedStoryId,
   onSave,
   isSaving,
+  audioUrl,
+  onAudioUrlChange,
+  audioIsPlaying,
+  onAudioPlayPause,
+  morphTargets,
+  morphOverrides,
+  onMorphOverrideChange,
 }) {
   const { t } = useTranslation();
   const [urlInput, setUrlInput] = useState(avatarUrl);
   const [speechInput, setSpeechInput] = useState(speechText);
+  const [audioUrlInput, setAudioUrlInput] = useState(audioUrl || '');
   const [manualSceneId, setManualSceneId] = useState('');
   const [copiedStory, setCopiedStory] = useState(false);
   const [showAvaturn, setShowAvaturn] = useState(false);
@@ -49,10 +57,15 @@ export default function LeftPanel({
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(false);
   const [avatarListError, setAvatarListError] = useState('');
   const [hasLoadedAvatars, setHasLoadedAvatars] = useState(false);
+  const [showMorphDebug, setShowMorphDebug] = useState(false);
 
   useEffect(() => {
     setUrlInput(avatarUrl || '');
   }, [avatarUrl]);
+
+  useEffect(() => {
+    setAudioUrlInput(audioUrl || '');
+  }, [audioUrl]);
 
   const handleLoad = () => {
     if (urlInput.trim()) onLoadAvatar(urlInput.trim());
@@ -259,7 +272,77 @@ export default function LeftPanel({
 
       <hr className="border-gray-700" />
 
-      {/* ── Scene Section ──────────────────────────── */}
+      {/* ── Audio Section ──────────────────────────── */}
+      <section className="flex flex-col gap-3">
+        <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+          {t('audio')}
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={audioUrlInput}
+            onChange={(e) => {
+              setAudioUrlInput(e.target.value);
+              onAudioUrlChange(e.target.value);
+            }}
+            placeholder={t('audioUrlPlaceholder')}
+            className="flex-1 min-w-0 rounded-lg bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+          />
+          <button
+            onClick={onAudioPlayPause}
+            disabled={!audioUrlInput.trim()}
+            className="shrink-0 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-medium transition-colors"
+          >
+            {audioIsPlaying ? t('pause') : t('play')}
+          </button>
+        </div>
+      </section>
+
+      {/* ── Morph Targets Debug ────────────────────── */}
+      {Array.isArray(morphTargets) && morphTargets.length > 0 && (
+        <>
+          <hr className="border-gray-700" />
+          <section className="flex flex-col gap-2">
+            <button
+              onClick={() => setShowMorphDebug((v) => !v)}
+              className="flex items-center justify-between w-full text-xs font-semibold text-gray-300 uppercase tracking-wider hover:text-white transition-colors"
+            >
+              <span>{t('morphTargetsDebug')}</span>
+              <span className="text-gray-500">{showMorphDebug ? '▲' : '▼'}</span>
+            </button>
+            {showMorphDebug && (
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+                {morphTargets.map(({ name }) => {
+                  const value = morphOverrides?.[name] ?? 0;
+                  return (
+                    <div key={name} className="flex flex-col gap-0.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400 truncate max-w-[160px]" title={name}>
+                          {name}
+                        </span>
+                        <span className="text-xs text-gray-500 tabular-nums w-8 text-right">
+                          {value.toFixed(2)}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={value}
+                        onChange={(e) => onMorphOverrideChange(name, parseFloat(e.target.value))}
+                        className="w-full accent-violet-500 h-1.5"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      <hr className="border-gray-700" />
       <section className="flex flex-col gap-3">
         <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Scene</p>
         <input

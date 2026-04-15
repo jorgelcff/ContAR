@@ -24,8 +24,13 @@ export default function EditorPage() {
     posePreset, setPosePreset,
     speechText, setSpeechText,
     sceneTitle, setSceneTitle,
+    audioUrl, setAudioUrl,
+    morphOverrides, setMorphOverride,
     buildScenePayload,
   } = useScene();
+
+  const [audioIsPlaying, setAudioIsPlaying] = useState(false);
+  const [morphTargets, setMorphTargets] = useState([]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [currentSceneId, setCurrentSceneId] = useState('');
@@ -274,6 +279,13 @@ export default function EditorPage() {
           publishedStoryId={publishedStoryId}
           onSave={handleSave}
           isSaving={isSaving}
+          audioUrl={audioUrl}
+          onAudioUrlChange={setAudioUrl}
+          audioIsPlaying={audioIsPlaying}
+          onAudioPlayPause={() => setAudioIsPlaying((v) => !v)}
+          morphTargets={morphTargets}
+          morphOverrides={morphOverrides}
+          onMorphOverrideChange={setMorphOverride}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950">
@@ -290,6 +302,10 @@ export default function EditorPage() {
               transform={transform}
               posePreset={posePreset}
               speechText={speechText}
+              audioUrl={audioUrl}
+              audioIsPlaying={audioIsPlaying}
+              morphOverrides={morphOverrides}
+              onMorphTargetsDiscovered={setMorphTargets}
             />
           </div>
           <StoryBuilderPanel

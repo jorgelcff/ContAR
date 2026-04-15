@@ -20,7 +20,7 @@ function getInitialAvatarUrl() {
 
 /**
  * Central state hook for the scene editor.
- * Keeps avatar URL, transform, speech text, and title in sync.
+ * Keeps avatar URL, transform, speech text, audio URL, morph overrides and title in sync.
  */
 export default function useScene() {
   const [avatarUrl, setAvatarUrl] = useState(getInitialAvatarUrl);
@@ -28,6 +28,9 @@ export default function useScene() {
   const [posePreset, setPosePreset] = useState('idle');
   const [speechText, setSpeechText] = useState('');
   const [sceneTitle, setSceneTitle] = useState('');
+  const [audioUrl, setAudioUrl] = useState('');
+  /** @type {[Record<string,number>, React.Dispatch<React.SetStateAction<Record<string,number>>>]} */
+  const [morphOverrides, setMorphOverrides] = useState({});
 
   useEffect(() => {
     try {
@@ -43,6 +46,11 @@ export default function useScene() {
 
   const updateTransform = useCallback((key, value) => {
     setTransform((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  /** Set a single morph target override value (0–1). */
+  const setMorphOverride = useCallback((name, value) => {
+    setMorphOverrides((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   const buildScenePayload = useCallback(
@@ -61,12 +69,12 @@ export default function useScene() {
         },
         narrative: {
           text: speechText,
-          audioUrl: '',
+          audioUrl: audioUrl || '',
           bubbleStyle: { color: '#ffffff', fontSize: 14 },
         },
       },
     }),
-    [avatarUrl, posePreset, transform, speechText, sceneTitle]
+    [avatarUrl, posePreset, transform, speechText, sceneTitle, audioUrl]
   );
 
   return {
@@ -80,6 +88,10 @@ export default function useScene() {
     setSpeechText,
     sceneTitle,
     setSceneTitle,
+    audioUrl,
+    setAudioUrl,
+    morphOverrides,
+    setMorphOverride,
     buildScenePayload,
   };
 }

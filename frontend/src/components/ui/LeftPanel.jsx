@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AvaturnEmbed from './AvaturnEmbed';
 import TransformControls from './TransformControls';
+import AudioPanel from './AudioPanel';
 import { listAvaturnAvatars } from '../../api/sceneApi';
 
 const AVATURN_USER_ID_KEY = 'avaturn:userId';
@@ -38,6 +39,7 @@ export default function LeftPanel({
   publishedStoryId,
   onSave,
   isSaving,
+  audio,
 }) {
   const { t } = useTranslation();
   const [urlInput, setUrlInput] = useState(avatarUrl);
@@ -256,6 +258,24 @@ export default function LeftPanel({
           )}
         </div>
       </section>
+
+      <hr className="border-gray-700" />
+
+      {/* ── Audio & Lip Sync Section ───────────────── */}
+      {audio && (
+        <AudioPanel
+          audioUrl={audio.audioUrl}
+          isPlaying={audio.isPlaying}
+          isRecording={audio.isRecording}
+          error={audio.error}
+          onLoadFile={audio.loadFile}
+          onPlay={audio.play}
+          onPause={audio.pause}
+          onStop={audio.stop}
+          onStartRec={audio.startRecording}
+          onStopRec={audio.stopRecording}
+        />
+      )}
 
       <hr className="border-gray-700" />
 

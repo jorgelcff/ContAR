@@ -33,8 +33,9 @@ function normalizeAvatarUrl(url) {
  *   transform   – { positionX, positionY, positionZ, rotationY (deg), scale }
  *   posePreset  – idle | walk | run | dance | neutral | wave | hands_on_hips | salute | arms_crossed | t_pose
  *   speechText  – text to display in the speech bubble above the avatar's head
+ *   analyserRef – ref to a Web Audio API AnalyserNode used for real-time lip sync
  */
-export default function SceneCanvas({ avatarUrl, transform, posePreset, speechText }) {
+export default function SceneCanvas({ avatarUrl, transform, posePreset, speechText, analyserRef }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -49,6 +50,17 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
   const posePresetRef = useRef(posePreset);
   const loaderRef = useRef(null);
   const activeAvatarLoadIdRef = useRef(0);
+
+  // Lip-sync: discovered mouth morph targets on the current avatar
+  const mouthMorphsRef = useRef([]);
+  // Reusable typed array for analyser reads (allocated once per fftSize)
+  const lipSyncDataRef = useRef(null);
+  // Mirror the analyserRef prop into a local ref so the render-loop closure
+  // can always access the latest value without requiring scene reinitialisation.
+  const analyserRefLocal = useRef(analyserRef);
+  useEffect(() => {
+    analyserRefLocal.current = analyserRef;
+  }, [analyserRef]);
 
   // Expose renderer/camera to SpeechBubble via state once scene is ready
   const [renderCtx, setRenderCtx] = useState(null);
@@ -170,6 +182,38 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
     const animate = () => {
       animFrameRef.current = requestAnimationFrame(animate);
       mixerRef.current?.update(clockRef.current.getDelta());
+
+      // ── Lip sync: sample analyser amplitude → drive mouth morphs ──
+      const analyser = analyserRefLocal.current?.current;
+      const morphs = mouthMorphsRef.current;
+      if (analyser && morphs.length > 0) {
+        const binCount = analyser.frequencyBinCount;
+        if (!lipSyncDataRef.current || lipSyncDataRef.current.length !== binCount) {
+          lipSyncDataRef.current = new Uint8Array(binCount);
+        }
+        analyser.getByteTimeDomainData(lipSyncDataRef.current);
+        let sum = 0;
+        for (let i = 0; i < binCount; i++) {
+          const v = (lipSyncDataRef.current[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / binCount);
+        // Amplify and clamp to [0, 1]
+        const mouthOpen = Math.min(1, rms * 10);
+        morphs.forEach(({ mesh, index }) => {
+          if (mesh.morphTargetInfluences) {
+            mesh.morphTargetInfluences[index] = mouthOpen;
+          }
+        });
+      } else if (!analyser && morphs.length > 0) {
+        // No active audio — reset mouth morphs
+        morphs.forEach(({ mesh, index }) => {
+          if (mesh.morphTargetInfluences) {
+            mesh.morphTargetInfluences[index] = 0;
+          }
+        });
+      }
+
       controls.update();
       renderer.render(scene, camera);
     };
@@ -220,6 +264,7 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
       mixerRef.current = null;
       avatarRef.current = null;
       avatarClipsRef.current = [];
+      mouthMorphsRef.current = [];
     }
 
     loaderRef.current.load(
@@ -246,6 +291,33 @@ export default function SceneCanvas({ avatarUrl, transform, posePreset, speechTe
 
         sceneRef.current.add(model);
         avatarRef.current = model;
+
+        // Discover mouth morph targets for lip sync
+        const mouthMorphs = [];
+        const mouthPattern = /jaw.*open|mouth.*open|viseme.*(aa|A|O|oh|oh_|open)|^mouthOpen$/i;
+        model.traverse((node) => {
+          if (node.isMesh && node.morphTargetDictionary) {
+            Object.entries(node.morphTargetDictionary).forEach(([name, index]) => {
+              if (mouthPattern.test(name)) {
+                mouthMorphs.push({ mesh: node, index });
+              }
+            });
+          }
+        });
+        // Fallback: if no specific mouth targets found, look for any jaw/mouth morph
+        if (mouthMorphs.length === 0) {
+          const fallbackPattern = /jaw|mouth|lip/i;
+          model.traverse((node) => {
+            if (node.isMesh && node.morphTargetDictionary) {
+              Object.entries(node.morphTargetDictionary).forEach(([name, index]) => {
+                if (fallbackPattern.test(name)) {
+                  mouthMorphs.push({ mesh: node, index });
+                }
+              });
+            }
+          });
+        }
+        mouthMorphsRef.current = mouthMorphs;
 
         // Set up animation mixer
         const mixer = new THREE.AnimationMixer(model);

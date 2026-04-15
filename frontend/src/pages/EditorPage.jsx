@@ -7,6 +7,7 @@ import LeftPanel from '../components/ui/LeftPanel';
 import SceneCanvas from '../components/3d/SceneCanvas';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import useScene from '../hooks/useScene';
+import useAudio from '../hooks/useAudio';
 import { getScene, getStory, saveScene, saveStory } from '../api/sceneApi';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -26,6 +27,8 @@ export default function EditorPage() {
     sceneTitle, setSceneTitle,
     buildScenePayload,
   } = useScene();
+
+  const audio = useAudio();
 
   const [isSaving, setIsSaving] = useState(false);
   const [currentSceneId, setCurrentSceneId] = useState('');
@@ -274,6 +277,7 @@ export default function EditorPage() {
           publishedStoryId={publishedStoryId}
           onSave={handleSave}
           isSaving={isSaving}
+          audio={audio}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950">
@@ -290,6 +294,7 @@ export default function EditorPage() {
               transform={transform}
               posePreset={posePreset}
               speechText={speechText}
+              analyserRef={audio.analyserRef}
             />
           </div>
           <StoryBuilderPanel

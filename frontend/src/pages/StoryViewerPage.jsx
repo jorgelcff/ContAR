@@ -148,11 +148,14 @@ export default function StoryViewerPage() {
   const arHref = sceneData?.content?.avatar?.modelUrl
     ? `/ar?mode=surface&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}`
     : '/ar';
-  const arMarkerHref = sceneData?.content?.avatar?.modelUrl && currentMarkerUrl
-    ? `/ar?mode=marker&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}&markerUrl=${encodeURIComponent(currentMarkerUrl)}`
-    : sceneData?.content?.avatar?.modelUrl
-      ? `/ar?mode=marker&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}`
-      : '/ar?mode=marker';
+
+  function buildArMarkerHref() {
+    const modelUrl = sceneData?.content?.avatar?.modelUrl;
+    if (!modelUrl) return '/ar?mode=marker';
+    const base = `/ar?mode=marker&modelUrl=${encodeURIComponent(modelUrl)}`;
+    return currentMarkerUrl ? `${base}&markerUrl=${encodeURIComponent(currentMarkerUrl)}` : base;
+  }
+  const arMarkerHref = buildArMarkerHref();
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
@@ -247,7 +250,7 @@ export default function StoryViewerPage() {
                     to={arMarkerHref}
                     className="px-3 py-2 rounded bg-fuchsia-700 hover:bg-fuchsia-600 text-xs font-semibold"
                   >
-                    Marker
+                    Marker AR
                   </Link>
                   <button
                     onClick={() => setIsPlaying((prev) => !prev)}

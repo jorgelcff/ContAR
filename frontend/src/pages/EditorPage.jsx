@@ -295,6 +295,7 @@ export default function EditorPage() {
               posePreset={posePreset}
               speechText={speechText}
               analyserRef={audio.analyserRef}
+              lipSyncConfig={audio.lipSyncConfig}
             />
           </div>
           <StoryBuilderPanel

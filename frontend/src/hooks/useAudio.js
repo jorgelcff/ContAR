@@ -1,5 +1,24 @@
 import { useState, useRef } from 'react';
 
+const DEFAULT_AUDIO_PROCESSING = {
+  inputGain: 1.35,
+  analyserSmoothing: 0.72,
+  compressorThreshold: -24,
+  compressorRatio: 3,
+};
+
+export const DEFAULT_LIP_SYNC_CONFIG = {
+  amplitudeMultiplier: 12,
+  noiseGate: 0.02,
+  fullBandMix: 0.35,
+  speechBandMix: 0.65,
+  enableBandEnergy: true,
+  visemeMode: 'heuristic',
+  enableJawFallback: true,
+  jawFallbackStrength: 0.7,
+  showBlendshapeDebug: false,
+};
+
 /**
  * useAudio — manages audio playback and real-time analysis for lip sync.
  *
@@ -26,10 +45,21 @@ export default function useAudio() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState('');
+  const [audioMetrics, setAudioMetrics] = useState({
+    rms: 0,
+    speechBandEnergy: 0,
+    peak: 0,
+    level: 0,
+    clipping: false,
+  });
+  const [audioProcessing, setAudioProcessing] = useState(DEFAULT_AUDIO_PROCESSING);
+  const [lipSyncConfig, setLipSyncConfig] = useState(DEFAULT_LIP_SYNC_CONFIG);
 
   // Web Audio refs
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
+  const gainNodeRef = useRef(null);
+  const compressorRef = useRef(null);
   const audioElRef = useRef(null);
   const sourceNodeRef = useRef(null);
 
@@ -41,18 +71,36 @@ export default function useAudio() {
 
   // Track the current URL in a ref so callbacks never go stale
   const audioUrlRef = useRef('');
+  const meterFrameRef = useRef(null);
+  const meterTimeDataRef = useRef(null);
+  const meterFreqDataRef = useRef(null);
+  const lastMeterCommitRef = useRef(0);
 
   // ── Private helpers ──────────────────────────────────────────────
 
   function getOrCreateContext() {
     if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const gainNode = ctx.createGain();
+      const compressor = ctx.createDynamicsCompressor();
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.75;
+      analyser.smoothingTimeConstant = audioProcessing.analyserSmoothing;
+
+      gainNode.gain.value = audioProcessing.inputGain;
+      compressor.threshold.value = audioProcessing.compressorThreshold;
+      compressor.ratio.value = audioProcessing.compressorRatio;
+
+      gainNode.connect(compressor);
+      compressor.connect(analyser);
       analyser.connect(ctx.destination);
+
       audioCtxRef.current = ctx;
+      gainNodeRef.current = gainNode;
+      compressorRef.current = compressor;
       analyserRef.current = analyser;
+
+      startMeters();
     }
     return audioCtxRef.current;
   }
@@ -78,6 +126,96 @@ export default function useAudio() {
       audioElRef.current.src = '';
       audioElRef.current = null;
     }
+  }
+
+  function startMeters() {
+    if (meterFrameRef.current) return;
+
+    const tick = () => {
+      meterFrameRef.current = window.requestAnimationFrame(tick);
+
+      const analyser = analyserRef.current;
+      if (!analyser) return;
+
+      const now = performance.now();
+      const binCount = analyser.frequencyBinCount;
+      if (!meterTimeDataRef.current || meterTimeDataRef.current.length !== binCount) {
+        meterTimeDataRef.current = new Uint8Array(binCount);
+      }
+      if (!meterFreqDataRef.current || meterFreqDataRef.current.length !== binCount) {
+        meterFreqDataRef.current = new Uint8Array(binCount);
+      }
+
+      analyser.getByteTimeDomainData(meterTimeDataRef.current);
+      analyser.getByteFrequencyData(meterFreqDataRef.current);
+
+      let rmsSum = 0;
+      let peak = 0;
+      for (let i = 0; i < binCount; i++) {
+        const normalized = (meterTimeDataRef.current[i] - 128) / 128;
+        const abs = Math.abs(normalized);
+        if (abs > peak) peak = abs;
+        rmsSum += normalized * normalized;
+      }
+      const rms = Math.sqrt(rmsSum / binCount);
+
+      const sampleRate = analyser.context.sampleRate || 48000;
+      const hzPerBin = sampleRate / analyser.fftSize;
+      const minHz = 300;
+      const maxHz = 3000;
+      const minBin = Math.max(0, Math.floor(minHz / hzPerBin));
+      const maxBin = Math.min(binCount - 1, Math.ceil(maxHz / hzPerBin));
+      let speechSum = 0;
+      for (let i = minBin; i <= maxBin; i++) {
+        speechSum += meterFreqDataRef.current[i] / 255;
+      }
+      const speechBandEnergy = speechSum / Math.max(1, maxBin - minBin + 1);
+
+      const level = Math.min(1, Math.max(rms * 10, speechBandEnergy));
+      const clipping = peak > 0.98;
+
+      if (now - lastMeterCommitRef.current >= 80) {
+        lastMeterCommitRef.current = now;
+        setAudioMetrics({
+          rms,
+          speechBandEnergy,
+          peak,
+          level,
+          clipping,
+        });
+      }
+    };
+
+    meterFrameRef.current = window.requestAnimationFrame(tick);
+  }
+
+  function applyAudioProcessingSettings(nextSettings) {
+    const analyser = analyserRef.current;
+    const gainNode = gainNodeRef.current;
+    const compressor = compressorRef.current;
+
+    if (analyser) {
+      analyser.smoothingTimeConstant = nextSettings.analyserSmoothing;
+    }
+    if (gainNode) {
+      gainNode.gain.value = nextSettings.inputGain;
+    }
+    if (compressor) {
+      compressor.threshold.value = nextSettings.compressorThreshold;
+      compressor.ratio.value = nextSettings.compressorRatio;
+    }
+  }
+
+  function updateAudioProcessing(partial) {
+    setAudioProcessing((prev) => {
+      const next = { ...prev, ...partial };
+      applyAudioProcessingSettings(next);
+      return next;
+    });
+  }
+
+  function updateLipSyncConfig(partial) {
+    setLipSyncConfig((prev) => ({ ...prev, ...partial }));
   }
 
   function teardownMic() {
@@ -118,7 +256,7 @@ export default function useAudio() {
         audioElRef.current = el;
 
         const src = ctx.createMediaElementSource(el);
-        src.connect(analyserRef.current);
+        src.connect(gainNodeRef.current);
         sourceNodeRef.current = src;
 
         el.addEventListener('ended', () => setIsPlaying(false), { once: true });
@@ -160,7 +298,7 @@ export default function useAudio() {
       // causing an audible echo / feedback loop.  The analyser is reconnected
       // to destination once recording stops so playback works normally.
       try { analyserRef.current.disconnect(); } catch { /* ignore */ }
-      micSrc.connect(analyserRef.current);
+      micSrc.connect(gainNodeRef.current);
       micSourceRef.current = micSrc;
 
       const recorder = new MediaRecorder(stream);
@@ -205,12 +343,17 @@ export default function useAudio() {
     isPlaying,
     isRecording,
     error,
+    audioMetrics,
+    audioProcessing,
+    lipSyncConfig,
     loadFile,
     play,
     pause,
     stop,
     startRecording,
     stopRecording,
+    updateAudioProcessing,
+    updateLipSyncConfig,
   };
 }
 

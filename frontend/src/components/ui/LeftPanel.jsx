@@ -268,12 +268,17 @@ export default function LeftPanel({
           isPlaying={audio.isPlaying}
           isRecording={audio.isRecording}
           error={audio.error}
+          audioMetrics={audio.audioMetrics}
+          audioProcessing={audio.audioProcessing}
+          lipSyncConfig={audio.lipSyncConfig}
           onLoadFile={audio.loadFile}
           onPlay={audio.play}
           onPause={audio.pause}
           onStop={audio.stop}
           onStartRec={audio.startRecording}
           onStopRec={audio.stopRecording}
+          onAudioProcessingChange={audio.updateAudioProcessing}
+          onLipSyncConfigChange={audio.updateLipSyncConfig}
         />
       )}
 

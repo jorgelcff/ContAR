@@ -7,6 +7,7 @@ import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import SpeechBubble from './SpeechBubble';
 import { AnimationController } from '../../controllers/AnimationController';
+import { LipSyncController } from '../../controllers/LipSyncController';
 
 const DEFAULT_LIP_SYNC_CONFIG = {
   amplitudeMultiplier: 12,
@@ -114,6 +115,9 @@ export default function SceneCanvas({
   visemeTimeline,
   audioCurrentTime,
 }) {
+  // Enable Three.js resource cache so reloading the same GLB/HDR skips a round-trip.
+  THREE.Cache.enabled = true;
+
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -121,6 +125,7 @@ export default function SceneCanvas({
   const controlsRef = useRef(null);
   const avatarRef = useRef(null);
   const animControllerRef = useRef(null);
+  const lipSyncControllerRef = useRef(null);
   const clockRef = useRef(new THREE.Clock());
   const animFrameRef = useRef(null);
   const idleClipRef = useRef(null);
@@ -171,6 +176,7 @@ export default function SceneCanvas({
 
   // Expose renderer/camera to SpeechBubble via state once scene is ready
   const [renderCtx, setRenderCtx] = useState(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
   const [avatarLoadError, setAvatarLoadError] = useState('');
   const [debugSnapshot, setDebugSnapshot] = useState({ mouthOpen: 0, rms: 0, speechBand: 0, mode: 'idle' });
   const [blendshapeSnapshot, setBlendshapeSnapshot] = useState([]);
@@ -577,6 +583,8 @@ export default function SceneCanvas({
       controls.dispose();
       animControllerRef.current?.dispose();
       animControllerRef.current = null;
+      lipSyncControllerRef.current?.dispose();
+      lipSyncControllerRef.current = null;
       mouthMarkerRef.current?.geometry?.dispose?.();
       mouthMarkerRef.current?.material?.dispose?.();
       mouthMarkerRef.current = null;
@@ -607,6 +615,8 @@ export default function SceneCanvas({
       sceneRef.current.remove(avatarRef.current);
       animControllerRef.current?.dispose();
       animControllerRef.current = null;
+      lipSyncControllerRef.current?.dispose();
+      lipSyncControllerRef.current = null;
       avatarRef.current = null;
       avatarClipsRef.current = [];
       mouthMorphsRef.current = [];
@@ -625,9 +635,11 @@ export default function SceneCanvas({
       }
     }
 
+    setAvatarLoading(true);
     const avatarLoader = loaderRef.current;
     if (!avatarLoader) {
       setAvatarLoadError('Avatar loader is not ready yet.');
+      setAvatarLoading(false);
       return;
     }
 
@@ -641,6 +653,7 @@ export default function SceneCanvas({
 
         const model = gltf.scene;
         setAvatarLoadError('');
+        setAvatarLoading(false);
 
         // Enable shadows on every mesh
         model.traverse((node) => {
@@ -738,6 +751,13 @@ export default function SceneCanvas({
         }
         animControllerRef.current = animController;
 
+        // Set up LipSync controller — provides a clean API for ARKit viseme frames
+        // (e.g. from TTS providers). The existing inline render-loop logic continues
+        // to handle amplitude/heuristic modes; the controller acts as a facade for
+        // external ARKit viseme data ingestion.
+        lipSyncControllerRef.current?.dispose();
+        lipSyncControllerRef.current = new LipSyncController(model);
+
         applyPosePreset(
           model,
           animController,
@@ -754,6 +774,7 @@ export default function SceneCanvas({
         console.error('Avatar loader error:', err);
         const details = err?.message || err?.target?.statusText || 'Unknown load error';
         setAvatarLoadError(`Failed to load avatar model from URL: ${details}`);
+        setAvatarLoading(false);
       }
     );
 
@@ -799,7 +820,15 @@ export default function SceneCanvas({
   };
 
   return (
-    <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden">
+    <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden" style={{ touchAction: 'none' }}>
+      {avatarLoading && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/70 pointer-events-none">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+            <p className="text-xs text-cyan-200">Loading avatar…</p>
+          </div>
+        </div>
+      )}
       {avatarLoadError && (
         <div className="absolute top-3 left-3 right-3 z-20 rounded-md border border-red-600 bg-red-950/90 px-3 py-2 text-xs text-red-200">
           {avatarLoadError}

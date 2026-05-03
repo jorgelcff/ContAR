@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import LeftPanel from '../components/ui/LeftPanel';
-import SceneCanvas from '../components/3d/SceneCanvas';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import useScene from '../hooks/useScene';
 import useAudio from '../hooks/useAudio';
 import { getScene, getStory, saveScene, saveStory } from '../api/sceneApi';
+
+const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -289,16 +290,25 @@ export default function EditorPage() {
             </Link>
           </div>
           <div className="flex-1 overflow-hidden">
-            <SceneCanvas
-              avatarUrl={avatarUrl}
-              transform={transform}
-              posePreset={posePreset}
-              speechText={speechText}
-              analyserRef={audio.analyserRef}
-              lipSyncConfig={audio.lipSyncConfig}
-              visemeTimeline={audio.visemeTimeline}
-              audioCurrentTime={audio.audioCurrentTime}
-            />
+            <Suspense fallback={
+              <div className="flex h-full items-center justify-center bg-gray-900">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+                  <p className="text-xs text-cyan-200">Loading scene viewer…</p>
+                </div>
+              </div>
+            }>
+              <SceneCanvas
+                avatarUrl={avatarUrl}
+                transform={transform}
+                posePreset={posePreset}
+                speechText={speechText}
+                analyserRef={audio.analyserRef}
+                lipSyncConfig={audio.lipSyncConfig}
+                visemeTimeline={audio.visemeTimeline}
+                audioCurrentTime={audio.audioCurrentTime}
+              />
+            </Suspense>
           </div>
           <StoryBuilderPanel
             storyScenes={storyScenes}

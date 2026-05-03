@@ -130,6 +130,27 @@ export default function StoryViewerPage() {
     };
   }, [currentSceneId]);
 
+  // Preload the next scene's GLB so it loads without a visible stall
+  const nextSceneId = storyScenes[index + 1]?.sceneId;
+  useEffect(() => {
+    if (!nextSceneId) return;
+    let active = true;
+    getScene(nextSceneId)
+      .then((data) => {
+        if (!active) return;
+        const url = data?.content?.avatar?.modelUrl;
+        if (url) {
+          // Kick off a background fetch; the browser caches the binary so
+          // Three.js (with THREE.Cache enabled) skips the network request.
+          fetch(url, { method: 'GET', mode: 'cors' }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [nextSceneId]);
+
   const transform = useMemo(() => {
     if (!sceneData?.content?.avatar?.transform) return null;
     const t = sceneData.content.avatar.transform;
@@ -150,10 +171,18 @@ export default function StoryViewerPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
-      <Header />
+      {/* Hide header on small screens to maximise canvas area */}
+      <div className="hidden md:block shrink-0">
+        <Header />
+      </div>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center text-gray-400">Loading story...</div>
+        /* Loading skeleton — animated pulse reduces perceived wait time */
+        <div className="flex-1 flex flex-col gap-4 p-6 animate-pulse">
+          <div className="h-6 w-48 rounded bg-gray-700/60" />
+          <div className="h-4 w-72 rounded bg-gray-700/40" />
+          <div className="flex-1 rounded-xl bg-gray-800/60" />
+        </div>
       ) : error ? (
         <div className="flex-1 flex items-center justify-center text-red-400">{error}</div>
       ) : (
@@ -168,20 +197,20 @@ export default function StoryViewerPage() {
             <div className="hidden md:flex items-center gap-2">
               <Link
                 to={arHref}
-                className="px-3 py-1.5 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold"
+                className="px-3 py-2 min-h-[44px] rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center"
               >
                 {t('openSurfaceAr')}
               </Link>
               <button
                 onClick={() => setIsPlaying((prev) => !prev)}
-                className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-xs"
+                className="px-3 py-2 min-h-[44px] rounded bg-emerald-700 hover:bg-emerald-600 text-xs flex items-center"
               >
                 {isPlaying ? t('pause') : t('play')}
               </button>
               <button
                 onClick={() => setIndex((prev) => Math.max(0, prev - 1))}
                 disabled={index <= 0}
-                className="px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs"
+                className="px-3 py-2 min-h-[44px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
               >
                 Prev
               </button>
@@ -189,7 +218,7 @@ export default function StoryViewerPage() {
               <button
                 onClick={() => setIndex((prev) => Math.min(storyScenes.length - 1, prev + 1))}
                 disabled={index >= storyScenes.length - 1}
-                className="px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs"
+                className="px-3 py-2 min-h-[44px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
               >
                 Next
               </button>
@@ -227,27 +256,27 @@ export default function StoryViewerPage() {
                 <div className="flex items-center gap-2">
                   <Link
                     to={arHref}
-                    className="px-3 py-2 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold"
+                    className="px-3 py-2 min-h-[44px] rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center"
                   >
                     AR
                   </Link>
                   <button
                     onClick={() => setIsPlaying((prev) => !prev)}
-                    className="px-3 py-2 rounded bg-emerald-700 hover:bg-emerald-600 text-xs"
+                    className="px-4 py-2 min-h-[44px] flex-1 rounded bg-emerald-700 hover:bg-emerald-600 text-sm font-medium flex items-center justify-center"
                   >
                     {isPlaying ? t('pause') : t('play')}
                   </button>
                   <button
                     onClick={() => setIndex((prev) => Math.max(0, prev - 1))}
                     disabled={index <= 0}
-                    className="px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs"
+                    className="px-3 py-2 min-h-[44px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
                   >
                     Prev
                   </button>
                   <button
                     onClick={() => setIndex((prev) => Math.min(storyScenes.length - 1, prev + 1))}
                     disabled={index >= storyScenes.length - 1}
-                    className="px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs"
+                    className="px-3 py-2 min-h-[44px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
                   >
                     Next
                   </button>
@@ -285,12 +314,24 @@ export default function StoryViewerPage() {
                 style={{ transform: `scale(${scale})` }}
               >
                 {sceneData ? (
-                  <SceneCanvas
-                    avatarUrl={sceneData?.content?.avatar?.modelUrl}
-                    transform={transform}
-                    posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
-                    speechText={sceneData?.content?.narrative?.text || ''}
-                  />
+                  <>
+                    <SceneCanvas
+                      avatarUrl={sceneData?.content?.avatar?.modelUrl}
+                      transform={transform}
+                      posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
+                      speechText={sceneData?.content?.narrative?.text || ''}
+                    />
+                    {/* Hidden audio element for preloading the current scene's narration */}
+                    {sceneData?.content?.narrative?.audioUrl && (
+                      <audio
+                        key={sceneData.content.narrative.audioUrl}
+                        src={sceneData.content.narrative.audioUrl}
+                        preload="metadata"
+                        className="hidden"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </>
                 ) : (
                   <div className="h-full flex items-center justify-center text-gray-400">Scene not found.</div>
                 )}

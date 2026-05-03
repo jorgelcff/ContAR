@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -25,7 +25,11 @@ export default function AudioPanel({
   audioMetrics,
   audioProcessing,
   lipSyncConfig,
+  visemeTimeline,
   onLoadFile,
+  onLoadVisemeFile,
+  onClearVisemeTimeline,
+  onGenerateVisemeFromText,
   onPlay,
   onPause,
   onStop,
@@ -36,11 +40,30 @@ export default function AudioPanel({
 }) {
   const { t } = useTranslation();
   const fileInputRef = useRef(null);
+  const visemeInputRef = useRef(null);
+  const [visemeTextInput, setVisemeTextInput] = useState('');
+
+  const applyNaturalTimelinePreset = () => {
+    onLipSyncConfigChange({
+      visemeMode: 'timeline',
+      timelineCrossfadeSec: 0.08,
+      timelineMouthWeight: 0.74,
+      timelineSpeechWeight: 0.26,
+      jawAttackSpeed: 22,
+      jawReleaseSpeed: 12,
+    });
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) onLoadFile(file);
     // Reset input so the same file can be re-selected
+    e.target.value = '';
+  };
+
+  const handleVisemeFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) onLoadVisemeFile(file);
     e.target.value = '';
   };
 
@@ -76,6 +99,52 @@ export default function AudioPanel({
       >
         {isRecording ? t('audioStopRec') : t('audioStartRec')}
       </button>
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => visemeInputRef.current?.click()}
+          className="flex-1 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
+        >
+          Load Viseme JSON
+        </button>
+        {!!visemeTimeline?.length && (
+          <button
+            onClick={onClearVisemeTimeline}
+            className="px-3 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 text-white text-sm transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <input
+        ref={visemeInputRef}
+        type="file"
+        accept="application/json,.json"
+        onChange={handleVisemeFileChange}
+        className="hidden"
+      />
+      {!!visemeTimeline?.length && (
+        <p className="text-xs text-indigo-300">
+          Viseme cues loaded: {visemeTimeline.length}
+        </p>
+      )}
+
+      <div className="rounded-md border border-indigo-700/40 bg-indigo-950/20 p-2 text-xs text-indigo-100">
+        <p className="mb-1 font-semibold uppercase tracking-wide">Text to Visemes</p>
+        <textarea
+          rows={3}
+          value={visemeTextInput}
+          onChange={(e) => setVisemeTextInput(e.target.value)}
+          placeholder="Type text to auto-generate viseme timeline"
+          className="mb-2 w-full rounded border border-indigo-700 bg-indigo-950/60 px-2 py-1 text-xs text-indigo-100 placeholder-indigo-300/70"
+        />
+        <button
+          onClick={() => onGenerateVisemeFromText(visemeTextInput)}
+          className="w-full rounded bg-indigo-700 px-2 py-1.5 text-xs font-medium text-white hover:bg-indigo-600"
+        >
+          Generate timeline from text
+        </button>
+      </div>
 
       {/* Playback controls – only shown when audio is available */}
       {audioUrl && (
@@ -210,6 +279,39 @@ export default function AudioPanel({
           className="w-full mb-2"
         />
 
+        <label className="block mb-1">Timeline crossfade: {Math.round(Number(lipSyncConfig?.timelineCrossfadeSec || 0.08) * 1000)} ms</label>
+        <input
+          type="range"
+          min="0.02"
+          max="0.18"
+          step="0.005"
+          value={lipSyncConfig?.timelineCrossfadeSec || 0.08}
+          onChange={(e) => onLipSyncConfigChange({ timelineCrossfadeSec: Number(e.target.value) })}
+          className="w-full mb-2"
+        />
+
+        <label className="block mb-1">Timeline mouth weight: {Number(lipSyncConfig?.timelineMouthWeight || 0.72).toFixed(2)}</label>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={lipSyncConfig?.timelineMouthWeight || 0.72}
+          onChange={(e) => onLipSyncConfigChange({ timelineMouthWeight: Number(e.target.value) })}
+          className="w-full mb-2"
+        />
+
+        <label className="block mb-1">Timeline speech weight: {Number(lipSyncConfig?.timelineSpeechWeight || 0.28).toFixed(2)}</label>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={lipSyncConfig?.timelineSpeechWeight || 0.28}
+          onChange={(e) => onLipSyncConfigChange({ timelineSpeechWeight: Number(e.target.value) })}
+          className="w-full mb-2"
+        />
+
         <label className="block mb-1">Jaw fallback strength: {Number(lipSyncConfig?.jawFallbackStrength || 0).toFixed(2)}</label>
         <input
           type="range"
@@ -254,9 +356,17 @@ export default function AudioPanel({
           onChange={(e) => onLipSyncConfigChange({ visemeMode: e.target.value })}
           className="w-full rounded bg-gray-800 border border-gray-700 px-2 py-1 text-xs"
         >
+          <option value="timeline">Timeline (JSON)</option>
           <option value="heuristic">Heuristic visemes</option>
           <option value="amplitude">Amplitude only</option>
         </select>
+
+        <button
+          onClick={applyNaturalTimelinePreset}
+          className="mt-2 w-full rounded bg-emerald-700 px-2 py-1.5 text-xs font-medium text-white hover:bg-emerald-600"
+        >
+          Apply natural timeline preset
+        </button>
       </div>
 
       <p className="text-xs text-gray-500">{t('audioLipSyncHint')}</p>

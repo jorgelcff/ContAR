@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AvaturnEmbed from './AvaturnEmbed';
 import TransformControls from './TransformControls';
@@ -51,10 +51,19 @@ export default function LeftPanel({
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(false);
   const [avatarListError, setAvatarListError] = useState('');
   const [hasLoadedAvatars, setHasLoadedAvatars] = useState(false);
+  const localGlbInputRef = useRef(null);
+  const localBlobUrlRef = useRef('');
 
   useEffect(() => {
     setUrlInput(avatarUrl || '');
   }, [avatarUrl]);
+
+  useEffect(() => () => {
+    if (localBlobUrlRef.current) {
+      URL.revokeObjectURL(localBlobUrlRef.current);
+      localBlobUrlRef.current = '';
+    }
+  }, []);
 
   const handleLoad = () => {
     if (urlInput.trim()) onLoadAvatar(urlInput.trim());
@@ -123,6 +132,37 @@ export default function LeftPanel({
     onLoadAvatar(selectedUrl);
   };
 
+  const handlePickLocalGlb = () => {
+    localGlbInputRef.current?.click();
+  };
+
+  const handleLocalGlbChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const lowerName = file.name.toLowerCase();
+    const isGlbLike = lowerName.endsWith('.glb')
+      || lowerName.endsWith('.vrm')
+      || file.type === 'model/gltf-binary'
+      || file.type === 'model/vrm'
+      || file.type === 'application/octet-stream';
+    if (!isGlbLike) {
+      event.target.value = '';
+      return;
+    }
+
+    if (localBlobUrlRef.current) {
+      URL.revokeObjectURL(localBlobUrlRef.current);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const objectUrlWithHint = `${objectUrl}#filename=${encodeURIComponent(file.name)}`;
+    localBlobUrlRef.current = objectUrl;
+    setUrlInput(objectUrlWithHint);
+    onAvatarUrlChange(objectUrlWithHint);
+    onLoadAvatar(objectUrlWithHint);
+    event.target.value = '';
+  };
+
   return (
     <aside className="w-80 shrink-0 flex flex-col gap-4 p-4 bg-gray-800 overflow-y-auto border-r border-gray-700">
 
@@ -144,6 +184,20 @@ export default function LeftPanel({
         >
           {isLoadingAvatars ? t('loadingAvatars') : t('loadMyAvatars')}
         </button>
+
+        <button
+          onClick={handlePickLocalGlb}
+          className="w-full py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
+        >
+          Load Local GLB/VRM
+        </button>
+        <input
+          ref={localGlbInputRef}
+          type="file"
+          accept=".glb,.vrm,model/gltf-binary,model/vrm"
+          onChange={handleLocalGlbChange}
+          className="hidden"
+        />
 
         {savedAvatars.length > 0 && (
           <select
@@ -218,6 +272,7 @@ export default function LeftPanel({
           <option value="walk">{t('poseWalk')}</option>
           <option value="run">{t('poseRun')}</option>
           <option value="dance">{t('poseDance')}</option>
+          <option value="speaker">{t('poseSpeaker')}</option>
           <option value="neutral">{t('poseNeutral')}</option>
           <option value="wave">{t('poseWave')}</option>
           <option value="hands_on_hips">{t('poseHandsOnHips')}</option>
@@ -271,7 +326,11 @@ export default function LeftPanel({
           audioMetrics={audio.audioMetrics}
           audioProcessing={audio.audioProcessing}
           lipSyncConfig={audio.lipSyncConfig}
+          visemeTimeline={audio.visemeTimeline}
           onLoadFile={audio.loadFile}
+          onLoadVisemeFile={audio.loadVisemeTimeline}
+          onClearVisemeTimeline={audio.clearVisemeTimeline}
+          onGenerateVisemeFromText={audio.generateVisemeTimelineFromText}
           onPlay={audio.play}
           onPause={audio.pause}
           onStop={audio.stop}

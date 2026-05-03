@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const DEFAULT_AUDIO_PROCESSING = {
   inputGain: 1.35,
@@ -13,7 +13,10 @@ export const DEFAULT_LIP_SYNC_CONFIG = {
   fullBandMix: 0.35,
   speechBandMix: 0.65,
   enableBandEnergy: true,
-  visemeMode: 'heuristic',
+  visemeMode: 'timeline',
+  timelineCrossfadeSec: 0.08,
+  timelineMouthWeight: 0.72,
+  timelineSpeechWeight: 0.28,
   enableJawFallback: true,
   jawFallbackStrength: 0.7,
   showBlendshapeDebug: false,
@@ -54,6 +57,9 @@ export default function useAudio() {
   });
   const [audioProcessing, setAudioProcessing] = useState(DEFAULT_AUDIO_PROCESSING);
   const [lipSyncConfig, setLipSyncConfig] = useState(DEFAULT_LIP_SYNC_CONFIG);
+  const [visemeTimeline, setVisemeTimeline] = useState([]);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
 
   // Web Audio refs
   const audioCtxRef = useRef(null);
@@ -183,6 +189,7 @@ export default function useAudio() {
           level,
           clipping,
         });
+        setAudioCurrentTime(audioElRef.current?.currentTime || 0);
       }
     };
 
@@ -218,6 +225,51 @@ export default function useAudio() {
     setLipSyncConfig((prev) => ({ ...prev, ...partial }));
   }
 
+  async function loadVisemeTimeline(file) {
+    if (!file) return;
+    setError('');
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      const normalized = normalizeVisemeTimelineToDuration(
+        normalizeVisemeTimeline(parsed),
+        audioDuration
+      );
+      if (!normalized.length) {
+        throw new Error('No valid viseme cues found in JSON');
+      }
+      setVisemeTimeline(normalized);
+    } catch (err) {
+      setVisemeTimeline([]);
+      setError(err?.message || 'Invalid viseme JSON');
+    }
+  }
+
+  function clearVisemeTimeline() {
+    setVisemeTimeline([]);
+  }
+
+  function generateVisemeTimelineFromText(text) {
+    const source = String(text || '').trim();
+    if (!source) {
+      setError('Type a text first to generate visemes');
+      return;
+    }
+
+    const generated = normalizeVisemeTimelineToDuration(
+      textToVisemeTimeline(source),
+      audioDuration
+    );
+    if (!generated.length) {
+      setError('Could not generate visemes from text');
+      return;
+    }
+
+    setError('');
+    setVisemeTimeline(generated);
+    setLipSyncConfig((prev) => ({ ...prev, visemeMode: 'timeline' }));
+  }
+
   function teardownMic() {
     if (micSourceRef.current) {
       try { micSourceRef.current.disconnect(); } catch { /* ignore */ }
@@ -236,6 +288,8 @@ export default function useAudio() {
     teardownSource();
     revokeCurrentUrl();
     setIsPlaying(false);
+    setAudioCurrentTime(0);
+    setAudioDuration(0);
     setError('');
     setUrl(URL.createObjectURL(file));
   }
@@ -253,6 +307,14 @@ export default function useAudio() {
 
         const el = new Audio(url);
         el.crossOrigin = 'anonymous';
+        el.addEventListener(
+          'loadedmetadata',
+          () => {
+            const nextDuration = Number(el.duration) || 0;
+            setAudioDuration(nextDuration);
+          },
+          { once: true }
+        );
         audioElRef.current = el;
 
         const src = ctx.createMediaElementSource(el);
@@ -280,7 +342,13 @@ export default function useAudio() {
       audioElRef.current.currentTime = 0;
     }
     setIsPlaying(false);
+    setAudioCurrentTime(0);
   }
+
+  useEffect(() => {
+    if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
+    setVisemeTimeline((prev) => normalizeVisemeTimelineToDuration(prev, audioDuration));
+  }, [audioDuration]);
 
   async function startRecording() {
     setError('');
@@ -346,7 +414,13 @@ export default function useAudio() {
     audioMetrics,
     audioProcessing,
     lipSyncConfig,
+    visemeTimeline,
+    audioCurrentTime,
+    audioDuration,
     loadFile,
+    loadVisemeTimeline,
+    clearVisemeTimeline,
+    generateVisemeTimelineFromText,
     play,
     pause,
     stop,
@@ -355,5 +429,113 @@ export default function useAudio() {
     updateAudioProcessing,
     updateLipSyncConfig,
   };
+}
+
+function normalizeVisemeTimeline(payload) {
+  const cues = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.mouthCues)
+      ? payload.mouthCues
+      : [];
+
+  return cues
+    .map((cue) => {
+      const start = Number(cue?.start);
+      const end = Number(cue?.end);
+      const value = String(cue?.value || cue?.viseme || '').trim().toUpperCase();
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end < start || !value) {
+        return null;
+      }
+      return { start, end, value };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.start - b.start);
+}
+
+function normalizeVisemeTimelineToDuration(cues, durationSec) {
+  if (!Array.isArray(cues) || cues.length === 0) return [];
+
+  const duration = Number(durationSec);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return cues;
+  }
+
+  const lastEnd = Number(cues[cues.length - 1]?.end || 0);
+  if (!Number.isFinite(lastEnd) || lastEnd <= 0) {
+    return cues;
+  }
+
+  // Skip tiny differences to avoid pointless state churn.
+  if (Math.abs(lastEnd - duration) <= 0.03) {
+    return cues;
+  }
+
+  const scale = duration / lastEnd;
+  return cues.map((cue) => {
+    const start = Math.max(0, cue.start * scale);
+    const end = Math.max(start + 0.01, cue.end * scale);
+    return { ...cue, start, end };
+  });
+}
+
+function textToVisemeTimeline(input) {
+  const text = String(input || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const cues = [];
+  let cursor = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1] || '';
+    const cue = charToRhubarbCue(ch, next);
+    if (!cue) continue;
+
+    const duration = cueDuration(cue, ch);
+    cues.push({ start: cursor, end: cursor + duration, value: cue });
+    cursor += duration;
+  }
+
+  // Merge contiguous identical cues.
+  const merged = [];
+  cues.forEach((cue) => {
+    const last = merged[merged.length - 1];
+    if (last && last.value === cue.value && Math.abs(last.end - cue.start) < 1e-6) {
+      last.end = cue.end;
+    } else {
+      merged.push({ ...cue });
+    }
+  });
+
+  return merged;
+}
+
+function charToRhubarbCue(ch, next) {
+  if (!ch) return null;
+  if (/\s|[,.!?;:]/.test(ch)) return 'X';
+  if (/[ae]/.test(ch)) return 'A';
+  if (/[i]/.test(ch)) return 'C';
+  if (/[o]/.test(ch)) return 'E';
+  if (/[u]/.test(ch)) return 'F';
+  if (/[bmp]/.test(ch)) return 'B';
+  if (/[fv]/.test(ch)) return 'G';
+  if (/[tdnlr]/.test(ch)) return 'D';
+  if (/[szxj]/.test(ch)) return 'H';
+  if (ch === 'c' && /[eiy]/.test(next)) return 'H';
+  if (/[kgq]/.test(ch)) return 'A';
+  if (ch === 'h') return 'X';
+  return 'D';
+}
+
+function cueDuration(cue, ch) {
+  if (cue === 'X') return /\s/.test(ch) ? 0.08 : 0.06;
+  if (cue === 'B') return 0.075;
+  if (cue === 'G' || cue === 'H') return 0.09;
+  if (cue === 'C') return 0.11;
+  if (cue === 'E' || cue === 'F') return 0.12;
+  if (cue === 'A') return 0.13;
+  return 0.1;
 }
 

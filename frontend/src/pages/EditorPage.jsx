@@ -296,6 +296,8 @@ export default function EditorPage() {
               speechText={speechText}
               analyserRef={audio.analyserRef}
               lipSyncConfig={audio.lipSyncConfig}
+              visemeTimeline={audio.visemeTimeline}
+              audioCurrentTime={audio.audioCurrentTime}
             />
           </div>
           <StoryBuilderPanel

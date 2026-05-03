@@ -33,6 +33,12 @@ export class AnimationController {
     /** @type {THREE.Bone | null | undefined} undefined = not searched yet */
     this._chestBone = undefined;
 
+    // Procedural speaker gestures for storytelling scenes
+    this._proceduralMode = 'default';
+    this._speakerTime = 0;
+    /** @type {Record<string, { bone: THREE.Bone, baseQuat: THREE.Quaternion }> | null | undefined} */
+    this._speakerBones = undefined;
+
     this.addClips(clips);
   }
 
@@ -96,6 +102,25 @@ export class AnimationController {
   }
 
   /**
+   * Set procedural behavior profile.
+   * @param {'default'|'speaker'} mode
+   */
+  setProceduralMode(mode = 'default') {
+    const normalized = mode === 'speaker' ? 'speaker' : 'default';
+    if (this._proceduralMode === normalized) return;
+
+    if (this._proceduralMode === 'speaker') {
+      this._resetSpeakerBones();
+      this._speakerTime = 0;
+    }
+
+    this._proceduralMode = normalized;
+    if (normalized === 'speaker') {
+      this._speakerBones = undefined;
+    }
+  }
+
+  /**
    * Must be called every rendered frame with the elapsed delta time.
    * @param {number} delta  seconds since last frame
    */
@@ -103,6 +128,7 @@ export class AnimationController {
     this._mixer.update(delta);
     this._updateBlink(delta);
     this._updateBreathing(delta);
+    this._updateSpeakerGestures(delta);
   }
 
   /** Release mixer resources. */
@@ -185,5 +211,78 @@ export class AnimationController {
     this._breathTimer += delta;
     // ~12 breaths/min, very subtle (±0.004 rad)
     this._chestBone.rotation.x = Math.sin(this._breathTimer * 0.2 * Math.PI) * 0.004;
+  }
+
+  _updateSpeakerGestures(delta) {
+    if (this._proceduralMode !== 'speaker') return;
+
+    const bones = this._getSpeakerBones();
+    if (!bones) return;
+
+    this._speakerTime += delta;
+    const t = this._speakerTime;
+
+    const applyOffset = (entry, x = 0, y = 0, z = 0) => {
+      if (!entry?.bone) return;
+      const offset = new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, 'XYZ'));
+      entry.bone.quaternion.copy(entry.baseQuat).multiply(offset);
+    };
+
+    applyOffset(bones.head, Math.sin(t * 2.1) * 0.02, Math.sin(t * 1.2) * 0.05, 0);
+    applyOffset(bones.neck, 0, Math.sin(t * 0.9 + 0.5) * 0.025, 0);
+
+    applyOffset(
+      bones.leftUpperArm,
+      -0.12 + Math.sin(t * 2.2 + 0.2) * 0.05,
+      0,
+      0.28 + Math.sin(t * 1.7) * 0.07
+    );
+    applyOffset(
+      bones.rightUpperArm,
+      -0.1 + Math.sin(t * 2.2 + 1.2) * 0.05,
+      0,
+      -0.28 + Math.sin(t * 1.7 + 1.1) * 0.07
+    );
+    applyOffset(bones.leftForeArm, -0.35 + Math.sin(t * 2.8 + 0.8) * 0.08, 0, -0.08);
+    applyOffset(bones.rightForeArm, -0.35 + Math.sin(t * 2.8 + 1.9) * 0.08, 0, 0.08);
+  }
+
+  _getSpeakerBones() {
+    if (this._speakerBones !== undefined) return this._speakerBones;
+
+    const findBone = (patterns) => {
+      let found = null;
+      this._model.traverse((node) => {
+        if (found || !node?.isBone) return;
+        const name = String(node.name || '').toLowerCase();
+        if (patterns.some((re) => re.test(name))) {
+          found = node;
+        }
+      });
+      return found;
+    };
+
+    const capture = (bone) => (bone ? { bone, baseQuat: bone.quaternion.clone() } : null);
+
+    const bones = {
+      head: capture(findBone([/head/, /mixamorighead/])),
+      neck: capture(findBone([/neck/, /mixamorigneck/])),
+      leftUpperArm: capture(findBone([/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/])),
+      rightUpperArm: capture(findBone([/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/])),
+      leftForeArm: capture(findBone([/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/])),
+      rightForeArm: capture(findBone([/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/])),
+    };
+
+    const hasAnyBone = Object.values(bones).some(Boolean);
+    this._speakerBones = hasAnyBone ? bones : null;
+    return this._speakerBones;
+  }
+
+  _resetSpeakerBones() {
+    if (!this._speakerBones) return;
+    Object.values(this._speakerBones).forEach((entry) => {
+      if (!entry?.bone || !entry?.baseQuat) return;
+      entry.bone.quaternion.copy(entry.baseQuat);
+    });
   }
 }

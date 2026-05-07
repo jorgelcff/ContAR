@@ -4,6 +4,7 @@ import AvaturnEmbed from './AvaturnEmbed';
 import TransformControls from './TransformControls';
 import AudioPanel from './AudioPanel';
 import SceneProgressBar from './SceneProgressBar';
+import { TooltipIcon } from './Tooltip';
 import { useSceneStore } from '../../store/useSceneStore';
 import { listAvaturnAvatars } from '../../api/sceneApi';
 
@@ -27,6 +28,8 @@ export default function LeftPanel({
   isSaving,
   audio,
   tts,
+  mobilePanelTab,
+  onMobilePanelClose,
 }) {
   const { t } = useTranslation();
 
@@ -45,6 +48,11 @@ export default function LeftPanel({
 
   const [activeTab, setActiveTab] = useState('avatar');
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Sync desktop tab when mobile nav changes
+  useEffect(() => {
+    if (mobilePanelTab) setActiveTab(mobilePanelTab);
+  }, [mobilePanelTab]);
 
   // Avatar tab state
   const [urlInput, setUrlInput] = useState(avatarUrl);
@@ -146,10 +154,9 @@ export default function LeftPanel({
     setTimeout(() => setCopiedStory(false), 1500);
   };
 
-  // ── Render ──────────────────────────────────────────────────
-  return (
-    <aside className="w-80 shrink-0 flex flex-col bg-gray-800 border-r border-gray-700 overflow-hidden">
-
+  // ── Shared inner content ─────────────────────────────────────
+  const innerContent = (
+    <>
       {/* Progress bar */}
       <SceneProgressBar
         avatarUrl={avatarUrl}
@@ -240,7 +247,10 @@ export default function LeftPanel({
 
             {/* Pose */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pose</p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pose</p>
+                <TooltipIcon text="Define a animação base do avatar: idle (parado), wave (acenando), speaker (palestrando) e outros." />
+              </div>
               <select value={posePreset} onChange={(e) => setPosePreset(e.target.value)}
                 className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-blue-500">
                 <option value="idle">{t('poseIdle')}</option>
@@ -302,13 +312,16 @@ export default function LeftPanel({
 
               {tts && (
                 <>
-                  <button
-                    onClick={() => tts.generate(speechInput)}
-                    disabled={tts.isGenerating || !speechInput.trim()}
-                    className="w-full py-3 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white text-sm font-semibold transition-all shadow-md shadow-purple-900/30"
-                  >
-                    {tts.isGenerating ? '⏳ Gerando voz...' : '🎙️ Gerar Voz (TTS)'}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => tts.generate(speechInput)}
+                      disabled={tts.isGenerating || !speechInput.trim()}
+                      className="flex-1 py-3 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white text-sm font-semibold transition-all shadow-md shadow-purple-900/30"
+                    >
+                      {tts.isGenerating ? '⏳ Gerando voz...' : '🎙️ Gerar Voz (TTS)'}
+                    </button>
+                    <TooltipIcon text="Converte o texto acima em áudio com voz sintética e sincroniza os lábios do avatar automaticamente." />
+                  </div>
                   {tts.error && <p className="text-xs text-red-400">{tts.error}</p>}
                 </>
               )}
@@ -424,6 +437,35 @@ export default function LeftPanel({
         )}
 
       </div>
-    </aside>
+    </>
+  );
+
+  // ── Render: sidebar (desktop) + drawer (mobile) ──────────────
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex md:w-80 md:shrink-0 md:flex-col bg-gray-800 border-r border-gray-700 overflow-hidden">
+        {innerContent}
+      </aside>
+
+      {/* Mobile drawer */}
+      {mobilePanelTab && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/60 md:hidden"
+            onClick={onMobilePanelClose}
+          />
+          <div className="fixed bottom-16 left-0 right-0 z-50 md:hidden bg-gray-800 rounded-t-2xl flex flex-col overflow-hidden shadow-2xl"
+            style={{ maxHeight: '78vh' }}
+          >
+            {/* drag handle */}
+            <button onClick={onMobilePanelClose} className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 bg-gray-600 rounded-full" />
+            </button>
+            {innerContent}
+          </div>
+        </>
+      )}
+    </>
   );
 }

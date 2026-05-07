@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import LeftPanel from '../components/ui/LeftPanel';
+import BottomNav from '../components/ui/BottomNav';
 import OnboardingOverlay, { shouldShowOnboarding } from '../components/ui/OnboardingOverlay';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import TimelinePanel from '../components/ui/TimelinePanel';
@@ -50,6 +51,7 @@ export default function EditorPage() {
   });
 
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
+  const [mobilePanelTab, setMobilePanelTab] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
   const [error, setError] = useState('');
@@ -240,6 +242,8 @@ export default function EditorPage() {
           isSaving={isSaving}
           audio={audio}
           tts={tts}
+          mobilePanelTab={mobilePanelTab}
+          onMobilePanelClose={() => setMobilePanelTab(null)}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950">
@@ -273,6 +277,12 @@ export default function EditorPage() {
           <StoryBuilderPanel />
         </div>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <BottomNav
+        activeTab={mobilePanelTab}
+        onTabChange={(tab) => setMobilePanelTab((prev) => (prev === tab ? null : tab))}
+      />
     </div>
   );
 }

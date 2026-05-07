@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import HelpModal from './HelpModal';
 
 /** Top navigation bar with title, language toggle and autosave indicator. */
 export default function Header({ autosaveStatus }) {
   const { t, i18n } = useTranslation();
   const { isAuthenticated, logout } = useAuth();
+  const [showHelp, setShowHelp] = useState(false);
   const toggleLang = () => i18n.changeLanguage(i18n.language === 'en' ? 'pt' : 'en');
 
   const autosaveLabel = autosaveStatus === 'saving'
@@ -16,6 +18,8 @@ export default function Header({ autosaveStatus }) {
       : null;
 
   return (
+    <>
+    {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     <header className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-700 shrink-0">
       <Link to={isAuthenticated ? '/stories' : '/login'} className="text-white font-bold text-lg tracking-tight">
         {t('appTitle')}
@@ -40,6 +44,13 @@ export default function Header({ autosaveStatus }) {
         >
           {i18n.language === 'en' ? '🇧🇷 PT' : '🇺🇸 EN'}
         </button>
+        <button
+          onClick={() => setShowHelp(true)}
+          title="Ajuda"
+          className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors"
+        >
+          ❓ Ajuda
+        </button>
         {isAuthenticated && (
           <button
             onClick={logout}
@@ -50,5 +61,6 @@ export default function Header({ autosaveStatus }) {
         )}
       </div>
     </header>
+    </>
   );
 }

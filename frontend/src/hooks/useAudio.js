@@ -8,8 +8,8 @@ const DEFAULT_AUDIO_PROCESSING = {
 };
 
 export const DEFAULT_LIP_SYNC_CONFIG = {
-  amplitudeMultiplier: 12,
-  noiseGate: 0.02,
+  amplitudeMultiplier: 18,
+  noiseGate: 0.008,
   fullBandMix: 0.35,
   speechBandMix: 0.65,
   enableBandEnergy: true,

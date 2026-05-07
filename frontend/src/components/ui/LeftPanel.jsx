@@ -325,6 +325,38 @@ export default function LeftPanel({
                   {tts.error && <p className="text-xs text-red-400">{tts.error}</p>}
                 </>
               )}
+
+              {/* Lip sync intensity slider */}
+              {audio && (() => {
+                const amp = audio.lipSyncConfig?.amplitudeMultiplier ?? 18;
+                // Map amplitudeMultiplier [6..33] → slider [1..10]
+                const sliderVal = Math.min(10, Math.max(1, Math.round((amp - 6) / 3) + 1));
+                const label = sliderVal <= 3 ? 'Suave' : sliderVal <= 7 ? 'Normal' : 'Intensa';
+                const labelColor = sliderVal <= 3 ? 'text-blue-400' : sliderVal <= 7 ? 'text-cyan-400' : 'text-orange-400';
+                return (
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium text-gray-400">🔊 Intensidade da fala</span>
+                        <TooltipIcon text="Controla o quanto a boca do avatar se move. Aumente se os lábios parecerem parados." />
+                      </div>
+                      <span className={`text-xs font-semibold ${labelColor}`}>{label}</span>
+                    </div>
+                    <input
+                      type="range" min="1" max="10" step="1"
+                      value={sliderVal}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        audio.updateLipSyncConfig({ amplitudeMultiplier: 6 + (v - 1) * 3 });
+                      }}
+                      className="w-full accent-cyan-400 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-gray-600 select-none">
+                      <span>Suave</span><span>Normal</span><span>Intensa</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {audio && (

@@ -10,8 +10,8 @@ import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 
 const DEFAULT_LIP_SYNC_CONFIG = {
-  amplitudeMultiplier: 12,
-  noiseGate: 0.02,
+  amplitudeMultiplier: 18,
+  noiseGate: 0.008,
   adaptiveNoiseGate: true,
   noiseFloorMultiplier: 2.2,
   noiseFloorRiseSpeed: 1.8,
@@ -425,27 +425,30 @@ export default function SceneCanvas({
             timelineCrossfadeSec
           );
           if (timelineBlend) {
-            const timelineMouthWeight = Math.max(0, Number(effectiveConfig.timelineMouthWeight) || 0);
-            const timelineSpeechWeight = Math.max(0, Number(effectiveConfig.timelineSpeechWeight) || 0);
-            const timelineWeightTotal = Math.max(0.0001, timelineMouthWeight + timelineSpeechWeight);
-            const hybridIntensity = THREE.MathUtils.clamp(
-              ((mouthOpen * timelineMouthWeight) + (speechBand * timelineSpeechWeight)) / timelineWeightTotal,
-              0,
-              1
-            );
-
             lipSyncController.resetGroups();
 
-            // Simple cue to viseme mapping for timeline mode
+            // Audio presence gates silence but doesn't throttle the viseme intensity.
+            // TTS audio is often low-volume after compression, so we use a low threshold
+            // and let the viseme data be the primary driver of mouth shape.
+            const audioPresence = THREE.MathUtils.clamp(mouthOpen * 2.5 + speechBand * 1.5, 0, 1);
+            const isAudioActive = audioPresence > 0.04;
+            // When audio is playing, guarantee at least 40% of the viseme shows.
+            const ttsFloor = isAudioActive ? 0.4 : 0;
+
+            const VISEME_MAP = {
+              A: { aa: 1.0 },          B: { mbp: 1.0 },
+              C: { ee: 0.95 },         D: { ee: 0.75, aa: 0.35 },
+              E: { aa: 0.9, oh: 0.25 }, F: { oh: 1.0 },
+              G: { fv: 1.0, ee: 0.45 }, H: { ee: 0.5, aa: 0.45 },
+              X: { mbp: 0.3 },
+            };
+
             timelineBlend.forEach(({ cue, weight }) => {
-              const cueIntensity = THREE.MathUtils.clamp((0.15 + mouthOpen * 0.95) * weight * hybridIntensity, 0, 1);
-              const map = {
-                A: { aa: 1.0 }, B: { mbp: 1.0 }, C: { ee: 0.95 },
-                D: { ee: 0.75, aa: 0.35 }, E: { aa: 0.9, oh: 0.25 },
-                F: { oh: 1.0 }, G: { fv: 1.0, ee: 0.45 },
-                H: { ee: 0.5, aa: 0.45 }, X: { mbp: 0.3 },
-              };
-              const blend = map[String(cue?.value || '').toUpperCase()];
+              const cueIntensity = THREE.MathUtils.clamp(
+                (ttsFloor + audioPresence * 0.6) * weight,
+                0, 1
+              );
+              const blend = VISEME_MAP[String(cue?.value || '').toUpperCase()];
               if (blend) {
                 Object.entries(blend).forEach(([grp, w]) => {
                   lipSyncController.setGroupValue(grp, cueIntensity * w);
@@ -467,10 +470,10 @@ export default function SceneCanvas({
           lipSyncController.setGroupValue('mbp', (1 - mouthOpen) * 0.2);
         }
 
-        // Ensure a visible baseline mouth movement
+        // Visible baseline: raised from 0.22 to 0.45 so the jaw always opens
+        // noticeably when audio is playing, regardless of blendshape mapping.
         if (hasMorphs) {
-          const reducedBase = mouthOpen * 0.22;
-          lipSyncController.setGroupValue('mouthOpen', reducedBase);
+          lipSyncController.setGroupValue('mouthOpen', mouthOpen * 0.45);
         }
 
         if (effectiveConfig.enableJawFallback && !hasMorphs && jawBones.length > 0) {

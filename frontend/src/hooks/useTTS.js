@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { AUTH_TOKEN_KEY } from '../api/sceneApi';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
 
@@ -26,7 +27,7 @@ export default function useTTS({ onAudioReady, onVisemeReady } = {}) {
       setError('');
 
       try {
-        const token = localStorage.getItem('authToken') || '';
+        const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
         const res = await fetch(`${API_BASE}/api/tts/generate`, {
           method: 'POST',
           headers: {

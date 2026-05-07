@@ -8,6 +8,7 @@ import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import TimelinePanel from '../components/ui/TimelinePanel';
 import { useSceneStore } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
+import useTTS from '../hooks/useTTS';
 import { getScene, getStory, saveScene, saveStory } from '../api/sceneApi';
 
 const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
@@ -38,6 +39,11 @@ export default function EditorPage() {
   } = useSceneStore();
 
   const audio = useAudio();
+
+  const tts = useTTS({
+    onAudioReady: (file) => audio.loadFile(file),
+    onVisemeReady: (text) => audio.generateVisemeTimelineFromText(text),
+  });
 
   const [isSaving, setIsSaving] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
@@ -221,6 +227,7 @@ export default function EditorPage() {
           onSave={handleSave}
           isSaving={isSaving}
           audio={audio}
+          tts={tts}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950">

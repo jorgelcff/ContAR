@@ -21,6 +21,7 @@ export default function LeftPanel({
   onSave,
   isSaving,
   audio,
+  tts,
 }) {
   const { t } = useTranslation();
   
@@ -316,6 +317,21 @@ export default function LeftPanel({
             </button>
           )}
         </div>
+
+        {tts && (
+          <>
+            <button
+              onClick={() => tts.generate(speechInput)}
+              disabled={tts.isGenerating || !speechInput.trim()}
+              className="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white text-sm font-medium transition-colors"
+            >
+              {tts.isGenerating ? 'Gerando voz...' : 'Gerar Voz (TTS)'}
+            </button>
+            {tts.error && (
+              <p className="text-xs text-red-400">{tts.error}</p>
+            )}
+          </>
+        )}
       </section>
 
       <hr className="border-gray-700" />

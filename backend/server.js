@@ -7,6 +7,7 @@ const sceneRoutes = require('./routes/sceneRoutes');
 const avatarRoutes = require('./routes/avatarRoutes');
 const storyRoutes = require('./routes/storyRoutes');
 const authRoutes = require('./routes/authRoutes');
+const ttsRoutes = require('./routes/ttsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +31,7 @@ app.use('/api/scene', sceneRoutes);
 app.use('/api/avatar', avatarRoutes);
 app.use('/api/story', storyRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/tts', ttsRoutes);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

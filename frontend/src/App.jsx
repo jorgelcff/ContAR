@@ -66,6 +66,8 @@ export default function App() {
         />
         <Route path="/scene/:id" element={<ViewerPage />} />
         <Route path="/story/:id" element={<StoryViewerPage />} />
+        <Route path="/story" element={<Navigate to="/" replace />} />
+        <Route path="/scene" element={<Navigate to="/" replace />} />
         <Route path="/ar" element={<ARPage />} />
         <Route
           path="/welcome"
@@ -75,6 +77,7 @@ export default function App() {
             </ProtectedRoute>
           )}
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
     </ToastProvider>

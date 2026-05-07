@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -10,19 +10,18 @@ import TimelinePanel from '../components/ui/TimelinePanel';
 import { useSceneStore } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
 import useTTS from '../hooks/useTTS';
+import { useToast } from '../context/ToastContext';
 import { getScene, getStory, saveScene, saveStory } from '../api/sceneApi';
 
 const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/**
- * EditorPage — main scene-building interface.
- * Left panel: controls. Right panel: live Three.js canvas.
- */
 export default function EditorPage() {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
+  const { addToast } = useToast();
+
   const {
     avatarUrl, setAvatarUrl,
     transform, setTransform,
@@ -37,12 +36,16 @@ export default function EditorPage() {
     currentStoryId, setCurrentStoryId,
     publishedStoryId, setPublishedStoryId,
     buildScenePayload,
+    timelineBlocks,
   } = useSceneStore();
 
   const audio = useAudio();
 
   const tts = useTTS({
-    onAudioReady: (file) => audio.loadFile(file),
+    onAudioReady: (file) => {
+      audio.loadFile(file);
+      addToast('Voz gerada! Clique em Play para ouvir.', 'success');
+    },
     onVisemeReady: (text) => audio.generateVisemeTimelineFromText(text),
   });
 
@@ -51,15 +54,33 @@ export default function EditorPage() {
   const [isStorySaving, setIsStorySaving] = useState(false);
   const [error, setError] = useState('');
 
+  // ── Autosave ────────────────────────────────────────────────
+  const [autosaveStatus, setAutosaveStatus] = useState(null); // null | 'saving' | Date
+  const autosaveTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!currentSceneId) return;
+    clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(async () => {
+      setAutosaveStatus('saving');
+      try {
+        await saveScene(buildScenePayload(currentSceneId));
+        setAutosaveStatus(new Date());
+      } catch {
+        setAutosaveStatus(null);
+      }
+    }, 3000);
+    return () => clearTimeout(autosaveTimerRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId]);
+
   const isStoryLinked = Boolean(currentStoryId);
   const arHref = avatarUrl ? `/ar?mode=surface&modelUrl=${encodeURIComponent(avatarUrl)}` : '/ar';
 
+  // ── Load story from URL ──────────────────────────────────────
   useEffect(() => {
     const routeStoryId = searchParams.get('storyId') || '';
-    if (routeStoryId !== currentStoryId) {
-      setCurrentStoryId(routeStoryId);
-    }
-
+    if (routeStoryId !== currentStoryId) setCurrentStoryId(routeStoryId);
     if (!routeStoryId) return;
 
     getStory(routeStoryId)
@@ -78,55 +99,43 @@ export default function EditorPage() {
         setStoryScenes(scenes);
         setSceneTitlesById({});
       })
-      .catch((err) => {
-        setError(`${t('errorLoading')}: ${err.message}`);
-      });
+      .catch((err) => setError(`${t('errorLoading')}: ${err.message}`));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, t]);
 
+  // ── Load missing scene titles ────────────────────────────────
   useEffect(() => {
-    const sceneIds = [...new Set(storyScenes.map((item) => item.sceneId).filter(Boolean))];
+    const sceneIds = [...new Set(storyScenes.map((s) => s.sceneId).filter(Boolean))];
     const missing = sceneIds.filter((id) => !sceneTitlesById[id]);
     if (!missing.length) return;
-
     let active = true;
-
     Promise.all(
       missing.map(async (id) => {
-        try {
-          const scene = await getScene(id);
-          const title = String(scene?.metadata?.title || '').trim();
-          return [id, title || id];
-        } catch {
-          return [id, id];
-        }
+        try { const s = await getScene(id); return [id, String(s?.metadata?.title || '').trim() || id]; }
+        catch { return [id, id]; }
       })
     ).then((entries) => {
       if (!active) return;
       setSceneTitlesById((prev) => {
         const next = { ...prev };
-        entries.forEach(([id, title]) => {
-          next[id] = title;
-        });
+        entries.forEach(([id, title]) => { next[id] = title; });
         return next;
       });
     });
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [storyScenes, sceneTitlesById, setSceneTitlesById]);
 
+  // ── Handlers ─────────────────────────────────────────────────
   const handleSave = async () => {
     setIsSaving(true);
     setError('');
     try {
       const result = await saveScene(buildScenePayload(currentSceneId || undefined));
-      if (result?.sceneId) {
-        setCurrentSceneId(result.sceneId);
-      }
+      if (result?.sceneId) setCurrentSceneId(result.sceneId);
+      addToast('Cena salva com sucesso!', 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
+      addToast(`Erro ao salvar: ${err.message}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -135,38 +144,39 @@ export default function EditorPage() {
   const handleAddCurrentSceneToStory = async () => {
     setError('');
     try {
-      // Always create a NEW scene when adding to a story sequence.
       const result = await saveScene(buildScenePayload(undefined));
       const sceneId = result?.sceneId;
       if (!sceneId) throw new Error('Missing sceneId in save response');
       setCurrentSceneId(sceneId);
       useSceneStore.getState().addStoryScene(sceneId);
+      addToast('Cena adicionada à história!', 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
+      addToast(`Erro: ${err.message}`, 'error');
     }
   };
 
   const handleAddSceneIdToStory = (sceneId) => {
     setError('');
-    const { storyScenes, addStoryScene } = useSceneStore.getState();
+    const { storyScenes: scenes, addStoryScene } = useSceneStore.getState();
     if (!sceneId || !UUID_RE.test(sceneId)) {
-      setError(t('invalidSceneId'));
+      addToast(t('invalidSceneId'), 'warning');
       return false;
     }
-    if (storyScenes.some((item) => item.sceneId === sceneId)) {
-      setError(t('sceneAlreadyInStory'));
+    if (scenes.some((item) => item.sceneId === sceneId)) {
+      addToast(t('sceneAlreadyInStory'), 'warning');
       return false;
     }
     addStoryScene(sceneId);
+    addToast('Cena adicionada!', 'success');
     return true;
   };
 
   const handleSaveStory = async () => {
     if (!storyScenes.length) {
-      setError(t('noStoryScenes'));
+      addToast('Adicione pelo menos uma cena à história antes de salvar.', 'warning');
       return;
     }
-
     setIsStorySaving(true);
     setError('');
     try {
@@ -184,15 +194,14 @@ export default function EditorPage() {
           durationSeconds: Number(item.durationSeconds) || 0,
         })),
       };
-
       const result = await saveStory(payload);
       const savedStoryId = result?.storyId || '';
       setPublishedStoryId(savedStoryId);
-      if (savedStoryId && !currentStoryId) {
-        setCurrentStoryId(savedStoryId);
-      }
+      if (savedStoryId && !currentStoryId) setCurrentStoryId(savedStoryId);
+      addToast('História salva! O link de compartilhamento está disponível.', 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
+      addToast(`Erro ao salvar história: ${err.message}`, 'error');
     } finally {
       setIsStorySaving(false);
     }
@@ -207,17 +216,15 @@ export default function EditorPage() {
       {showOnboarding && (
         <OnboardingOverlay onDone={() => setShowOnboarding(false)} />
       )}
-      <Header />
+      <Header autosaveStatus={autosaveStatus} />
       {error && (
-        <div className="shrink-0 bg-red-900/80 text-red-200 text-sm px-4 py-2 border-b border-red-700">
-          {error}
+        <div className="shrink-0 bg-red-900/80 text-red-200 text-sm px-4 py-2 border-b border-red-700 flex items-center justify-between gap-2">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="text-red-300 hover:text-white text-lg leading-none">×</button>
         </div>
       )}
       <div className="shrink-0 border-b border-gray-800 bg-gray-950 px-4 py-2 flex items-center justify-end gap-2 md:hidden">
-        <Link
-          to={arHref}
-          className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600"
-        >
+        <Link to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
           {t('openSurfaceAr')}
         </Link>
       </div>
@@ -236,19 +243,17 @@ export default function EditorPage() {
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950">
-            <Link
-              to={arHref}
-              className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600"
-            >
+            <Link to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
               {t('openSurfaceAr')}
             </Link>
           </div>
           <div className="flex-1 overflow-hidden">
             <Suspense fallback={
               <div className="flex h-full items-center justify-center bg-gray-900">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-                  <p className="text-xs text-cyan-200">Loading scene viewer…</p>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+                  <p className="text-sm text-cyan-200 font-medium">Preparando o palco 3D...</p>
+                  <p className="text-xs text-gray-500">Isso pode levar alguns segundos</p>
                 </div>
               </div>
             }>

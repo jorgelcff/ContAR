@@ -8,6 +8,7 @@ import StoryViewerPage from './pages/StoryViewerPage';
 import ARPage from './pages/ARPage';
 import WelcomePage from './pages/WelcomePage';
 import { useAuth } from './auth/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import './i18n';
 
 const ONBOARDING_KEY = 'avaturn:onboarding:done';
@@ -42,6 +43,7 @@ function HomeRedirect() {
 
 export default function App() {
   return (
+    <ToastProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomeRedirect />} />
@@ -75,5 +77,6 @@ export default function App() {
         />
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   );
 }

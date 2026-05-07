@@ -294,6 +294,20 @@ export default function useAudio() {
     setUrl(URL.createObjectURL(file));
   }
 
+  // Load audio directly from an external URL (no blob creation).
+  // Used by StoryViewerPage to play narration stored on the server.
+  function loadUrl(url) {
+    if (!url) return;
+    teardownSource();
+    // Don't revoke — this is an external URL, not a blob we created
+    setIsPlaying(false);
+    setAudioCurrentTime(0);
+    setAudioDuration(0);
+    setError('');
+    audioUrlRef.current = url;
+    setAudioUrl(url);
+  }
+
   async function play() {
     const url = audioUrlRef.current;
     if (!url) return;
@@ -418,6 +432,7 @@ export default function useAudio() {
     audioCurrentTime,
     audioDuration,
     loadFile,
+    loadUrl,
     loadVisemeTimeline,
     clearVisemeTimeline,
     generateVisemeTimelineFromText,

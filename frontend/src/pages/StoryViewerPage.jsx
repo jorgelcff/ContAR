@@ -1,14 +1,17 @@
-import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import { getPublicStory, getScene } from '../api/sceneApi';
+import useAudio from '../hooks/useAudio';
 
 const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
 export default function StoryViewerPage() {
   const { id } = useParams();
   const { t } = useTranslation();
+  const audio = useAudio();
+
   const [story, setStory] = useState(null);
   const [storyScenes, setStoryScenes] = useState([]);
   const [index, setIndex] = useState(0);
@@ -18,10 +21,11 @@ export default function StoryViewerPage() {
   const [sceneProgress, setSceneProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const playbackBaseMsRef = React.useRef(0);
-  const playbackStartMsRef = React.useRef(0);
-  const progressFrameRef = React.useRef(0);
+  const playbackBaseMsRef = useRef(0);
+  const playbackStartMsRef = useRef(0);
+  const progressFrameRef = useRef(0);
 
+  // ── Load story ────────────────────────────────────────────────
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -44,18 +48,14 @@ export default function StoryViewerPage() {
       })
       .catch((err) => {
         if (!active) return;
-        const apiError = err?.response?.data?.error;
-        setError(apiError || err.message || 'Failed to load story');
+        setError(err?.response?.data?.error || err.message || 'Failed to load story');
       })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      .finally(() => { if (active) setLoading(false); });
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [id]);
 
+  // ── Scene progress / auto-advance ─────────────────────────────
   useEffect(() => {
     if (loading || error || !storyScenes.length || !isPlaying) return;
 
@@ -107,31 +107,50 @@ export default function StoryViewerPage() {
     window.cancelAnimationFrame(progressFrameRef.current);
   }, [index, storyScenes]);
 
+  // ── Load current scene ────────────────────────────────────────
   const currentSceneId = storyScenes[index]?.sceneId || '';
 
   useEffect(() => {
     let active = true;
-    if (!currentSceneId) {
-      setSceneData(null);
-      return;
-    }
+    if (!currentSceneId) { setSceneData(null); return; }
 
     getScene(currentSceneId)
-      .then((data) => {
-        if (!active) return;
-        setSceneData(data);
-      })
-      .catch(() => {
-        if (!active) return;
-        setSceneData(null);
-      });
+      .then((data) => { if (active) setSceneData(data); })
+      .catch(() => { if (active) setSceneData(null); });
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [currentSceneId]);
 
-  // Preload the next scene's GLB so it loads without a visible stall
+  // ── Load audio when scene changes ─────────────────────────────
+  useEffect(() => {
+    const narrativeAudioUrl = sceneData?.content?.narrative?.audioUrl;
+    const text = sceneData?.content?.narrative?.text || '';
+
+    if (narrativeAudioUrl) {
+      audio.loadUrl(narrativeAudioUrl);
+      if (text) audio.generateVisemeTimelineFromText(text);
+    } else {
+      audio.stop();
+      audio.clearVisemeTimeline();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneData]);
+
+  // ── Sync play / pause with audio ──────────────────────────────
+  useEffect(() => {
+    if (!audio.audioUrl) return;
+    if (isPlaying) {
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, audio.audioUrl]);
+
+  // Stop audio when leaving the page
+  useEffect(() => () => { audio.stop(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Preload next scene's GLB ───────────────────────────────────
   const nextSceneId = storyScenes[index + 1]?.sceneId;
   useEffect(() => {
     if (!nextSceneId) return;
@@ -140,18 +159,13 @@ export default function StoryViewerPage() {
       .then((data) => {
         if (!active) return;
         const url = data?.content?.avatar?.modelUrl;
-        if (url) {
-          // Kick off a background fetch; the browser caches the binary so
-          // Three.js (with THREE.Cache enabled) skips the network request.
-          fetch(url, { method: 'GET', mode: 'cors' }).catch(() => {});
-        }
+        if (url) fetch(url, { method: 'GET', mode: 'cors' }).catch(() => {});
       })
       .catch(() => {});
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [nextSceneId]);
 
+  // ── Derived values ────────────────────────────────────────────
   const transform = useMemo(() => {
     if (!sceneData?.content?.avatar?.transform) return null;
     const t = sceneData.content.avatar.transform;
@@ -164,21 +178,19 @@ export default function StoryViewerPage() {
     };
   }, [sceneData]);
 
-  const progressHeight = `${sceneProgress}%`;
   const scaleLabel = `${Math.round(scale * 100)}%`;
   const arHref = sceneData?.content?.avatar?.modelUrl
     ? `/ar?mode=surface&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}`
     : '/ar';
 
+  // ── Render ────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
-      {/* Hide header on small screens to maximise canvas area */}
       <div className="hidden md:block shrink-0">
         <Header />
       </div>
 
       {loading ? (
-        /* Loading skeleton — animated pulse reduces perceived wait time */
         <div className="flex-1 flex flex-col gap-4 p-6 animate-pulse">
           <div className="h-6 w-48 rounded bg-gray-700/60" />
           <div className="h-4 w-72 rounded bg-gray-700/40" />
@@ -188,6 +200,7 @@ export default function StoryViewerPage() {
         <div className="flex-1 flex items-center justify-center text-red-400">{error}</div>
       ) : (
         <>
+          {/* Top bar */}
           <div className="shrink-0 border-b border-gray-700 bg-gray-800 px-4 py-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold">{story?.metadata?.title || 'Story'}</h2>
@@ -196,113 +209,82 @@ export default function StoryViewerPage() {
               )}
             </div>
             <div className="hidden md:flex items-center gap-2">
-              <Link
-                to={arHref}
-                className="px-3 py-2 min-h-[48px] rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center"
-              >
+              <Link to={arHref}
+                className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center">
                 {t('openSurfaceAr')}
               </Link>
-              <button
-                onClick={() => setIsPlaying((prev) => !prev)}
-                className="px-3 py-2 min-h-[48px] rounded bg-emerald-700 hover:bg-emerald-600 text-xs flex items-center"
-              >
+              <button onClick={() => setIsPlaying((p) => !p)}
+                className="px-3 py-2 min-h-12 rounded bg-emerald-700 hover:bg-emerald-600 text-xs flex items-center">
                 {isPlaying ? t('pause') : t('play')}
               </button>
-              <button
-                onClick={() => setIndex((prev) => Math.max(0, prev - 1))}
-                disabled={index <= 0}
-                className="px-3 py-2 min-h-[48px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
-              >
+              <button onClick={() => setIndex((p) => Math.max(0, p - 1))} disabled={index <= 0}
+                className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center">
                 Prev
               </button>
-              <span className="text-xs text-gray-300">{storyScenes.length ? `${index + 1}/${storyScenes.length}` : '0/0'}</span>
-              <button
-                onClick={() => setIndex((prev) => Math.min(storyScenes.length - 1, prev + 1))}
+              <span className="text-xs text-gray-300">
+                {storyScenes.length ? `${index + 1}/${storyScenes.length}` : '0/0'}
+              </span>
+              <button onClick={() => setIndex((p) => Math.min(storyScenes.length - 1, p + 1))}
                 disabled={index >= storyScenes.length - 1}
-                className="px-3 py-2 min-h-[48px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
-              >
+                className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center">
                 Next
               </button>
               <label className="flex items-center gap-2 rounded bg-gray-900/60 px-3 py-1.5 text-xs">
                 <span className="text-gray-300">{t('scale')}</span>
-                <input
-                  type="range"
-                  min="0.6"
-                  max="1.4"
-                  step="0.01"
-                  value={scale}
+                <input type="range" min="0.6" max="1.4" step="0.01" value={scale}
                   onChange={(e) => setScale(Number(e.target.value))}
-                  className="w-28 accent-cyan-400"
-                />
+                  className="w-28 accent-cyan-400" />
                 <span className="w-11 text-right text-gray-200">{scaleLabel}</span>
               </label>
             </div>
           </div>
 
+          {/* Canvas area */}
           <div className="flex-1 overflow-hidden pb-24 md:pb-0">
             <div className="relative h-full w-full">
+              {/* Desktop progress bar */}
               <div className="hidden md:flex absolute right-4 top-4 bottom-4 z-20 w-4 flex-col items-center justify-start">
                 <div className="relative h-full w-1 rounded-full bg-white/15 overflow-hidden shadow-lg shadow-black/30">
-                  <div
-                    className="absolute left-0 top-0 w-full origin-top rounded-full bg-cyan-400 transition-transform duration-75"
-                    style={{ transform: `scaleY(${sceneProgress / 100})` }}
-                  />
+                  <div className="absolute left-0 top-0 w-full origin-top rounded-full bg-cyan-400 transition-transform duration-75"
+                    style={{ transform: `scaleY(${sceneProgress / 100})` }} />
                 </div>
                 <div className="mt-2 rounded-full border border-cyan-300/70 bg-gray-950/80 px-2 py-0.5 text-[10px] font-semibold text-cyan-200 shadow-lg shadow-black/30">
                   {Math.round(sceneProgress)}%
                 </div>
               </div>
 
+              {/* Mobile controls */}
               <div className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-gray-700 bg-gray-950/95 px-4 py-3 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
-                  <Link
-                    to={arHref}
-                    className="px-3 py-2 min-h-[48px] rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center"
-                  >
+                  <Link to={arHref}
+                    className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center">
                     AR
                   </Link>
-                  <button
-                    onClick={() => setIsPlaying((prev) => !prev)}
-                    className="px-4 py-2 min-h-[48px] flex-1 rounded bg-emerald-700 hover:bg-emerald-600 text-sm font-medium flex items-center justify-center"
-                  >
+                  <button onClick={() => setIsPlaying((p) => !p)}
+                    className="px-4 py-2 min-h-12 flex-1 rounded bg-emerald-700 hover:bg-emerald-600 text-sm font-medium flex items-center justify-center">
                     {isPlaying ? t('pause') : t('play')}
                   </button>
-                  <button
-                    onClick={() => setIndex((prev) => Math.max(0, prev - 1))}
-                    disabled={index <= 0}
-                    className="px-3 py-2 min-h-[48px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
-                  >
+                  <button onClick={() => setIndex((p) => Math.max(0, p - 1))} disabled={index <= 0}
+                    className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center">
                     Prev
                   </button>
-                  <button
-                    onClick={() => setIndex((prev) => Math.min(storyScenes.length - 1, prev + 1))}
+                  <button onClick={() => setIndex((p) => Math.min(storyScenes.length - 1, p + 1))}
                     disabled={index >= storyScenes.length - 1}
-                    className="px-3 py-2 min-h-[48px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
-                  >
+                    className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center">
                     Next
                   </button>
                 </div>
-
                 <div className="mt-3 flex items-center gap-2">
                   <span className="text-[10px] font-semibold text-gray-300">{t('scale')}</span>
-                  <input
-                    type="range"
-                    min="0.6"
-                    max="1.4"
-                    step="0.01"
-                    value={scale}
+                  <input type="range" min="0.6" max="1.4" step="0.01" value={scale}
                     onChange={(e) => setScale(Number(e.target.value))}
-                    className="min-w-0 flex-1 accent-cyan-400"
-                  />
+                    className="min-w-0 flex-1 accent-cyan-400" />
                   <span className="w-11 text-right text-[10px] font-semibold text-gray-200">{scaleLabel}</span>
                 </div>
-
                 <div className="mt-3">
                   <div className="h-1.5 w-full rounded-full bg-white/15 overflow-hidden shadow-inner shadow-black/30">
-                    <div
-                      className="h-full origin-left rounded-full bg-cyan-400 transition-transform duration-75"
-                      style={{ transform: `scaleX(${sceneProgress / 100})` }}
-                    />
+                    <div className="h-full origin-left rounded-full bg-cyan-400 transition-transform duration-75"
+                      style={{ transform: `scaleX(${sceneProgress / 100})` }} />
                   </div>
                   <div className="mt-1 text-[10px] font-semibold text-cyan-200 text-right">
                     {Math.round(sceneProgress)}%
@@ -310,17 +292,9 @@ export default function StoryViewerPage() {
                 </div>
               </div>
 
-              <div
-                className="h-full w-full origin-center transition-transform duration-300"
-                style={{ transform: `scale(${scale})` }}
-              >
-                {sceneData?.content?.narrative?.audioUrl && (
-                  <audio
-                    src={sceneData.content.narrative.audioUrl}
-                    preload="metadata"
-                    style={{ display: 'none' }}
-                  />
-                )}
+              {/* Scene canvas */}
+              <div className="h-full w-full origin-center transition-transform duration-300"
+                style={{ transform: `scale(${scale})` }}>
                 {sceneData ? (
                   <Suspense fallback={
                     <div className="flex h-full items-center justify-center bg-gray-900">
@@ -336,20 +310,16 @@ export default function StoryViewerPage() {
                       transform={transform}
                       posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
                       speechText={sceneData?.content?.narrative?.text || ''}
+                      analyserRef={audio.analyserRef}
+                      lipSyncConfig={audio.lipSyncConfig}
+                      visemeTimeline={audio.visemeTimeline}
+                      audioCurrentTime={audio.audioCurrentTime}
                     />
-                    {/* Hidden audio element for preloading the current scene's narration */}
-                    {sceneData?.content?.narrative?.audioUrl && (
-                      <audio
-                        key={sceneData.content.narrative.audioUrl}
-                        src={sceneData.content.narrative.audioUrl}
-                        preload="metadata"
-                        className="hidden"
-                        aria-hidden="true"
-                      />
-                    )}
                   </Suspense>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-400">Scene not found.</div>
+                  <div className="h-full flex items-center justify-center text-gray-400">
+                    Cena não encontrada.
+                  </div>
                 )}
               </div>
             </div>

@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const mongoose = require('mongoose');
 
 const sceneRoutes = require('./routes/sceneRoutes');
@@ -8,6 +9,7 @@ const avatarRoutes = require('./routes/avatarRoutes');
 const storyRoutes = require('./routes/storyRoutes');
 const authRoutes = require('./routes/authRoutes');
 const ttsRoutes = require('./routes/ttsRoutes');
+const mediaRoutes = require('./routes/mediaRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,6 +34,8 @@ app.use('/api/avatar', avatarRoutes);
 app.use('/api/story', storyRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tts', ttsRoutes);
+app.use('/api/media', mediaRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

@@ -52,8 +52,10 @@ const createAvatarSlice = (set, get) => ({
 
 const createSpeechSlice = (set) => ({
   speechText: '',
+  narrativeAudioUrl: '',
   setSpeechText: (text) => set({ speechText: text }),
-  clearSpeech: () => set({ speechText: '' }),
+  setNarrativeAudioUrl: (url) => set({ narrativeAudioUrl: url }),
+  clearSpeech: () => set({ speechText: '', narrativeAudioUrl: '' }),
 });
 
 const createStorySlice = (set, get) => ({
@@ -127,7 +129,7 @@ const createStorySlice = (set, get) => ({
   setPublishedStoryId: (id) => set({ publishedStoryId: id }),
 
   buildScenePayload: (existingId) => {
-    const { sceneTitle, avatarUrl, posePreset, transform, speechText, timelineBlocks, timelineDuration } = get();
+    const { sceneTitle, avatarUrl, posePreset, transform, speechText, narrativeAudioUrl, timelineBlocks, timelineDuration } = get();
     return {
       sceneId: existingId !== undefined ? existingId : (get().currentSceneId || undefined),
       metadata: { title: sceneTitle || 'Untitled Scene', theme: '' },
@@ -143,7 +145,7 @@ const createStorySlice = (set, get) => ({
         },
         narrative: {
           text: speechText,
-          audioUrl: '', // This will be extended when we refactor audio
+          audioUrl: narrativeAudioUrl || '',
           bubbleStyle: { color: '#ffffff', fontSize: 14 },
         },
         timeline: {

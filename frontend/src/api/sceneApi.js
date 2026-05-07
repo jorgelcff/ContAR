@@ -112,3 +112,12 @@ export async function listAvaturnAvatars(avaturnUserId) {
   const { data } = await api.get(`/avatar/list${query}`);
   return data;
 }
+
+export async function uploadAudio(blob) {
+  const formData = new FormData();
+  formData.append('file', blob, 'tts-output.mp3');
+  const { data } = await api.post('/media/audio', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.url; // full URL returned by the server
+}

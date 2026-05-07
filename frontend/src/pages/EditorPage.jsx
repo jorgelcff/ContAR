@@ -12,7 +12,7 @@ import { useSceneStore, hadLocalAvatarOnInit } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
 import useTTS from '../hooks/useTTS';
 import { useToast } from '../context/ToastContext';
-import { getScene, getStory, saveScene, saveStory } from '../api/sceneApi';
+import { getScene, getStory, saveScene, saveStory, uploadAudio } from '../api/sceneApi';
 
 const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
@@ -43,9 +43,15 @@ export default function EditorPage() {
   const audio = useAudio();
 
   const tts = useTTS({
-    onAudioReady: (file) => {
+    onAudioReady: async (file) => {
       audio.loadFile(file);
       addToast('Voz gerada! Clique em Play para ouvir.', 'success');
+      try {
+        const url = await uploadAudio(file);
+        useSceneStore.getState().setNarrativeAudioUrl(url);
+      } catch {
+        // Upload failure is non-critical — audio plays locally, just won't persist in the story viewer
+      }
     },
     onVisemeReady: (text) => audio.generateVisemeTimelineFromText(text),
   });

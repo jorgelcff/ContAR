@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
-import SceneCanvas from '../components/3d/SceneCanvas';
 import { getPublicStory, getScene } from '../api/sceneApi';
+
+const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
 export default function StoryViewerPage() {
   const { id } = useParams();
@@ -197,20 +198,20 @@ export default function StoryViewerPage() {
             <div className="hidden md:flex items-center gap-2">
               <Link
                 to={arHref}
-                className="px-3 py-2 min-h-[44px] rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center"
+                className="px-3 py-2 min-h-[48px] rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center"
               >
                 {t('openSurfaceAr')}
               </Link>
               <button
                 onClick={() => setIsPlaying((prev) => !prev)}
-                className="px-3 py-2 min-h-[44px] rounded bg-emerald-700 hover:bg-emerald-600 text-xs flex items-center"
+                className="px-3 py-2 min-h-[48px] rounded bg-emerald-700 hover:bg-emerald-600 text-xs flex items-center"
               >
                 {isPlaying ? t('pause') : t('play')}
               </button>
               <button
                 onClick={() => setIndex((prev) => Math.max(0, prev - 1))}
                 disabled={index <= 0}
-                className="px-3 py-2 min-h-[44px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
+                className="px-3 py-2 min-h-[48px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
               >
                 Prev
               </button>
@@ -218,7 +219,7 @@ export default function StoryViewerPage() {
               <button
                 onClick={() => setIndex((prev) => Math.min(storyScenes.length - 1, prev + 1))}
                 disabled={index >= storyScenes.length - 1}
-                className="px-3 py-2 min-h-[44px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
+                className="px-3 py-2 min-h-[48px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
               >
                 Next
               </button>
@@ -256,27 +257,27 @@ export default function StoryViewerPage() {
                 <div className="flex items-center gap-2">
                   <Link
                     to={arHref}
-                    className="px-3 py-2 min-h-[44px] rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center"
+                    className="px-3 py-2 min-h-[48px] rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center"
                   >
                     AR
                   </Link>
                   <button
                     onClick={() => setIsPlaying((prev) => !prev)}
-                    className="px-4 py-2 min-h-[44px] flex-1 rounded bg-emerald-700 hover:bg-emerald-600 text-sm font-medium flex items-center justify-center"
+                    className="px-4 py-2 min-h-[48px] flex-1 rounded bg-emerald-700 hover:bg-emerald-600 text-sm font-medium flex items-center justify-center"
                   >
                     {isPlaying ? t('pause') : t('play')}
                   </button>
                   <button
                     onClick={() => setIndex((prev) => Math.max(0, prev - 1))}
                     disabled={index <= 0}
-                    className="px-3 py-2 min-h-[44px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
+                    className="px-3 py-2 min-h-[48px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
                   >
                     Prev
                   </button>
                   <button
                     onClick={() => setIndex((prev) => Math.min(storyScenes.length - 1, prev + 1))}
                     disabled={index >= storyScenes.length - 1}
-                    className="px-3 py-2 min-h-[44px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
+                    className="px-3 py-2 min-h-[48px] rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center"
                   >
                     Next
                   </button>
@@ -313,8 +314,22 @@ export default function StoryViewerPage() {
                 className="h-full w-full origin-center transition-transform duration-300"
                 style={{ transform: `scale(${scale})` }}
               >
+                {sceneData?.content?.narrative?.audioUrl && (
+                  <audio
+                    src={sceneData.content.narrative.audioUrl}
+                    preload="metadata"
+                    style={{ display: 'none' }}
+                  />
+                )}
                 {sceneData ? (
-                  <>
+                  <Suspense fallback={
+                    <div className="flex h-full items-center justify-center bg-gray-900">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+                        <p className="text-xs text-cyan-200">Loading scene viewer…</p>
+                      </div>
+                    </div>
+                  }>
                     <SceneCanvas
                       avatarUrl={sceneData?.content?.avatar?.modelUrl}
                       transform={transform}
@@ -331,7 +346,7 @@ export default function StoryViewerPage() {
                         aria-hidden="true"
                       />
                     )}
-                  </>
+                  </Suspense>
                 ) : (
                   <div className="h-full flex items-center justify-center text-gray-400">Scene not found.</div>
                 )}

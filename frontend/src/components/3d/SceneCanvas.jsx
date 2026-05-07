@@ -328,10 +328,9 @@ export default function SceneCanvas({
 
       // ── Lip sync: voice-band aware analysis + viseme mapping ──
       const analyser = analyserRefLocal.current?.current;
-      const morphs = mouthMorphsRef.current;
-      const faceBlendshapes = faceBlendshapesRef.current;
-      const visemeGroups = visemeMorphGroupsRef.current;
+      const lipSyncController = lipSyncControllerRef.current;
       const jawBones = jawBonesRef.current;
+      const hasMorphs = lipSyncController?.hasTargets;
       const pseudoJawRig = isPseudoJawRig(jawBones);
       const effectiveConfig = pseudoJawRig
         ? {
@@ -339,7 +338,7 @@ export default function SceneCanvas({
             ...NO_RIG_SAFE_PRESET,
           }
         : mergedLipSyncConfig;
-      if (analyser && (morphs.length > 0 || jawBones.length > 0)) {
+      if (analyser && (hasMorphs || jawBones.length > 0)) {
         const binCount = analyser.frequencyBinCount;
         if (!lipSyncDataRef.current || lipSyncDataRef.current.length !== binCount) {
           lipSyncDataRef.current = new Uint8Array(binCount);
@@ -411,7 +410,7 @@ export default function SceneCanvas({
         );
         const mouthOpen = THREE.MathUtils.clamp(jawSmoothedOpenRef.current, 0, 1);
 
-        if (effectiveConfig.visemeMode === 'timeline' && morphs.length > 0) {
+        if (effectiveConfig.visemeMode === 'timeline' && hasMorphs) {
           const timelineCrossfadeSec = Number(effectiveConfig.timelineCrossfadeSec) || 0.08;
           const timelineBlend = getTimelineBlendState(
             visemeTimelineRef.current,
@@ -428,39 +427,46 @@ export default function SceneCanvas({
               1
             );
 
-            resetVisemeGroups(visemeGroups);
-            resetTimelineMouthShapes(faceBlendshapes);
+            lipSyncController.resetGroups();
 
+            // Simple cue to viseme mapping for timeline mode
             timelineBlend.forEach(({ cue, weight }) => {
-              applyTimelineCueWeight(visemeGroups, cue, mouthOpen, weight, hybridIntensity);
-              applyTimelineMouthShapesForCue(
-                faceBlendshapes,
-                cue,
-                mouthOpen,
-                weight,
-                hybridIntensity
-              );
+              const cueIntensity = THREE.MathUtils.clamp((0.15 + mouthOpen * 0.95) * weight * hybridIntensity, 0, 1);
+              const map = {
+                A: { aa: 1.0 }, B: { mbp: 1.0 }, C: { ee: 0.95 },
+                D: { ee: 0.75, aa: 0.35 }, E: { aa: 0.9, oh: 0.25 },
+                F: { oh: 1.0 }, G: { fv: 1.0, ee: 0.45 },
+                H: { ee: 0.5, aa: 0.45 }, X: { mbp: 0.3 },
+              };
+              const blend = map[String(cue?.value || '').toUpperCase()];
+              if (blend) {
+                Object.entries(blend).forEach(([grp, w]) => {
+                  lipSyncController.setGroupValue(grp, cueIntensity * w);
+                });
+              }
             });
           } else {
-            resetVisemeGroups(visemeGroups);
-            resetTimelineMouthShapes(faceBlendshapes);
+            lipSyncController.resetGroups();
           }
-        } else if (effectiveConfig.visemeMode === 'heuristic') {
+        } else if (effectiveConfig.visemeMode === 'heuristic' && hasMorphs) {
           const sumBands = Math.max(0.0001, lowBand + midBand + highBand);
           const vowelOpen = THREE.MathUtils.clamp((lowBand + midBand) / sumBands, 0, 1);
           const bright = THREE.MathUtils.clamp(highBand / sumBands, 0, 1);
 
-          applyVisemeGroup(visemeGroups.aa, mouthOpen * vowelOpen);
-          applyVisemeGroup(visemeGroups.oh, mouthOpen * THREE.MathUtils.clamp(lowBand / sumBands, 0, 1));
-          applyVisemeGroup(visemeGroups.ee, mouthOpen * bright);
-          applyVisemeGroup(visemeGroups.fv, mouthOpen * bright * 0.65);
-          applyVisemeGroup(visemeGroups.mbp, (1 - mouthOpen) * 0.2);
+          lipSyncController.setGroupValue('aa', mouthOpen * vowelOpen);
+          lipSyncController.setGroupValue('oh', mouthOpen * THREE.MathUtils.clamp(lowBand / sumBands, 0, 1));
+          lipSyncController.setGroupValue('ee', mouthOpen * bright);
+          lipSyncController.setGroupValue('fv', mouthOpen * bright * 0.65);
+          lipSyncController.setGroupValue('mbp', (1 - mouthOpen) * 0.2);
         }
 
-        // Ensure a visible baseline mouth movement after timeline/viseme resets.
-        applyMouthBaseline(morphs, mouthOpen);
+        // Ensure a visible baseline mouth movement
+        if (hasMorphs) {
+          const reducedBase = mouthOpen * 0.22;
+          lipSyncController.setGroupValue('mouthOpen', reducedBase);
+        }
 
-        if (effectiveConfig.enableJawFallback && morphs.length === 0 && jawBones.length > 0) {
+        if (effectiveConfig.enableJawFallback && !hasMorphs && jawBones.length > 0) {
           jawJitterPhaseRef.current += delta * effectiveConfig.jawMicroJitterSpeed * Math.PI * 2;
           const jawJitter = effectiveConfig.enableJawMicroJitter
             ? Math.sin(jawJitterPhaseRef.current) * effectiveConfig.jawMicroJitterAmount * mouthOpen
@@ -483,12 +489,12 @@ export default function SceneCanvas({
           rms,
           speechBand,
           mode: `${effectiveConfig.visemeMode}${
-            morphs.length === 0 && jawBones.length > 0
+            !hasMorphs && jawBones.length > 0
               ? pseudoJawRig ? ' (pseudo-safe)' : ' (jaw)'
               : ''
           }`,
           analyserReady: true,
-          mouthTargetCount: morphs.length,
+          hasMorphs,
           jawBoneCount: jawBones.length,
         };
       } else {
@@ -498,13 +504,8 @@ export default function SceneCanvas({
           0,
           THREE.MathUtils.clamp(effectiveConfig.jawReleaseSpeed * delta, 0, 1)
         );
-        morphs.forEach(({ mesh, index }) => {
-          if (mesh.morphTargetInfluences) {
-            mesh.morphTargetInfluences[index] = 0;
-          }
-        });
-
-        resetVisemeGroups(visemeGroups);
+        
+        lipSyncController?.resetAll();
 
         jawBones.forEach((bone) => {
           if (bone?.userData?.__jawRestQuat) {
@@ -513,14 +514,14 @@ export default function SceneCanvas({
         });
 
         const hasAnalyser = Boolean(analyser);
-        const hasRigTargets = morphs.length > 0 || jawBones.length > 0;
+        const hasRigTargets = hasMorphs || jawBones.length > 0;
         lipSyncTelemetryRef.current = {
           mouthOpen: 0,
           rms: 0,
           speechBand: 0,
           mode: !hasAnalyser ? 'no-analyser' : !hasRigTargets ? 'no-rig' : 'idle',
           analyserReady: hasAnalyser,
-          mouthTargetCount: morphs.length,
+          hasMorphs,
           jawBoneCount: jawBones.length,
         };
       }
@@ -531,17 +532,14 @@ export default function SceneCanvas({
         updateMouthDebugMarker(
           mouthMarkerRef.current,
           jawBones,
-          morphs,
+          lipSyncController?._morphTargets || [],
           mouthMarkerInfoRef,
           pseudoJawRig
         );
         setDebugSnapshot(lipSyncTelemetryRef.current);
-        setBlendshapeSnapshot(
-          blendshapeCatalogRef.current.map((entry) => ({
-            ...entry,
-            value: Number(entry.mesh?.morphTargetInfluences?.[entry.index] || 0),
-          }))
-        );
+        if (lipSyncController) {
+          setBlendshapeSnapshot(lipSyncController.getAll());
+        }
         setMouthMarkerInfo(mouthMarkerInfoRef.current);
       }
 
@@ -619,15 +617,7 @@ export default function SceneCanvas({
       lipSyncControllerRef.current = null;
       avatarRef.current = null;
       avatarClipsRef.current = [];
-      mouthMorphsRef.current = [];
-      faceBlendshapesRef.current = [];
-      visemeMorphGroupsRef.current = { aa: [], oh: [], ee: [], fv: [], mbp: [] };
       jawBonesRef.current = [];
-      blendshapeCatalogRef.current = [];
-      setBlendshapeSnapshot([]);
-      setBlendshapeMeshFilter('all');
-      setBoneCatalogSnapshot([]);
-      setMeshCatalogSnapshot([]);
       mouthMarkerInfoRef.current = { source: 'none', name: '' };
       setMouthMarkerInfo({ source: 'none', name: '' });
       if (mouthMarkerRef.current) {
@@ -669,52 +659,12 @@ export default function SceneCanvas({
         sceneRef.current.add(model);
         avatarRef.current = model;
 
-        // Discover mouth morph targets for lip sync.
-        const mouthMorphs = [];
-        const faceBlendshapes = [];
-        const visemeGroups = { aa: [], oh: [], ee: [], fv: [], mbp: [] };
-        const allBlendshapes = [];
+        // Set up LipSync controller
+        lipSyncControllerRef.current?.dispose();
+        const lipSyncController = new LipSyncController(model);
+        lipSyncControllerRef.current = lipSyncController;
 
-        model.traverse((node) => {
-          if (node.isMesh && node.morphTargetDictionary) {
-            Object.entries(node.morphTargetDictionary).forEach(([name, index]) => {
-              const entry = {
-                key: `${node.uuid}:${index}`,
-                meshName: String(node.name || 'mesh'),
-                name,
-                index,
-                mesh: node,
-              };
-              allBlendshapes.push(entry);
-
-              const isFaceMesh = isPrimaryFaceMesh(node.name);
-              if (isFaceMesh && /jaw|mouth|lip|viseme|tongue/i.test(name)) {
-                faceBlendshapes.push(entry);
-              }
-              if (isFaceMesh && MOUTH_OPEN_PATTERNS.some((pattern) => pattern.test(name))) {
-                mouthMorphs.push(entry);
-              }
-
-              Object.entries(VISEME_PATTERNS).forEach(([group, patterns]) => {
-                if (isFaceMesh && patterns.some((pattern) => pattern.test(name))) {
-                  visemeGroups[group].push(entry);
-                }
-              });
-            });
-          }
-        });
-
-        // Fallback: if no specific mouth targets found, look for any jaw/mouth/lip morph
-        if (mouthMorphs.length === 0) {
-          mouthMorphs.push(
-            ...allBlendshapes.filter((entry) =>
-              MOUTH_FALLBACK_PATTERNS.some((pattern) => pattern.test(entry.name))
-            )
-          );
-        }
-
-        const jawBones = [];
-        jawBones.push(...resolveJawBones(model, manualJawBoneName));
+        const jawBones = resolveJawBones(model, manualJawBoneName);
 
         const boneNames = [];
         const meshNames = [];
@@ -728,17 +678,8 @@ export default function SceneCanvas({
             if (name) meshNames.push(name);
           }
         });
-        setBoneCatalogSnapshot(Array.from(new Set(boneNames)).sort((a, b) => a.localeCompare(b)));
-        setMeshCatalogSnapshot(Array.from(new Set(meshNames)).sort((a, b) => a.localeCompare(b)));
-
-        mouthMorphsRef.current = mouthMorphs;
-        faceBlendshapesRef.current = faceBlendshapes;
-        visemeMorphGroupsRef.current = visemeGroups;
+        
         jawBonesRef.current = jawBones;
-        blendshapeCatalogRef.current = allBlendshapes;
-        setBlendshapeSnapshot(
-          allBlendshapes.map((entry) => ({ ...entry, value: 0 }))
-        );
 
         // Set up animation controller (crossfade + procedural micro-animation).
         avatarClipsRef.current = Array.isArray(gltf.animations) ? gltf.animations : [];
@@ -750,13 +691,6 @@ export default function SceneCanvas({
           animController.addClips([idleClipRef.current]);
         }
         animControllerRef.current = animController;
-
-        // Set up LipSync controller — provides a clean API for ARKit viseme frames
-        // (e.g. from TTS providers). The existing inline render-loop logic continues
-        // to handle amplitude/heuristic modes; the controller acts as a facade for
-        // external ARKit viseme data ingestion.
-        lipSyncControllerRef.current?.dispose();
-        lipSyncControllerRef.current = new LipSyncController(model);
 
         applyPosePreset(
           model,
@@ -934,97 +868,7 @@ function createAvatarLoader(dracoLoader) {
   return loader;
 }
 
-function applyVisemeGroup(entries, value) {
-  const target = THREE.MathUtils.clamp(value, 0, 1);
-  entries.forEach(({ mesh, index }) => {
-    if (mesh?.morphTargetInfluences) {
-      mesh.morphTargetInfluences[index] = target;
-    }
-  });
-}
 
-function applyVisemeGroupMax(entries, value) {
-  const target = THREE.MathUtils.clamp(value, 0, 1);
-  entries.forEach(({ mesh, index }) => {
-    if (mesh?.morphTargetInfluences) {
-      mesh.morphTargetInfluences[index] = Math.max(mesh.morphTargetInfluences[index] || 0, target);
-    }
-  });
-}
-
-function applyMouthBaseline(entries, mouthOpen) {
-  const reducedBase = mouthOpen * 0.22;
-  entries.forEach(({ mesh, index, name }) => {
-    if (!mesh?.morphTargetInfluences) return;
-    const key = String(name || '');
-    const isDirectOpen = /jawopen|mouthopen/i.test(key);
-    const baseline = isDirectOpen ? reducedBase : reducedBase * 0.55;
-    mesh.morphTargetInfluences[index] = Math.max(
-      mesh.morphTargetInfluences[index] || 0,
-      baseline
-    );
-  });
-}
-
-function resetTimelineMouthShapes(entries) {
-  entries.forEach(({ mesh, index, name }) => {
-    if (!mesh?.morphTargetInfluences) return;
-    const key = String(name || '').toLowerCase();
-    if (/jawopen|mouthclose|mouthfunnel|mouthpucker|mouthstretch|mouthsmile|mouthpress|mouthroll/i.test(key)) {
-      mesh.morphTargetInfluences[index] = 0;
-    }
-  });
-}
-
-function applyTimelineMouthShapesForCue(entries, cue, mouthOpen, blendWeight = 1, hybridIntensity = 1) {
-  const cueValue = String(cue?.value || '').toUpperCase();
-  const base = THREE.MathUtils.clamp(mouthOpen, 0, 1);
-  const jawBase = base * 0.32;
-  const globalWeight = THREE.MathUtils.clamp(blendWeight * hybridIntensity, 0, 1);
-
-  const weightsByCue = {
-    A: [['jawopen', jawBase * 1.0], ['mouthclose', 0.1]],
-    B: [['mouthclose', 0.85], ['mouthpress', 0.45], ['jawopen', jawBase * 0.15]],
-    C: [['mouthstretch', 0.7], ['mouthsmile', 0.45], ['jawopen', jawBase * 0.35]],
-    D: [['mouthstretch', 0.5], ['jawopen', jawBase * 0.55]],
-    E: [['jawopen', jawBase * 0.8], ['mouthfunnel', 0.45], ['mouthpucker', 0.28]],
-    F: [['mouthfunnel', 0.75], ['mouthpucker', 0.6], ['jawopen', jawBase * 0.4]],
-    G: [['mouthpress', 0.72], ['mouthroll', 0.35], ['jawopen', jawBase * 0.2]],
-    H: [['mouthstretch', 0.48], ['mouthsmile', 0.35], ['jawopen', jawBase * 0.42]],
-    X: [['mouthclose', 0.5], ['jawopen', 0]],
-  };
-
-  const weights = (weightsByCue[cueValue] || []).map(([token, value]) => [token, value * globalWeight]);
-  weights.forEach(([token, weight]) => {
-    applyTokenToMorphs(entries, token, weight);
-  });
-}
-
-function applyTokenToMorphs(entries, token, weight) {
-  const target = THREE.MathUtils.clamp(weight, 0, 1);
-  const tokenLower = String(token || '').toLowerCase();
-  entries.forEach(({ mesh, index, name }) => {
-    if (!mesh?.morphTargetInfluences) return;
-    const key = String(name || '').toLowerCase();
-    const isMatch = tokenLower === 'mouthroll'
-      ? /mouthroll(lower|upper)/.test(key)
-      : key.includes(tokenLower);
-    if (isMatch) {
-      mesh.morphTargetInfluences[index] = Math.max(mesh.morphTargetInfluences[index] || 0, target);
-    }
-  });
-}
-
-function isPrimaryFaceMesh(meshName) {
-  const name = String(meshName || '').toLowerCase();
-  if (!name) return false;
-  if (/^eye/.test(name)) return false;
-  return /head|teeth|face|avatar/.test(name);
-}
-
-function resetVisemeGroups(groups) {
-  Object.values(groups).forEach((entries) => applyVisemeGroup(entries, 0));
-}
 
 function getTimelineBlendState(cues, timeSec, crossfadeSec = 0.07) {
   if (!Array.isArray(cues) || !cues.length) return null;
@@ -1067,29 +911,7 @@ function getTimelineBlendState(cues, timeSec, crossfadeSec = 0.07) {
   return blendItems.map((item) => ({ cue: item.cue, weight: item.weight / total }));
 }
 
-function applyTimelineCueWeight(visemeGroups, cue, mouthOpen, blendWeight = 1, hybridIntensity = 1) {
-  const value = String(cue?.value || '').toUpperCase();
-  const intensity = THREE.MathUtils.clamp((0.15 + mouthOpen * 0.95) * blendWeight * hybridIntensity, 0, 1);
 
-  // Rhubarb mapping (A-H, X) collapsed into the heuristic groups used by this scene.
-  const map = {
-    A: { aa: 1.0 },
-    B: { mbp: 1.0 },
-    C: { ee: 0.95 },
-    D: { ee: 0.75, aa: 0.35 },
-    E: { aa: 0.9, oh: 0.25 },
-    F: { oh: 1.0 },
-    G: { fv: 1.0, ee: 0.45 },
-    H: { ee: 0.5, aa: 0.45 },
-    X: { mbp: 0.3 },
-  };
-  const blend = map[value];
-  if (!blend) return;
-
-  Object.entries(blend).forEach(([group, weight]) => {
-    applyVisemeGroupMax(visemeGroups[group] || [], intensity * weight);
-  });
-}
 
 function averageRange(freqData, hzPerBin, minHz, maxHz) {
   if (!freqData?.length || !hzPerBin) return 0;

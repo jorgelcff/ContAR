@@ -5,24 +5,18 @@
  * This controller is intentionally decoupled from audio. External code (Web
  * Speech API, Azure TTS, ElevenLabs, etc.) is responsible for supplying viseme
  * frames; this controller only applies them to the mesh.
- *
- * Viseme names follow the ARKit / Ready Player Me convention:
- *   viseme_sil, viseme_PP, viseme_FF, viseme_TH, viseme_DD,
- *   viseme_kk, viseme_CH, viseme_SS, viseme_nn, viseme_RR,
- *   viseme_aa, viseme_E, viseme_I, viseme_O, viseme_U,
- *   mouthOpen, jawOpen …
- *
- * Usage:
- *   const lipsync = new LipSyncController(avatarModel);
- *   if (lipsync.hasTargets) {
- *     // set a single value
- *     lipsync.setMorphValue('viseme_aa', 0.8);
- *     // apply a full viseme frame from a TTS provider
- *     lipsync.setVisemeFrame({ viseme_aa: 0.8, viseme_E: 0.1 });
- *     // get all morph targets for a debug UI
- *     const targets = lipsync.getAll();
- *   }
  */
+import * as THREE from 'three';
+
+const VISEME_PATTERNS = {
+  aa: [/viseme.*aa/i, /viseme.*ah/i, /mouthopen/i, /jawopen/i],
+  oh: [/viseme.*oh/i, /viseme.*o/i, /mouthfunnel/i, /mouthpucker/i],
+  ee: [/viseme.*ee/i, /viseme.*ih/i, /mouthsmile/i, /mouthstretch/i],
+  fv: [/viseme.*ff/i, /viseme.*fv/i, /mouthrolllower/i],
+  mbp: [/viseme.*pp/i, /viseme.*bb/i, /viseme.*mm/i, /mouthclose/i],
+  mouthOpen: [/jaw.*open/i, /mouth.*open/i, /^jawopen$/i, /^mouthopen$/i, /viseme.*(aa|ah|ao|oh|o)/i],
+};
+
 export class LipSyncController {
   constructor(model) {
     this._model = model;
@@ -30,6 +24,8 @@ export class LipSyncController {
     this._morphTargets = [];
     /** @type {Array<{ name: string, mesh: THREE.Mesh, index: number }>} viseme-related subset */
     this._visemeTargets = [];
+    /** @type {Record<string, Array<{ name: string, mesh: THREE.Mesh, index: number }>>} */
+    this._groupedTargets = { aa: [], oh: [], ee: [], fv: [], mbp: [], mouthOpen: [] };
     /** @type {Record<string, number>} current logical value per name */
     this._currentValues = {};
 
@@ -106,6 +102,31 @@ export class LipSyncController {
     }
   }
 
+  /**
+   * Apply heuristic viseme groups
+   */
+  setGroupValue(groupName, value) {
+    const clamped = Math.max(0, Math.min(1, value));
+    const targets = this._groupedTargets[groupName];
+    if (!targets) return;
+
+    for (const entry of targets) {
+      entry.mesh.morphTargetInfluences[entry.index] = clamped;
+      this._currentValues[entry.name] = clamped;
+    }
+  }
+
+  resetGroups() {
+    Object.keys(this._groupedTargets).forEach(group => this.setGroupValue(group, 0));
+  }
+
+  /**
+   * Get specific group info (for checking how many targets it matched)
+   */
+  getGroupTargets(groupName) {
+    return this._groupedTargets[groupName] || [];
+  }
+
   /** Release resources (resets morph targets). */
   dispose() {
     this.resetAll();
@@ -133,6 +154,12 @@ export class LipSyncController {
         if (VISEME_RE.test(name)) {
           this._visemeTargets.push(entry);
         }
+        
+        Object.entries(VISEME_PATTERNS).forEach(([group, patterns]) => {
+          if (patterns.some((pattern) => pattern.test(name))) {
+            this._groupedTargets[group].push(entry);
+          }
+        });
       }
     });
   }

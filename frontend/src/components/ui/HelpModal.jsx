@@ -8,7 +8,7 @@ const FAQ = [
     items: [
       {
         q: 'Como adiciono meu próprio avatar?',
-        a: 'Clique em "Abrir Avaturn" na aba Avatar. O Avaturn é gratuito — você pode criar um personagem do zero ou usar uma selfie para gerar um avatar parecido com você. Ao terminar, clique em "Exportar" e ele aparece automaticamente no editor.',
+        a: 'Clique em "Criar Avatar" na aba Avatar. O criador de avatares é gratuito — você pode criar um personagem do zero ou usar uma selfie para gerar um avatar parecido com você. Ao terminar, clique em "Exportar" e ele aparece automaticamente no editor.',
       },
       {
         q: 'Posso usar um arquivo GLB do meu computador?',
@@ -86,7 +86,7 @@ const GUIDES = [
   {
     title: '🚀 Criar sua primeira cena (5 min)',
     steps: [
-      'Na aba Avatar, clique em "Abrir Avaturn" e crie ou escolha um personagem.',
+      'Na aba Avatar, clique em "Criar Avatar" e crie ou escolha um personagem.',
       'Na aba Fala, escreva o que o avatar vai dizer.',
       'Clique em "🎙️ Gerar Voz (TTS)" e aguarde a voz ser criada.',
       'Clique em Play para ver o avatar falar.',
@@ -168,7 +168,7 @@ export default function HelpModal({ onClose }) {
   const [tab, setTab] = useState('faq');
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4">
+    <div className="fixed inset-0 z-100 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4">
       <div className="w-full sm:max-w-lg bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[88vh]">
 
         {/* Header */}

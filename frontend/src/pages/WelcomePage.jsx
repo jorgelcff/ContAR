@@ -34,7 +34,7 @@ export default function WelcomePage() {
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
           Bem-vindo ao{' '}
           <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-purple-400">
-            Avaturn 3D
+            ContAR
           </span>
         </h1>
 
@@ -63,7 +63,7 @@ export default function WelcomePage() {
         {!showTemplates && (
           <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl w-full text-left">
             {[
-              { step: '1', icon: '👤', title: 'Escolha um avatar', desc: 'Crie seu personagem 3D gratuitamente com o Avaturn.' },
+              { step: '1', icon: '👤', title: 'Escolha um avatar', desc: 'Crie seu personagem 3D gratuitamente com o criador integrado.' },
               { step: '2', icon: '💬', title: 'Escreva a fala', desc: 'Digite o texto e gere a voz com um clique.' },
               { step: '3', icon: '▶️', title: 'Pronto!', desc: 'Seu personagem fala com lábios sincronizados automaticamente.' },
             ].map(({ step, icon, title, desc }) => (

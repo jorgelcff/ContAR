@@ -7,8 +7,8 @@ const STEPS = [
     icon: '👤',
     title: 'Primeiro, escolha um avatar',
     description:
-      'Clique em "Abrir Avaturn" no painel à esquerda para criar ou escolher seu personagem 3D. Você pode usar uma selfie para gerar um avatar parecido com você!',
-    hint: 'Painel esquerdo → aba Avatar → "Abrir Avaturn"',
+      'Clique em "Criar Avatar" no painel à esquerda. Use o criador integrado para montar seu personagem 3D — inclusive com uma selfie!',
+    hint: 'Painel esquerdo → aba Avatar → "Criar Avatar"',
     hintIcon: '👈',
   },
   {

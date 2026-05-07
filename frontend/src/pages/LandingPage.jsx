@@ -6,7 +6,7 @@ const FEATURES = [
   {
     icon: '🎭',
     title: 'Avatares 3D personalizados',
-    desc: 'Crie seu personagem em minutos com o Avaturn — use uma selfie ou crie do zero, gratuitamente.',
+    desc: 'Crie seu personagem 3D em minutos — use uma selfie ou personalize do zero, gratuitamente.',
   },
   {
     icon: '🎙️',
@@ -26,7 +26,7 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: '1', icon: '👤', title: 'Crie seu avatar', desc: 'Abra o Avaturn, personalize o rosto, a roupa e exporte para o editor.' },
+  { n: '1', icon: '👤', title: 'Crie seu avatar', desc: 'Use o criador de avatares integrado, personalize o rosto e a roupa e exporte para o editor.' },
   { n: '2', icon: '💬', title: 'Escreva a fala', desc: 'Digite o texto, gere a voz com IA e veja o avatar falar com lábios sincronizados.' },
   { n: '3', icon: '🚀', title: 'Compartilhe', desc: 'Salve a cena, monte a história e copie o link — qualquer pessoa consegue assistir.' },
 ];
@@ -45,7 +45,7 @@ export default function LandingPage() {
       {/* ── Navbar ────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-gray-950/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
-          <span className="text-lg font-bold tracking-tight text-white">Avaturn 3D</span>
+          <span className="text-lg font-bold tracking-tight text-white">ContAR</span>
           <div className="flex items-center gap-3">
             {!isLoading && (
               isAuthenticated ? (
@@ -175,7 +175,7 @@ export default function LandingPage() {
       {/* ── Footer ────────────────────────────────────────────── */}
       <footer className="border-t border-white/5 py-8 px-5">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
-          <span>© {new Date().getFullYear()} Avaturn 3D</span>
+          <span>© {new Date().getFullYear()} ContAR</span>
           <div className="flex gap-6">
             <Link to="/login" className="hover:text-gray-400 transition-colors">Entrar</Link>
             <Link to="/ar" className="hover:text-gray-400 transition-colors">AR</Link>

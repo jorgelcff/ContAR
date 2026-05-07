@@ -2,9 +2,22 @@ import { create } from 'zustand';
 
 const LAST_AVATAR_URL_KEY = 'avaturn:lastAvatarUrl';
 
+// Set to true when a local blob URL was discarded on startup, so the UI can
+// show a friendly notification rather than a broken-model error.
+let _hadLocalAvatarOnInit = false;
+export function hadLocalAvatarOnInit() { return _hadLocalAvatarOnInit; }
+
 function getInitialAvatarUrl() {
   try {
-    return localStorage.getItem(LAST_AVATAR_URL_KEY) || '';
+    const url = localStorage.getItem(LAST_AVATAR_URL_KEY) || '';
+    // Blob URLs are session-scoped and never survive a page refresh.
+    // Discard them silently to avoid a confusing "Failed to load" error.
+    if (url.startsWith('blob:')) {
+      localStorage.removeItem(LAST_AVATAR_URL_KEY);
+      _hadLocalAvatarOnInit = true;
+      return '';
+    }
+    return url;
   } catch {
     return '';
   }

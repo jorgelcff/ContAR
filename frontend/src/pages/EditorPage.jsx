@@ -8,7 +8,7 @@ import BottomNav from '../components/ui/BottomNav';
 import OnboardingOverlay, { shouldShowOnboarding } from '../components/ui/OnboardingOverlay';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import TimelinePanel from '../components/ui/TimelinePanel';
-import { useSceneStore } from '../store/useSceneStore';
+import { useSceneStore, hadLocalAvatarOnInit } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
 import useTTS from '../hooks/useTTS';
 import { useToast } from '../context/ToastContext';
@@ -52,6 +52,12 @@ export default function EditorPage() {
 
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
   const [mobilePanelTab, setMobilePanelTab] = useState(null);
+
+  useEffect(() => {
+    if (hadLocalAvatarOnInit()) {
+      addToast('Avatar local removido após atualização. Carregue o arquivo GLB novamente.', 'info', 5000);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [isSaving, setIsSaving] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
   const [error, setError] = useState('');

@@ -3,45 +3,49 @@ import { useTranslation } from 'react-i18next';
 import AvaturnEmbed from './AvaturnEmbed';
 import TransformControls from './TransformControls';
 import AudioPanel from './AudioPanel';
+import { useSceneStore } from '../../store/useSceneStore';
 import { listAvaturnAvatars } from '../../api/sceneApi';
 
 const AVATURN_USER_ID_KEY = 'avaturn:userId';
 
 /**
  * LeftPanel — the editor's control sidebar.
- *
- * Props: (see EditorPage)
  */
 export default function LeftPanel({
-  avatarUrl,
-  onAvatarUrlChange,
-  onLoadAvatar,
-  transform,
-  onTransformUpdate,
-  posePreset,
-  onPosePresetChange,
-  speechText,
-  onAddSpeech,
-  onClearSpeech,
-  sceneTitle,
-  onSceneTitleChange,
   onAddCurrentSceneToStory,
   onAddSceneIdToStory,
-  storyTitle,
-  onStoryTitleChange,
-  storyDescription,
-  onStoryDescriptionChange,
   onSaveStory,
   onPublishStory,
   isStorySaving,
   isStoryLinked,
-  linkedStoryId,
-  publishedStoryId,
   onSave,
   isSaving,
   audio,
 }) {
   const { t } = useTranslation();
+  
+  const {
+    avatarUrl, setAvatarUrl,
+    transform, setTransform,
+    posePreset, setPosePreset,
+    speechText, setSpeechText,
+    sceneTitle, setSceneTitle,
+    storyTitle, setStoryTitle,
+    storyDescription, setStoryDescription,
+    currentStoryId: linkedStoryId,
+    publishedStoryId,
+  } = useSceneStore();
+  
+  const onLoadAvatar = setAvatarUrl;
+  const onAvatarUrlChange = setAvatarUrl;
+  const onTransformUpdate = setTransform;
+  const onPosePresetChange = setPosePreset;
+  const onAddSpeech = setSpeechText;
+  const onClearSpeech = () => setSpeechText('');
+  const onSceneTitleChange = setSceneTitle;
+  const onStoryTitleChange = setStoryTitle;
+  const onStoryDescriptionChange = setStoryDescription;
+
   const [urlInput, setUrlInput] = useState(avatarUrl);
   const [speechInput, setSpeechInput] = useState(speechText);
   const [manualSceneId, setManualSceneId] = useState('');

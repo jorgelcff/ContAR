@@ -1,14 +1,16 @@
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSceneStore } from '../../store/useSceneStore';
 
-export default function StoryBuilderPanel({
-  storyScenes,
-  sceneTitlesById,
-  onStorySceneChange,
-  onRemoveStoryScene,
-  onReorderStoryScenes,
-}) {
+export default function StoryBuilderPanel() {
   const { t } = useTranslation();
+  const { 
+    storyScenes, 
+    sceneTitlesById,
+    updateStoryScene,
+    removeStoryScene,
+    reorderStoryScenes
+  } = useSceneStore();
   const dragIndexRef = useRef(-1);
 
   return (
@@ -35,7 +37,7 @@ export default function StoryBuilderPanel({
                 const from = dragIndexRef.current;
                 const to = index;
                 if (from < 0 || from === to) return;
-                onReorderStoryScenes(from, to);
+                reorderStoryScenes(from, to);
                 dragIndexRef.current = -1;
               }}
             >
@@ -45,7 +47,7 @@ export default function StoryBuilderPanel({
               <input
                 type="text"
                 value={item.transitionText}
-                onChange={(e) => onStorySceneChange(index, 'transitionText', e.target.value)}
+                onChange={(e) => updateStoryScene(index, 'transitionText', e.target.value)}
                 placeholder={t('transitionText')}
                 className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-blue-500"
               />
@@ -54,12 +56,12 @@ export default function StoryBuilderPanel({
                   type="number"
                   min={0}
                   value={item.durationSeconds}
-                  onChange={(e) => onStorySceneChange(index, 'durationSeconds', e.target.value)}
+                  onChange={(e) => updateStoryScene(index, 'durationSeconds', e.target.value)}
                   placeholder={t('durationSeconds')}
                   className="w-24 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 />
                 <button
-                  onClick={() => onRemoveStoryScene(index)}
+                  onClick={() => removeStoryScene(index)}
                   className="ml-auto px-2 py-1 rounded bg-red-700 hover:bg-red-600 text-xs text-white"
                 >
                   X

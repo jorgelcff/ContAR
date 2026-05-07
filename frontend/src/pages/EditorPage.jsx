@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import LeftPanel from '../components/ui/LeftPanel';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
-import useScene from '../hooks/useScene';
+import { useSceneStore } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
 import { getScene, getStory, saveScene, saveStory } from '../api/sceneApi';
 
@@ -22,24 +22,24 @@ export default function EditorPage() {
   const { t } = useTranslation();
   const {
     avatarUrl, setAvatarUrl,
-    transform, updateTransform,
+    transform, setTransform,
     posePreset, setPosePreset,
     speechText, setSpeechText,
     sceneTitle, setSceneTitle,
+    storyTitle, setStoryTitle,
+    storyDescription, setStoryDescription,
+    storyScenes, setStoryScenes,
+    sceneTitlesById, setSceneTitlesById,
+    currentSceneId, setCurrentSceneId,
+    currentStoryId, setCurrentStoryId,
+    publishedStoryId, setPublishedStoryId,
     buildScenePayload,
-  } = useScene();
+  } = useSceneStore();
 
   const audio = useAudio();
 
   const [isSaving, setIsSaving] = useState(false);
-  const [currentSceneId, setCurrentSceneId] = useState('');
-  const [currentStoryId, setCurrentStoryId] = useState(searchParams.get('storyId') || '');
-  const [storyTitle, setStoryTitle] = useState('');
-  const [storyDescription, setStoryDescription] = useState('');
-  const [storyScenes, setStoryScenes] = useState([]);
-  const [sceneTitlesById, setSceneTitlesById] = useState({});
   const [isStorySaving, setIsStorySaving] = useState(false);
-  const [publishedStoryId, setPublishedStoryId] = useState('');
   const [error, setError] = useState('');
 
   const isStoryLinked = Boolean(currentStoryId);
@@ -47,7 +47,9 @@ export default function EditorPage() {
 
   useEffect(() => {
     const routeStoryId = searchParams.get('storyId') || '';
-    setCurrentStoryId(routeStoryId);
+    if (routeStoryId !== currentStoryId) {
+      setCurrentStoryId(routeStoryId);
+    }
 
     if (!routeStoryId) return;
 
@@ -70,6 +72,7 @@ export default function EditorPage() {
       .catch((err) => {
         setError(`${t('errorLoading')}: ${err.message}`);
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, t]);
 
   useEffect(() => {
@@ -103,25 +106,7 @@ export default function EditorPage() {
     return () => {
       active = false;
     };
-  }, [storyScenes, sceneTitlesById]);
-
-  const addSceneIdToStory = (sceneId) => {
-    if (!sceneId || !UUID_RE.test(sceneId)) {
-      setError(t('invalidSceneId'));
-      return false;
-    }
-
-    if (storyScenes.some((item) => item.sceneId === sceneId)) {
-      setError(t('sceneAlreadyInStory'));
-      return false;
-    }
-
-    setStoryScenes((prev) => [
-      ...prev,
-      { sceneId, transitionText: '', durationSeconds: 8 },
-    ]);
-    return true;
-  };
+  }, [storyScenes, sceneTitlesById, setSceneTitlesById]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -146,7 +131,7 @@ export default function EditorPage() {
       const sceneId = result?.sceneId;
       if (!sceneId) throw new Error('Missing sceneId in save response');
       setCurrentSceneId(sceneId);
-      addSceneIdToStory(sceneId);
+      useSceneStore.getState().addStoryScene(sceneId);
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
     }
@@ -154,43 +139,17 @@ export default function EditorPage() {
 
   const handleAddSceneIdToStory = (sceneId) => {
     setError('');
-    addSceneIdToStory(sceneId);
-  };
-
-  const handleRemoveStoryScene = (index) => {
-    setStoryScenes((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleMoveStoryScene = (index, direction) => {
-    setStoryScenes((prev) => {
-      const target = index + direction;
-      if (target < 0 || target >= prev.length) return prev;
-      const copy = [...prev];
-      [copy[index], copy[target]] = [copy[target], copy[index]];
-      return copy;
-    });
-  };
-
-  const handleReorderStoryScenes = (from, to) => {
-    setStoryScenes((prev) => {
-      if (from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
-      const next = [...prev];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      return next;
-    });
-  };
-
-  const handleStorySceneChange = (index, key, value) => {
-    setStoryScenes((prev) =>
-      prev.map((item, i) => {
-        if (i !== index) return item;
-        if (key === 'durationSeconds') {
-          return { ...item, durationSeconds: Math.max(0, Number(value) || 0) };
-        }
-        return { ...item, [key]: value };
-      })
-    );
+    const { storyScenes, addStoryScene } = useSceneStore.getState();
+    if (!sceneId || !UUID_RE.test(sceneId)) {
+      setError(t('invalidSceneId'));
+      return false;
+    }
+    if (storyScenes.some((item) => item.sceneId === sceneId)) {
+      setError(t('sceneAlreadyInStory'));
+      return false;
+    }
+    addStoryScene(sceneId);
+    return true;
   };
 
   const handleSaveStory = async () => {
@@ -252,30 +211,12 @@ export default function EditorPage() {
       </div>
       <div className="flex flex-1 overflow-hidden">
         <LeftPanel
-          avatarUrl={avatarUrl}
-          onAvatarUrlChange={setAvatarUrl}
-          onLoadAvatar={setAvatarUrl}
-          transform={transform}
-          onTransformUpdate={updateTransform}
-          posePreset={posePreset}
-          onPosePresetChange={setPosePreset}
-          speechText={speechText}
-          onAddSpeech={setSpeechText}
-          onClearSpeech={() => setSpeechText('')}
-          sceneTitle={sceneTitle}
-          onSceneTitleChange={setSceneTitle}
           onAddCurrentSceneToStory={handleAddCurrentSceneToStory}
           onAddSceneIdToStory={handleAddSceneIdToStory}
-          storyTitle={storyTitle}
-          onStoryTitleChange={setStoryTitle}
-          storyDescription={storyDescription}
-          onStoryDescriptionChange={setStoryDescription}
           onSaveStory={handleSaveStory}
           onPublishStory={handlePublishStory}
           isStorySaving={isStorySaving}
           isStoryLinked={isStoryLinked}
-          linkedStoryId={currentStoryId}
-          publishedStoryId={publishedStoryId}
           onSave={handleSave}
           isSaving={isSaving}
           audio={audio}
@@ -310,13 +251,7 @@ export default function EditorPage() {
               />
             </Suspense>
           </div>
-          <StoryBuilderPanel
-            storyScenes={storyScenes}
-            sceneTitlesById={sceneTitlesById}
-            onStorySceneChange={handleStorySceneChange}
-            onRemoveStoryScene={handleRemoveStoryScene}
-            onReorderStoryScenes={handleReorderStoryScenes}
-          />
+          <StoryBuilderPanel />
         </div>
       </div>
     </div>

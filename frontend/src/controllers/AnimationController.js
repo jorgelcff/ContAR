@@ -27,11 +27,6 @@ export class AnimationController {
     this._chestBone = undefined;
     this._shoulderBones = undefined; // { left, right }
 
-    // ── Idle micro-sway (all poses) ──────────────────────────
-    this._idleTimer = 0;
-    this._spineBone = undefined;
-    this._hipBone = undefined;
-
     // ── Speaker gestures ─────────────────────────────────────
     this._proceduralMode = 'default';
     this._speakerTime = 0;
@@ -96,7 +91,6 @@ export class AnimationController {
     this._mixer.update(delta);
     this._updateBlink(delta);
     this._updateBreathing(delta);
-    this._updateIdleMicro(delta);
     this._updateSpeakerGestures(delta);
   }
 
@@ -179,74 +173,45 @@ export class AnimationController {
   // ── Breathing ─────────────────────────────────────────────────────────────
 
   _updateBreathing(delta) {
+    // Only apply breathing when no clip animation is driving the skeleton.
+    // During walk/run/dance/idle clips the mixer already animates the chest;
+    // applying our own rotation on top fights the clip and looks wrong.
+    if (this._currentAction !== null) return;
+
     if (this._chestBone === undefined) {
-      let chest = null, leftShoulder = null, rightShoulder = null;
+      let chest = null;
       this._model.traverse((node) => {
-        if (!node.isBone) return;
-        const n = String(node.name ?? '').toLowerCase();
-        if (!chest && /spine(?:0?[12])?|chest/i.test(n)) chest = node;
-        if (!leftShoulder && /left.*shoulder|shoulder.*l\b|leftshoulder/i.test(n)) leftShoulder = node;
-        if (!rightShoulder && /right.*shoulder|shoulder.*r\b|rightshoulder/i.test(n)) rightShoulder = node;
+        if (!chest && node.isBone && /spine(?:0?[12])?|chest/i.test(String(node.name ?? ''))) {
+          chest = node;
+          // Capture rest quaternion so we can offset from it, not accumulate
+          chest.userData.__breathBaseQuat = chest.quaternion.clone();
+        }
       });
-      this._chestBone = chest;
-      this._shoulderBones = { left: leftShoulder, right: rightShoulder };
+      this._chestBone = chest ?? null;
+    }
+
+    if (!this._chestBone) return;
+
+    // Ensure base is captured (once per static-pose entry)
+    if (!this._chestBone.userData.__breathBaseQuat) {
+      this._chestBone.userData.__breathBaseQuat = this._chestBone.quaternion.clone();
     }
 
     this._breathTimer += delta;
     const t = this._breathTimer;
 
-    // Asymmetric breath: inhale is slower (wider top), exhale is quicker
-    // Uses two incommensurable frequencies for natural variation
-    const breathCycle = 0.22 * Math.PI; // ~12 breaths/min base
+    // Asymmetric breath: two incommensurable frequencies (φ = golden ratio)
+    const breathCycle = 0.22 * Math.PI; // ~12 breaths/min
     const breathRaw = Math.sin(t * breathCycle) * 0.7 + Math.sin(t * breathCycle * 1.618) * 0.3;
-    // Map to [0..1] and apply asymmetric ease (power curve for naturalism)
-    const breathNorm = (breathRaw + 1) / 2;
-    const breathVal = Math.pow(breathNorm, 1.6); // softer inhale peak
+    const breathVal = Math.pow((breathRaw + 1) / 2, 1.6); // asymmetric ease
 
-    if (this._chestBone) {
-      // Amplitude increased from 0.004 to 0.012 — clearly visible
-      this._chestBone.rotation.x = (breathVal - 0.5) * 0.024;
-    }
-
-    // Shoulders rise slightly on inhale
-    const shoulderLift = breathVal * 0.008;
-    if (this._shoulderBones?.left)  this._shoulderBones.left.rotation.z  -= shoulderLift;
-    if (this._shoulderBones?.right) this._shoulderBones.right.rotation.z += shoulderLift;
-  }
-
-  // ── Idle micro-sway (all poses) ──────────────────────────────────────────
-
-  _updateIdleMicro(delta) {
-    if (this._spineBone === undefined) {
-      let spine = null, hip = null;
-      this._model.traverse((node) => {
-        if (!node.isBone) return;
-        const n = String(node.name ?? '').toLowerCase();
-        if (!spine && /spine(?:0?1)?$/i.test(n)) spine = node;
-        if (!hip   && /hips?|pelvis|root/i.test(n)) hip = node;
-      });
-      this._spineBone = spine;
-      this._hipBone = hip;
-    }
-
-    this._idleTimer += delta;
-    const t = this._idleTimer;
-
-    // Layered irrational frequencies (φ=1.618, √2≈1.414, √3≈1.732)
-    // These never form a repeating pattern → organic feel
-    const φ = 1.6180339887;
-    const swayX = 0.003 * Math.sin(t * 0.31) + 0.002 * Math.sin(t * 0.31 * φ);
-    const swayZ = 0.003 * Math.sin(t * 0.23 + 1.1) + 0.002 * Math.sin(t * 0.23 * 1.4142);
-
-    if (this._spineBone) {
-      this._spineBone.rotation.x += swayX;
-      this._spineBone.rotation.z += swayZ;
-    }
-
-    // Subtle weight-shift on hips (lateral rocking)
-    if (this._hipBone) {
-      this._hipBone.rotation.z = 0.004 * Math.sin(t * 0.19) + 0.002 * Math.sin(t * 0.19 * φ);
-    }
+    // SET relative to captured rest — never accumulates
+    const offset = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler((breathVal - 0.5) * 0.018, 0, 0)
+    );
+    this._chestBone.quaternion
+      .copy(this._chestBone.userData.__breathBaseQuat)
+      .multiply(offset);
   }
 
   // ── Speaker gestures ──────────────────────────────────────────────────────

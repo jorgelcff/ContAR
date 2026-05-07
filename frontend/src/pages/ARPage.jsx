@@ -424,7 +424,7 @@ export default function ARPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-gray-950 via-slate-950 to-black text-white overflow-hidden">
+    <div className="flex flex-col h-screen bg-linear-to-b from-gray-950 via-slate-950 to-black text-white overflow-hidden">
       <Header />
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-sm md:p-8">

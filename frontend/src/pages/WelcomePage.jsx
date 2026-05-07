@@ -33,7 +33,7 @@ export default function WelcomePage() {
 
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
           Bem-vindo ao{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-purple-400">
             Avaturn 3D
           </span>
         </h1>
@@ -47,7 +47,7 @@ export default function WelcomePage() {
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
           <button
             onClick={handleNewScene}
-            className="flex-1 py-4 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-lg font-semibold shadow-lg shadow-blue-900/40 transition-all duration-200 active:scale-95"
+            className="flex-1 py-4 px-6 rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-lg font-semibold shadow-lg shadow-blue-900/40 transition-all duration-200 active:scale-95"
           >
             ✨ Criar nova cena
           </button>
@@ -89,7 +89,7 @@ export default function WelcomePage() {
               <button
                 key={tpl.id}
                 onClick={() => handleUseTemplate(tpl)}
-                className={`rounded-2xl bg-gradient-to-br ${tpl.color} border border-white/10 p-6 flex flex-col gap-3 text-left hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-100`}
+                className={`rounded-2xl bg-linear-to-br ${tpl.color} border border-white/10 p-6 flex flex-col gap-3 text-left hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-100`}
               >
                 <span className="text-4xl">{tpl.emoji}</span>
                 <div>

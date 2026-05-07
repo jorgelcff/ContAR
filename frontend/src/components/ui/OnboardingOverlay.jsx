@@ -102,7 +102,7 @@ export default function OnboardingOverlay({ onDone }) {
           )}
           <button
             onClick={next}
-            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-blue-900/30"
+            className="flex-1 py-3 rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-blue-900/30"
           >
             {isLast ? '🚀 Começar!' : 'Próximo →'}
           </button>

@@ -95,7 +95,8 @@
         <a-asset-item id="modelAsset" src=""></a-asset-item>
       </a-assets>
 
-      <a-marker type="pattern" url="" emitevents="true" id="custom-marker">
+      <!-- Marker type is set dynamically by JS based on useHiro param -->
+      <a-marker preset="hiro" id="custom-marker" emitevents="true">
         <a-gltf-model id="avatar-model" src="#modelAsset" position="0 0 0" scale="0.4 0.4 0.4" rotation="0 0 0"></a-gltf-model>
       </a-marker>
 
@@ -119,6 +120,7 @@
       const params = new URLSearchParams(window.location.search);
       const initialModelUrl = params.get('modelUrl') || '';
       const initialMarkerUrl = params.get('markerUrl') || '';
+      const useHiro = params.get('useHiro') === '1';
 
       let modelBlobUrl = '';
       let markerBlobUrl = '';
@@ -143,8 +145,22 @@
         setStatus('Marcador remoto carregado.');
       };
 
+      // Configure marker type based on URL param
+      if (!useHiro) {
+        // Switch to custom pattern marker
+        markerEl.setAttribute('preset', 'custom');
+        markerEl.setAttribute('type', 'pattern');
+        markerEl.setAttribute('url', '');
+      }
+
       if (initialModelUrl) loadRemoteModel(initialModelUrl);
-      if (initialMarkerUrl) loadRemoteMarker(initialMarkerUrl);
+      if (initialMarkerUrl && !useHiro) loadRemoteMarker(initialMarkerUrl);
+
+      if (useHiro) {
+        // Hide the custom file inputs for the demo mode
+        document.querySelector('.row:nth-child(2)').style.display = 'none';
+        setStatus('Demo Hiro ativo. Aponte a câmera para o marcador Hiro impresso.');
+      }
 
       modelInput.addEventListener('change', (event) => {
         const file = event.target.files && event.target.files[0];

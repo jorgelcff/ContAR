@@ -192,6 +192,12 @@ export default function SceneCanvas({
     ...(lipSyncConfig || {}),
   };
 
+  // Dev tools only visible when ?dev is present in the URL
+  const showDevTools = useMemo(
+    () => { try { return new URLSearchParams(window.location.search).has('dev'); } catch { return false; } },
+    []
+  );
+
   useEffect(() => {
     posePresetRef.current = posePreset;
   }, [posePreset]);
@@ -756,16 +762,24 @@ export default function SceneCanvas({
   return (
     <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden" style={{ touchAction: 'none' }}>
       {avatarLoading && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/70 pointer-events-none">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-            <p className="text-xs text-cyan-200">Loading avatar…</p>
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/75 pointer-events-none">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="h-16 w-16 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+              <span className="absolute inset-0 flex items-center justify-center text-2xl select-none">👤</span>
+            </div>
+            <p className="text-sm text-cyan-200 font-medium">Carregando seu personagem...</p>
+            <p className="text-xs text-gray-400">Isso pode levar alguns segundos</p>
           </div>
         </div>
       )}
       {avatarLoadError && (
-        <div className="absolute top-3 left-3 right-3 z-20 rounded-md border border-red-600 bg-red-950/90 px-3 py-2 text-xs text-red-200">
-          {avatarLoadError}
+        <div className="absolute top-3 left-3 right-3 z-20 rounded-xl border border-red-700/60 bg-red-950/90 px-4 py-3 text-sm text-red-200 flex items-start gap-2">
+          <span className="shrink-0 text-base">⚠️</span>
+          <div>
+            <p className="font-medium">Não foi possível carregar o avatar</p>
+            <p className="text-xs text-red-300/80 mt-0.5">{avatarLoadError}</p>
+          </div>
         </div>
       )}
       {renderCtx && (
@@ -776,6 +790,7 @@ export default function SceneCanvas({
           renderer={renderCtx.renderer}
         />
       )}
+      {showDevTools && (
       <div className="absolute right-3 top-3 z-20 rounded-md border border-cyan-700/70 bg-cyan-950/75 px-3 py-2 text-xs text-cyan-100">
         <p className="font-semibold uppercase tracking-wide text-cyan-200">Lip Sync</p>
         <p>Open: {debugSnapshot.mouthOpen.toFixed(2)}</p>
@@ -787,6 +802,8 @@ export default function SceneCanvas({
         <p>Jaw Bones: {debugSnapshot.jawBoneCount || 0}</p>
         <p>Mouth Marker: {mouthMarkerInfo.source}{mouthMarkerInfo.name ? ` (${mouthMarkerInfo.name})` : ''}</p>
       </div>
+      )}
+      {showDevTools && (
       <div className="absolute left-3 bottom-3 z-20 w-96 max-h-72 overflow-y-auto rounded-md border border-amber-700/70 bg-amber-950/80 px-3 py-2 text-xs text-amber-100">
         <p className="font-semibold uppercase tracking-wide text-amber-200">Rig Debug</p>
         <p>Bones: {boneCatalogSnapshot.length}</p>
@@ -822,6 +839,7 @@ export default function SceneCanvas({
           ))}
         </ul>
       </div>
+      )}
       {mergedLipSyncConfig.showBlendshapeDebug && (
         <div className="absolute right-3 bottom-3 z-20 w-80 max-h-72 overflow-y-auto rounded-md border border-slate-600 bg-slate-950/90 px-3 py-2 text-xs text-slate-100">
           <p className="mb-2 font-semibold uppercase tracking-wide text-slate-300">

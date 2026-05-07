@@ -324,9 +324,10 @@ export default function StoryViewerPage() {
                 {sceneData ? (
                   <Suspense fallback={
                     <div className="flex h-full items-center justify-center bg-gray-900">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-                        <p className="text-xs text-cyan-200">Loading scene viewer…</p>
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+                        <p className="text-sm text-cyan-200 font-medium">Preparando a cena...</p>
+                        <p className="text-xs text-gray-500">Aguarde um momento</p>
                       </div>
                     </div>
                   }>

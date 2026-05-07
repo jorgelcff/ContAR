@@ -126,7 +126,7 @@ export default function SceneCanvas({
   const avatarRef = useRef(null);
   const animControllerRef = useRef(null);
   const lipSyncControllerRef = useRef(null);
-  const clockRef = useRef(new THREE.Clock());
+  const clockRef = useRef(new THREE.Timer());
   const animFrameRef = useRef(null);
   const idleClipRef = useRef(null);
   const avatarClipsRef = useRef([]);
@@ -329,6 +329,7 @@ export default function SceneCanvas({
     const animate = () => {
       if (!isVisibleRef.current) return;
       animFrameRef.current = requestAnimationFrame(animate);
+      clockRef.current.update();
       const delta = clockRef.current.getDelta();
       animControllerRef.current?.update(delta);
 
@@ -570,7 +571,7 @@ export default function SceneCanvas({
         const wasVisible = isVisibleRef.current;
         isVisibleRef.current = entry.isIntersecting;
         if (!wasVisible && entry.isIntersecting) {
-          clockRef.current.getDelta();
+          clockRef.current.update(); // reset accumulated time before resuming
           animate();
         }
       },

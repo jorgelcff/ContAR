@@ -2,54 +2,46 @@ import * as THREE from 'three';
 
 /**
  * AnimationController — manages Three.js AnimationMixer with smooth crossfade,
- * idle animation looping, and procedural micro-animations (blink, breathing).
- *
- * Usage:
- *   const ctrl = new AnimationController(model, clips);
- *   // every frame:
- *   ctrl.update(delta);
- *   // switch animation with crossfade:
- *   ctrl.play('idle', 0.4);
+ * idle animation looping, and procedural micro-animations (blink, breathing,
+ * idle sway, speaker gestures).
  */
 export class AnimationController {
   constructor(model, clips = []) {
     this._model = model;
     this._mixer = new THREE.AnimationMixer(model);
-    /** @type {Map<string, THREE.AnimationAction>} */
     this._actions = new Map();
     this._currentAction = null;
 
-    // Procedural blink
+    // ── Blink ────────────────────────────────────────────────
     this._blinkTimer = 0;
-    this._blinkInterval = 3 + Math.random() * 4; // 3–7 s
-    this._blinkDuration = 0.12; // seconds for one blink
+    this._blinkInterval = 2.5 + Math.random() * 4;
+    this._blinkDuration = 0.1;
     this._blinkActive = false;
     this._blinkElapsed = 0;
-    /** @type {Array<(v: number) => void> | null} cached setters, null = not discovered yet */
+    this._doubleBlink = false;   // flag: blink again shortly after
+    this._doubleBlinkDelay = 0;
     this._blinkSetters = null;
 
-    // Procedural breathing
+    // ── Breathing ────────────────────────────────────────────
     this._breathTimer = 0;
-    /** @type {THREE.Bone | null | undefined} undefined = not searched yet */
     this._chestBone = undefined;
+    this._shoulderBones = undefined; // { left, right }
 
-    // Procedural speaker gestures for storytelling scenes
+    // ── Idle micro-sway (all poses) ──────────────────────────
+    this._idleTimer = 0;
+    this._spineBone = undefined;
+    this._hipBone = undefined;
+
+    // ── Speaker gestures ─────────────────────────────────────
     this._proceduralMode = 'default';
     this._speakerTime = 0;
-    /** @type {Record<string, { bone: THREE.Bone, baseQuat: THREE.Quaternion }> | null | undefined} */
     this._speakerBones = undefined;
 
     this.addClips(clips);
   }
 
-  get mixer() {
-    return this._mixer;
-  }
+  get mixer() { return this._mixer; }
 
-  /**
-   * Register additional animation clips (e.g. from a separate .glb).
-   * @param {THREE.AnimationClip[]} clips
-   */
   addClips(clips = []) {
     for (const clip of clips) {
       if (!clip?.name) continue;
@@ -59,15 +51,8 @@ export class AnimationController {
     }
   }
 
-  /**
-   * Play a clip by name or clip reference, crossfading from the current action.
-   * @param {string|THREE.AnimationClip} clipOrName
-   * @param {number} fadeDuration  seconds (default 0.4)
-   * @returns {boolean} true if the clip was found and started
-   */
   play(clipOrName, fadeDuration = 0.4) {
     let action;
-
     if (clipOrName instanceof THREE.AnimationClip) {
       action = this._mixer.clipAction(clipOrName);
       action.enabled = true;
@@ -75,78 +60,62 @@ export class AnimationController {
     } else {
       action = this._findAction(String(clipOrName ?? '').toLowerCase());
     }
-
     if (!action) return false;
     if (action === this._currentAction) return true;
-
     action.reset();
     action.enabled = true;
     action.setEffectiveTimeScale(1);
     action.setEffectiveWeight(1);
-
     if (this._currentAction) {
       this._currentAction.crossFadeTo(action, fadeDuration, true);
     } else {
       action.fadeIn(fadeDuration);
     }
-
     action.play();
     this._currentAction = action;
     return true;
   }
 
-  /** Stop all active actions immediately. */
   stopAll() {
     this._mixer.stopAllAction();
     this._currentAction = null;
   }
 
-  /**
-   * Set procedural behavior profile.
-   * @param {'default'|'speaker'} mode
-   */
   setProceduralMode(mode = 'default') {
     const normalized = mode === 'speaker' ? 'speaker' : 'default';
     if (this._proceduralMode === normalized) return;
-
     if (this._proceduralMode === 'speaker') {
       this._resetSpeakerBones();
       this._speakerTime = 0;
     }
-
     this._proceduralMode = normalized;
-    if (normalized === 'speaker') {
-      this._speakerBones = undefined;
-    }
+    if (normalized === 'speaker') this._speakerBones = undefined;
   }
 
-  /**
-   * Must be called every rendered frame with the elapsed delta time.
-   * @param {number} delta  seconds since last frame
-   */
   update(delta) {
     this._mixer.update(delta);
     this._updateBlink(delta);
     this._updateBreathing(delta);
+    this._updateIdleMicro(delta);
     this._updateSpeakerGestures(delta);
   }
 
-  /** Release mixer resources. */
   dispose() {
     this._mixer.stopAllAction();
     this._mixer.uncacheRoot(this._model);
   }
 
-  // ── Private helpers ────────────────────────────────────────────────────────
+  // ── Private ───────────────────────────────────────────────────────────────
 
   _findAction(key) {
     if (this._actions.has(key)) return this._actions.get(key);
-    // Partial match: key is a substring of a stored name, or vice-versa
     for (const [name, action] of this._actions) {
       if (name.includes(key) || key.includes(name)) return action;
     }
     return null;
   }
+
+  // ── Blink ─────────────────────────────────────────────────────────────────
 
   _updateBlink(delta) {
     const setters = this._getBlinkSetters();
@@ -154,20 +123,38 @@ export class AnimationController {
 
     this._blinkTimer += delta;
 
-    if (!this._blinkActive && this._blinkTimer >= this._blinkInterval) {
+    // Handle double-blink countdown
+    if (this._doubleBlink) {
+      this._doubleBlinkDelay -= delta;
+      if (this._doubleBlinkDelay <= 0) {
+        this._doubleBlink = false;
+        this._blinkActive = true;
+        this._blinkElapsed = 0;
+      }
+    }
+
+    // Trigger new blink
+    if (!this._blinkActive && !this._doubleBlink && this._blinkTimer >= this._blinkInterval) {
       this._blinkActive = true;
       this._blinkElapsed = 0;
       this._blinkTimer = 0;
-      this._blinkInterval = 3 + Math.random() * 4;
+      this._blinkInterval = 2.5 + Math.random() * 4;
+
+      // 25% chance of a double blink
+      if (Math.random() < 0.25) {
+        this._doubleBlink = true;
+        this._doubleBlinkDelay = 0.18 + Math.random() * 0.1;
+      }
     }
 
     if (this._blinkActive) {
       this._blinkElapsed += delta;
       const t = this._blinkElapsed / this._blinkDuration;
-      // Triangle envelope: 0 → 1 → 0
-      const weight = Math.max(0, 1 - Math.abs(t * 2 - 1));
-      for (const set of setters) set(Math.min(1, weight));
-
+      // Fast close, slow open (more natural than symmetric triangle)
+      const closePhase = Math.min(1, t / 0.35);
+      const openPhase = Math.max(0, (t - 0.35) / 0.65);
+      const weight = closePhase < 1 ? closePhase : 1 - openPhase;
+      for (const set of setters) set(Math.min(1, Math.max(0, weight)));
       if (this._blinkElapsed >= this._blinkDuration) {
         for (const set of setters) set(0);
         this._blinkActive = false;
@@ -177,50 +164,110 @@ export class AnimationController {
 
   _getBlinkSetters() {
     if (this._blinkSetters !== null) return this._blinkSetters;
-
     const setters = [];
     this._model.traverse((node) => {
       if (!node.isMesh || !node.morphTargetDictionary) return;
-      const keys = Object.keys(node.morphTargetDictionary);
-      for (const k of keys.filter((n) => /blink/i.test(n))) {
+      for (const k of Object.keys(node.morphTargetDictionary).filter((n) => /blink/i.test(n))) {
         const idx = node.morphTargetDictionary[k];
-        setters.push((v) => {
-          node.morphTargetInfluences[idx] = v;
-        });
+        setters.push((v) => { node.morphTargetInfluences[idx] = v; });
       }
     });
-
     this._blinkSetters = setters;
     return setters;
   }
 
+  // ── Breathing ─────────────────────────────────────────────────────────────
+
   _updateBreathing(delta) {
-    // Lazy search for a chest / spine bone
     if (this._chestBone === undefined) {
-      let found = null;
+      let chest = null, leftShoulder = null, rightShoulder = null;
       this._model.traverse((node) => {
-        if (found || !node.isBone) return;
-        const name = String(node.name ?? '').toLowerCase();
-        if (/spine(?:0?1)|chest/i.test(name)) found = node;
+        if (!node.isBone) return;
+        const n = String(node.name ?? '').toLowerCase();
+        if (!chest && /spine(?:0?[12])?|chest/i.test(n)) chest = node;
+        if (!leftShoulder && /left.*shoulder|shoulder.*l\b|leftshoulder/i.test(n)) leftShoulder = node;
+        if (!rightShoulder && /right.*shoulder|shoulder.*r\b|rightshoulder/i.test(n)) rightShoulder = node;
       });
-      this._chestBone = found; // may be null if not found
+      this._chestBone = chest;
+      this._shoulderBones = { left: leftShoulder, right: rightShoulder };
     }
 
-    if (!this._chestBone) return;
-
     this._breathTimer += delta;
-    // ~12 breaths/min, very subtle (±0.004 rad)
-    this._chestBone.rotation.x = Math.sin(this._breathTimer * 0.2 * Math.PI) * 0.004;
+    const t = this._breathTimer;
+
+    // Asymmetric breath: inhale is slower (wider top), exhale is quicker
+    // Uses two incommensurable frequencies for natural variation
+    const breathCycle = 0.22 * Math.PI; // ~12 breaths/min base
+    const breathRaw = Math.sin(t * breathCycle) * 0.7 + Math.sin(t * breathCycle * 1.618) * 0.3;
+    // Map to [0..1] and apply asymmetric ease (power curve for naturalism)
+    const breathNorm = (breathRaw + 1) / 2;
+    const breathVal = Math.pow(breathNorm, 1.6); // softer inhale peak
+
+    if (this._chestBone) {
+      // Amplitude increased from 0.004 to 0.012 — clearly visible
+      this._chestBone.rotation.x = (breathVal - 0.5) * 0.024;
+    }
+
+    // Shoulders rise slightly on inhale
+    const shoulderLift = breathVal * 0.008;
+    if (this._shoulderBones?.left)  this._shoulderBones.left.rotation.z  -= shoulderLift;
+    if (this._shoulderBones?.right) this._shoulderBones.right.rotation.z += shoulderLift;
   }
+
+  // ── Idle micro-sway (all poses) ──────────────────────────────────────────
+
+  _updateIdleMicro(delta) {
+    if (this._spineBone === undefined) {
+      let spine = null, hip = null;
+      this._model.traverse((node) => {
+        if (!node.isBone) return;
+        const n = String(node.name ?? '').toLowerCase();
+        if (!spine && /spine(?:0?1)?$/i.test(n)) spine = node;
+        if (!hip   && /hips?|pelvis|root/i.test(n)) hip = node;
+      });
+      this._spineBone = spine;
+      this._hipBone = hip;
+    }
+
+    this._idleTimer += delta;
+    const t = this._idleTimer;
+
+    // Layered irrational frequencies (φ=1.618, √2≈1.414, √3≈1.732)
+    // These never form a repeating pattern → organic feel
+    const φ = 1.6180339887;
+    const swayX = 0.003 * Math.sin(t * 0.31) + 0.002 * Math.sin(t * 0.31 * φ);
+    const swayZ = 0.003 * Math.sin(t * 0.23 + 1.1) + 0.002 * Math.sin(t * 0.23 * 1.4142);
+
+    if (this._spineBone) {
+      this._spineBone.rotation.x += swayX;
+      this._spineBone.rotation.z += swayZ;
+    }
+
+    // Subtle weight-shift on hips (lateral rocking)
+    if (this._hipBone) {
+      this._hipBone.rotation.z = 0.004 * Math.sin(t * 0.19) + 0.002 * Math.sin(t * 0.19 * φ);
+    }
+  }
+
+  // ── Speaker gestures ──────────────────────────────────────────────────────
 
   _updateSpeakerGestures(delta) {
     if (this._proceduralMode !== 'speaker') return;
-
     const bones = this._getSpeakerBones();
     if (!bones) return;
 
     this._speakerTime += delta;
     const t = this._speakerTime;
+
+    // Helper: layered organic sine using golden ratio (φ) and silver ratio (δ)
+    // φ = 1.618…  δ = 2.414…   These are incommensurable with each other and with 1.
+    const φ = 1.6180339887;
+    const δ = 2.4142135623;
+
+    const organic = (base, a1 = 0.5, a2 = 0.35, a3 = 0.15, phase = 0) =>
+      a1 * Math.sin(t * base + phase) +
+      a2 * Math.sin(t * base * φ + phase * 1.3) +
+      a3 * Math.sin(t * base * δ + phase * 0.7);
 
     const applyOffset = (entry, x = 0, y = 0, z = 0) => {
       if (!entry?.bone) return;
@@ -228,23 +275,62 @@ export class AnimationController {
       entry.bone.quaternion.copy(entry.baseQuat).multiply(offset);
     };
 
-    applyOffset(bones.head, Math.sin(t * 2.1) * 0.02, Math.sin(t * 1.2) * 0.05, 0);
-    applyOffset(bones.neck, 0, Math.sin(t * 0.9 + 0.5) * 0.025, 0);
+    // Head: nod + turn, asymmetric
+    applyOffset(bones.head,
+      organic(1.1, 0.020, 0.012, 0.008, 0.0),   // nod
+      organic(0.7, 0.030, 0.020, 0.010, 0.5),   // turn
+      organic(0.5, 0.010, 0.005, 0.005, 1.2)    // tilt
+    );
 
-    applyOffset(
-      bones.leftUpperArm,
-      -0.12 + Math.sin(t * 2.2 + 0.2) * 0.05,
-      0,
-      0.28 + Math.sin(t * 1.7) * 0.07
+    // Neck: follows head slightly, offset phase
+    applyOffset(bones.neck,
+      organic(0.9, 0.010, 0.006, 0.004, 0.3),
+      organic(0.6, 0.018, 0.010, 0.006, 0.8),
+      0
     );
-    applyOffset(
-      bones.rightUpperArm,
-      -0.1 + Math.sin(t * 2.2 + 1.2) * 0.05,
-      0,
-      -0.28 + Math.sin(t * 1.7 + 1.1) * 0.07
+
+    // Spine / torso sway — gives sense of weight and breath
+    applyOffset(bones.spine,
+      organic(0.4, 0.012, 0.007, 0.004, 1.5),
+      organic(0.3, 0.008, 0.005, 0.002, 2.0),
+      organic(0.35, 0.006, 0.003, 0.002, 0.4)
     );
-    applyOffset(bones.leftForeArm, -0.35 + Math.sin(t * 2.8 + 0.8) * 0.08, 0, -0.08);
-    applyOffset(bones.rightForeArm, -0.35 + Math.sin(t * 2.8 + 1.9) * 0.08, 0, 0.08);
+
+    // Left arm — gestures slightly ahead of right
+    applyOffset(bones.leftUpperArm,
+      -0.14 + organic(1.1, 0.040, 0.025, 0.015, 0.0),
+      0,
+      0.24 + organic(0.85, 0.060, 0.035, 0.015, 0.3)
+    );
+    applyOffset(bones.leftForeArm,
+      -0.30 + organic(1.4, 0.050, 0.030, 0.010, 0.6),
+      organic(0.7, 0.015, 0.010, 0.005, 0.2),
+      -0.06
+    );
+
+    // Right arm — slightly different rhythm (offset phase)
+    applyOffset(bones.rightUpperArm,
+      -0.12 + organic(1.1, 0.040, 0.025, 0.015, 1.4),
+      0,
+      -0.24 + organic(0.85, 0.060, 0.035, 0.015, 1.7)
+    );
+    applyOffset(bones.rightForeArm,
+      -0.28 + organic(1.4, 0.050, 0.030, 0.010, 2.0),
+      organic(0.7, 0.015, 0.010, 0.005, 1.8),
+      0.06
+    );
+
+    // Wrist micro-rotation (expressiveness detail)
+    applyOffset(bones.leftHand,
+      0,
+      organic(1.8, 0.020, 0.012, 0.006, 0.0),
+      organic(2.1, 0.015, 0.010, 0.005, 0.5)
+    );
+    applyOffset(bones.rightHand,
+      0,
+      organic(1.8, 0.020, 0.012, 0.006, 2.3),
+      organic(2.1, 0.015, 0.010, 0.005, 1.9)
+    );
   }
 
   _getSpeakerBones() {
@@ -255,9 +341,7 @@ export class AnimationController {
       this._model.traverse((node) => {
         if (found || !node?.isBone) return;
         const name = String(node.name || '').toLowerCase();
-        if (patterns.some((re) => re.test(name))) {
-          found = node;
-        }
+        if (patterns.some((re) => re.test(name))) found = node;
       });
       return found;
     };
@@ -265,16 +349,18 @@ export class AnimationController {
     const capture = (bone) => (bone ? { bone, baseQuat: bone.quaternion.clone() } : null);
 
     const bones = {
-      head: capture(findBone([/head/, /mixamorighead/])),
-      neck: capture(findBone([/neck/, /mixamorigneck/])),
-      leftUpperArm: capture(findBone([/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/])),
+      head:          capture(findBone([/\bhead\b/, /mixamorighead/])),
+      neck:          capture(findBone([/\bneck\b/, /mixamorigneck/])),
+      spine:         capture(findBone([/spine(?:0?1)?$/, /mixamorigspine/])),
+      leftUpperArm:  capture(findBone([/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/])),
       rightUpperArm: capture(findBone([/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/])),
-      leftForeArm: capture(findBone([/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/])),
-      rightForeArm: capture(findBone([/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/])),
+      leftForeArm:   capture(findBone([/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/])),
+      rightForeArm:  capture(findBone([/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/])),
+      leftHand:      capture(findBone([/lefthand/, /hand_l/, /mixamoriglefthand/])),
+      rightHand:     capture(findBone([/righthand/, /hand_r/, /mixamorigrighthand/])),
     };
 
-    const hasAnyBone = Object.values(bones).some(Boolean);
-    this._speakerBones = hasAnyBone ? bones : null;
+    this._speakerBones = Object.values(bones).some(Boolean) ? bones : null;
     return this._speakerBones;
   }
 

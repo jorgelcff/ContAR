@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import LeftPanel from '../components/ui/LeftPanel';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
+import TimelinePanel from '../components/ui/TimelinePanel';
 import { useSceneStore } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
 import { getScene, getStory, saveScene, saveStory } from '../api/sceneApi';
@@ -251,6 +252,7 @@ export default function EditorPage() {
               />
             </Suspense>
           </div>
+          <TimelinePanel />
           <StoryBuilderPanel />
         </div>
       </div>

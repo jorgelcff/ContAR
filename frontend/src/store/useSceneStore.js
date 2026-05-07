@@ -53,9 +53,33 @@ const createStorySlice = (set, get) => ({
   currentStoryId: '',
   publishedStoryId: '',
 
+  // Timeline State
+  timelineBlocks: [],
+  timelineDuration: 10,
+
   setSceneTitle: (title) => set({ sceneTitle: title }),
   setStoryTitle: (title) => set({ storyTitle: title }),
   setStoryDescription: (desc) => set({ storyDescription: desc }),
+
+  addTimelineBlock: (block) => set((state) => {
+    const newBlock = {
+      id: crypto.randomUUID(),
+      type: block.type || 'action',
+      startSec: block.startSec ?? 0,
+      endSec: block.endSec ?? 2,
+      ref: block.ref || '',
+      ...block
+    };
+    return { timelineBlocks: [...state.timelineBlocks, newBlock] };
+  }),
+  updateTimelineBlock: (id, updates) => set((state) => ({
+    timelineBlocks: state.timelineBlocks.map(b => (b.id === id ? { ...b, ...updates } : b))
+  })),
+  removeTimelineBlock: (id) => set((state) => ({
+    timelineBlocks: state.timelineBlocks.filter(b => b.id !== id)
+  })),
+  setTimelineDuration: (duration) => set({ timelineDuration: Math.max(1, duration) }),
+
   setStoryScenes: (scenesConfig) => set((state) => ({ 
     storyScenes: typeof scenesConfig === 'function' ? scenesConfig(state.storyScenes) : scenesConfig 
   })),
@@ -90,7 +114,7 @@ const createStorySlice = (set, get) => ({
   setPublishedStoryId: (id) => set({ publishedStoryId: id }),
 
   buildScenePayload: (existingId) => {
-    const { sceneTitle, avatarUrl, posePreset, transform, speechText } = get();
+    const { sceneTitle, avatarUrl, posePreset, transform, speechText, timelineBlocks, timelineDuration } = get();
     return {
       sceneId: existingId !== undefined ? existingId : (get().currentSceneId || undefined),
       metadata: { title: sceneTitle || 'Untitled Scene', theme: '' },
@@ -108,6 +132,10 @@ const createStorySlice = (set, get) => ({
           text: speechText,
           audioUrl: '', // This will be extended when we refactor audio
           bubbleStyle: { color: '#ffffff', fontSize: 14 },
+        },
+        timeline: {
+          duration: timelineDuration,
+          blocks: timelineBlocks,
         },
       },
     };

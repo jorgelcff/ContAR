@@ -21,6 +21,7 @@ export default function StoryViewerPage() {
   const [sceneProgress, setSceneProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [fullscreen, setFullscreen] = useState(false);
   const playbackBaseMsRef = useRef(0);
   const playbackStartMsRef = useRef(0);
   const progressFrameRef = useRef(0);
@@ -186,9 +187,11 @@ export default function StoryViewerPage() {
   // ── Render ────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
-      <div className="hidden md:block shrink-0">
-        <Header />
-      </div>
+      {!fullscreen && (
+        <div className="hidden md:block shrink-0">
+          <Header />
+        </div>
+      )}
 
       {loading ? (
         <div className="flex-1 flex flex-col gap-4 p-6 animate-pulse">
@@ -201,6 +204,7 @@ export default function StoryViewerPage() {
       ) : (
         <>
           {/* Top bar */}
+          {!fullscreen && (
           <div className="shrink-0 border-b border-gray-700 bg-gray-800 px-4 py-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold">{story?.metadata?.title || 'Story'}</h2>
@@ -238,9 +242,10 @@ export default function StoryViewerPage() {
               </label>
             </div>
           </div>
+          )}
 
           {/* Canvas area */}
-          <div className="flex-1 overflow-hidden pb-24 md:pb-0">
+          <div className={`flex-1 overflow-hidden ${fullscreen ? '' : 'pb-24 md:pb-0'}`}>
             <div className="relative h-full w-full">
               {/* Desktop progress bar */}
               <div className="hidden md:flex absolute right-4 top-4 bottom-4 z-20 w-4 flex-col items-center justify-start">
@@ -253,7 +258,17 @@ export default function StoryViewerPage() {
                 </div>
               </div>
 
+              {/* Fullscreen toggle — visible over canvas on mobile */}
+              <button
+                onClick={() => setFullscreen((v) => !v)}
+                className="md:hidden absolute top-3 right-3 z-30 rounded-full bg-black/60 border border-white/20 w-10 h-10 flex items-center justify-center text-white text-lg backdrop-blur-sm active:bg-black/80"
+                aria-label={fullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+              >
+                {fullscreen ? '✕' : '⛶'}
+              </button>
+
               {/* Mobile controls */}
+              {!fullscreen && (
               <div className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-gray-700 bg-gray-950/95 px-4 py-3 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
                   <Link to={arHref}
@@ -291,6 +306,7 @@ export default function StoryViewerPage() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Scene canvas */}
               <div className="h-full w-full origin-center transition-transform duration-300"

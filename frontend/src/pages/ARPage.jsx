@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
+import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import Header from '../components/ui/Header';
 import SceneCanvas from '../components/3d/SceneCanvas';
 
@@ -142,6 +143,7 @@ function SurfaceARScene({ modelUrl, onBack }) {
     const gltfLoader = new GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
     gltfLoader.setCrossOrigin('anonymous');
+    gltfLoader.register((parser) => new VRMLoaderPlugin(parser)); // VRM support
     loaderRef.current = gltfLoader;
 
     const controller = renderer.xr.getController(0);
@@ -284,7 +286,7 @@ function SurfaceARScene({ modelUrl, onBack }) {
         modelRootRef.current.add(model);
         modelRootRef.current.scale.setScalar(scaleRef.current);
         setLoadingModel(false);
-        setStatus(t('tapToPlace'));
+        setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
       },
       undefined,
       (err) => {
@@ -310,56 +312,58 @@ function SurfaceARScene({ modelUrl, onBack }) {
       <div className="absolute left-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
         <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{t('arTitle')}</p>
         <p className="mt-2 text-sm text-gray-200">{status || t('tapToPlace')}</p>
-        <p className="mt-1 text-xs text-gray-400">{loadingModel ? 'Loading model…' : error || ''}</p>
+        {loadingModel && (
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent shrink-0" />
+            <p className="text-xs text-cyan-300">Carregando personagem...</p>
+          </div>
+        )}
+        {!loadingModel && error && (
+          <p className="mt-1 text-xs text-red-400">{error}</p>
+        )}
       </div>
 
       <div className="absolute bottom-4 left-4 right-4 z-20 rounded-2xl border border-white/10 bg-black/80 p-4 backdrop-blur-sm md:left-1/2 md:right-auto md:w-[520px] md:-translate-x-1/2">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        {/* Mobile-first controls: large touch targets */}
+        <div className="grid grid-cols-2 gap-2 md:flex md:flex-row md:items-center">
           <button
             onClick={onBack}
-            className="rounded-lg border border-white/10 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
+            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600"
           >
-            {t('back')}
+            ← {t('back')}
           </button>
           <button
             onClick={() => {
               placedRef.current = false;
-              setStatus(t('tapToPlace'));
-              if (modelRootRef.current) {
-                modelRootRef.current.visible = false;
-              }
+              setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
+              if (modelRootRef.current) modelRootRef.current.visible = false;
             }}
-            className="rounded-lg border border-white/10 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
+            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600"
           >
-            {t('reset')}
+            🔄 {t('reset')}
           </button>
-          <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-gray-900 px-4 py-2 text-sm text-gray-200">
+          <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
             <input
               type="checkbox"
               checked={lockPlacement}
               onChange={(e) => setLockPlacement(e.target.checked)}
-              className="accent-cyan-400"
+              className="w-5 h-5 accent-cyan-400 cursor-pointer"
             />
-            {lockPlacement ? t('fixPlacement') : t('unlockPlacement')}
-          </label>
-          <label className="flex flex-1 flex-col gap-1 text-sm text-gray-200">
-            <span>{t('scale')}</span>
-            <input
-              type="range"
-              min="0.2"
-              max="2.0"
-              step="0.01"
-              value={scale}
-              onChange={(e) => setScale(Number(e.target.value))}
-              className="accent-cyan-400"
-            />
+            <span>{lockPlacement ? '🔒 Posição fixada' : '🔓 Mover avatar'}</span>
           </label>
         </div>
-        <div ref={buttonHostRef} className="mt-3 flex justify-center" />
-      </div>
 
-      <div className="absolute right-4 top-16 z-20 rounded-full border border-cyan-300/30 bg-black/70 px-3 py-1 text-xs text-cyan-200 backdrop-blur-sm">
-        {`${t('scale')}: ${scaleLabel}`}
+        <label className="mt-3 flex items-center gap-3 text-sm text-gray-200">
+          <span className="shrink-0 w-14 text-right text-xs text-gray-400">{scaleLabel}</span>
+          <input
+            type="range" min="0.2" max="2.0" step="0.01" value={scale}
+            onChange={(e) => setScale(Number(e.target.value))}
+            className="flex-1 accent-cyan-400 cursor-pointer"
+          />
+          <span className="shrink-0 text-xs text-gray-400">{t('scale')}</span>
+        </label>
+
+        <div ref={buttonHostRef} className="mt-3 flex justify-center" />
       </div>
     </div>
   );
@@ -378,7 +382,7 @@ function MarkerFrame({ modelUrl, markerUrl }) {
       <div className="border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">{t('markerUrl')}</h2>
-          <p className="text-xs text-gray-400">Use a custom pattern file and a .glb model.</p>
+          <p className="text-xs text-gray-400">Use um arquivo de padrão personalizado e um modelo .glb.</p>
         </div>
         <Link
           to="/ar"
@@ -431,7 +435,7 @@ export default function ARPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">{t('arTitle')}</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">{t('arDescription')}</h1>
           <p className="mt-3 max-w-2xl text-sm text-gray-300">
-            Use surface mode to anchor the avatar on a plane with WebXR, or use marker mode with a custom pattern file.
+            Use o modo Superfície para ancorar o avatar em um plano com WebXR, ou o modo Marcador com um arquivo de padrão personalizado.
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -477,13 +481,13 @@ export default function ARPage() {
             <div className="rounded-2xl border border-cyan-400/20 bg-cyan-950/30 p-4">
               <h3 className="font-semibold text-cyan-200">Surface AR</h3>
               <p className="mt-2 text-sm text-gray-300">
-                Move the phone, tap the reticle, and the avatar stays fixed on the plane.
+                Mova o celular até aparecer o alvo ciano, toque para posicionar o avatar — ele fica fixo na superfície.
               </p>
             </div>
             <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-950/30 p-4">
               <h3 className="font-semibold text-fuchsia-200">Marker AR</h3>
               <p className="mt-2 text-sm text-gray-300">
-                Upload a custom marker pattern and keep the model locked to the printed target.
+                Imprima um marcador personalizado e aponte a câmera — o avatar fica ancorado sobre o papel.
               </p>
             </div>
           </div>

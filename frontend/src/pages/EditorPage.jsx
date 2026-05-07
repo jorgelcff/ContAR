@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import LeftPanel from '../components/ui/LeftPanel';
+import OnboardingOverlay, { shouldShowOnboarding } from '../components/ui/OnboardingOverlay';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import TimelinePanel from '../components/ui/TimelinePanel';
 import { useSceneStore } from '../store/useSceneStore';
@@ -45,6 +46,7 @@ export default function EditorPage() {
     onVisemeReady: (text) => audio.generateVisemeTimelineFromText(text),
   });
 
+  const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
   const [isSaving, setIsSaving] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
   const [error, setError] = useState('');
@@ -202,6 +204,9 @@ export default function EditorPage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
+      {showOnboarding && (
+        <OnboardingOverlay onDone={() => setShowOnboarding(false)} />
+      )}
       <Header />
       {error && (
         <div className="shrink-0 bg-red-900/80 text-red-200 text-sm px-4 py-2 border-b border-red-700">

@@ -6,8 +6,11 @@ import LoginPage from './pages/LoginPage';
 import StoriesPage from './pages/StoriesPage';
 import StoryViewerPage from './pages/StoryViewerPage';
 import ARPage from './pages/ARPage';
+import WelcomePage from './pages/WelcomePage';
 import { useAuth } from './auth/AuthContext';
 import './i18n';
+
+const ONBOARDING_KEY = 'avaturn:onboarding:done';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -30,7 +33,11 @@ function HomeRedirect() {
     return <div className="min-h-screen bg-gray-950 text-gray-300 flex items-center justify-center">Loading...</div>;
   }
 
-  return <Navigate to={isAuthenticated ? '/stories' : '/login'} replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // First-time users see the welcome screen; returning users go straight to stories.
+  const isNew = !localStorage.getItem(ONBOARDING_KEY);
+  return <Navigate to={isNew ? '/welcome' : '/stories'} replace />;
 }
 
 export default function App() {
@@ -58,6 +65,14 @@ export default function App() {
         <Route path="/scene/:id" element={<ViewerPage />} />
         <Route path="/story/:id" element={<StoryViewerPage />} />
         <Route path="/ar" element={<ARPage />} />
+        <Route
+          path="/welcome"
+          element={(
+            <ProtectedRoute>
+              <WelcomePage />
+            </ProtectedRoute>
+          )}
+        />
       </Routes>
     </BrowserRouter>
   );

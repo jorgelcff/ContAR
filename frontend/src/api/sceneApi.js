@@ -119,5 +119,19 @@ export async function uploadAudio(blob) {
   const { data } = await api.post('/media/audio', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  return data.url; // full URL returned by the server
+  return data.url;
+}
+
+export async function uploadModel(file) {
+  const formData = new FormData();
+  formData.append('file', file, file.name);
+  const { data } = await api.post('/media/model', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.url;
+}
+
+export async function listScenes() {
+  const { data } = await api.get('/scene');
+  return data;
 }

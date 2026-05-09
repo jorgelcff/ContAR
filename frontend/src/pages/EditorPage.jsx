@@ -23,6 +23,7 @@ export default function EditorPage() {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const { addToast } = useToast();
+  const sceneIdLoadedRef = useRef(false);
 
   const {
     avatarUrl, setAvatarUrl,
@@ -75,12 +76,18 @@ export default function EditorPage() {
   const autosaveTimerRef = useRef(null);
 
   useEffect(() => {
-    if (!currentSceneId) return;
+    // Only autosave when there is meaningful content to preserve
+    const hasContent = Boolean(avatarUrl || speechText || sceneTitle);
+    if (!hasContent) return;
     clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(async () => {
       setAutosaveStatus('saving');
       try {
-        await saveScene(buildScenePayload(currentSceneId));
+        const result = await saveScene(buildScenePayload(currentSceneId || undefined));
+        // Capture the generated sceneId on first save
+        if (result?.sceneId && !currentSceneId) {
+          useSceneStore.getState().setCurrentSceneId(result.sceneId);
+        }
         setAutosaveStatus(new Date());
       } catch {
         setAutosaveStatus(null);
@@ -92,6 +99,40 @@ export default function EditorPage() {
 
   const isStoryLinked = Boolean(currentStoryId);
   const arHref = avatarUrl ? `/ar?mode=surface&modelUrl=${encodeURIComponent(avatarUrl)}` : '/ar';
+
+  // ── Load scene from ?sceneId= URL param ─────────────────────
+  useEffect(() => {
+    const sceneId = searchParams.get('sceneId') || '';
+    if (!sceneId || sceneIdLoadedRef.current) return;
+    sceneIdLoadedRef.current = true;
+
+    getScene(sceneId)
+      .then((data) => {
+        if (!data) return;
+        const avatar = data.content?.avatar || {};
+        const narrative = data.content?.narrative || {};
+        const pos = avatar.transform?.position || [0, 0, 0];
+        const rot = avatar.transform?.rotation || [0, 0, 0];
+        const scale = avatar.transform?.scale || [1, 1, 1];
+        useSceneStore.setState({
+          currentSceneId: data.sceneId,
+          sceneTitle: data.metadata?.title || '',
+          avatarUrl: avatar.modelUrl || '',
+          posePreset: avatar.posePreset || 'idle',
+          transform: {
+            positionX: pos[0] ?? 0,
+            positionY: pos[1] ?? 0,
+            positionZ: pos[2] ?? 0,
+            rotationY: ((rot[1] ?? 0) * 180) / Math.PI,
+            scale: scale[0] ?? 1,
+          },
+          speechText: narrative.text || '',
+          narrativeAudioUrl: narrative.audioUrl || '',
+        });
+      })
+      .catch(() => addToast('Cena não encontrada.', 'error'));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // ── Load story from URL ──────────────────────────────────────
   useEffect(() => {

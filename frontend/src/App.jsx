@@ -4,6 +4,7 @@ import EditorPage from './pages/EditorPage';
 import ViewerPage from './pages/ViewerPage';
 import LoginPage from './pages/LoginPage';
 import StoriesPage from './pages/StoriesPage';
+import ScenesPage from './pages/ScenesPage';
 import StoryViewerPage from './pages/StoryViewerPage';
 import ARPage from './pages/ARPage';
 import WelcomePage from './pages/WelcomePage';
@@ -39,6 +40,14 @@ export default function App() {
           element={(
             <ProtectedRoute>
               <StoriesPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/scenes"
+          element={(
+            <ProtectedRoute>
+              <ScenesPage />
             </ProtectedRoute>
           )}
         />

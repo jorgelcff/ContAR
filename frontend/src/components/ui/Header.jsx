@@ -32,6 +32,16 @@ export default function Header({ autosaveStatus }) {
         )}
       </div>
       <div className="flex items-center gap-2">
+        {isAuthenticated && (
+          <>
+            <Link to="/scenes" className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors hidden sm:inline-flex">
+              Cenas
+            </Link>
+            <Link to="/stories" className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors hidden sm:inline-flex">
+              Histórias
+            </Link>
+          </>
+        )}
         <Link
           to="/ar"
           className="text-xs font-medium px-3 py-1 rounded-full bg-cyan-700 hover:bg-cyan-600 text-white transition-colors"

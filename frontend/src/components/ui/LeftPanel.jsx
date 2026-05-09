@@ -6,7 +6,8 @@ import AudioPanel from './AudioPanel';
 import SceneProgressBar from './SceneProgressBar';
 import { TooltipIcon } from './Tooltip';
 import { useSceneStore } from '../../store/useSceneStore';
-import { listAvaturnAvatars } from '../../api/sceneApi';
+import { listAvaturnAvatars, uploadModel } from '../../api/sceneApi';
+import { useToast } from '../../context/ToastContext';
 
 const AVATURN_USER_ID_KEY = 'avaturn:userId';
 
@@ -32,6 +33,7 @@ export default function LeftPanel({
   onMobilePanelClose,
 }) {
   const { t } = useTranslation();
+  const { addToast } = useToast();
 
   const {
     avatarUrl, setAvatarUrl,
@@ -61,6 +63,7 @@ export default function LeftPanel({
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(false);
   const [avatarListError, setAvatarListError] = useState('');
   const [hasLoadedAvatars, setHasLoadedAvatars] = useState(false);
+  const [isUploadingGlb, setIsUploadingGlb] = useState(false);
   const localGlbInputRef = useRef(null);
   const localBlobUrlRef = useRef('');
 
@@ -121,7 +124,7 @@ export default function LeftPanel({
 
   const handlePickLocalGlb = () => localGlbInputRef.current?.click();
 
-  const handleLocalGlbChange = (e) => {
+  const handleLocalGlbChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const lower = file.name.toLowerCase();
@@ -129,12 +132,29 @@ export default function LeftPanel({
       || file.type === 'model/gltf-binary' || file.type === 'model/vrm'
       || file.type === 'application/octet-stream';
     if (!valid) { e.target.value = ''; return; }
-    if (localBlobUrlRef.current) URL.revokeObjectURL(localBlobUrlRef.current);
-    const url = `${URL.createObjectURL(file)}#filename=${encodeURIComponent(file.name)}`;
-    localBlobUrlRef.current = url.split('#')[0];
-    setUrlInput(url);
-    setAvatarUrl(url);
     e.target.value = '';
+
+    // Preview immediately with blob URL
+    if (localBlobUrlRef.current) URL.revokeObjectURL(localBlobUrlRef.current);
+    const blobUrl = URL.createObjectURL(file);
+    localBlobUrlRef.current = blobUrl;
+    setUrlInput(blobUrl);
+    setAvatarUrl(blobUrl);
+
+    // Upload to server so URL persists across sessions
+    setIsUploadingGlb(true);
+    try {
+      const serverUrl = await uploadModel(file);
+      URL.revokeObjectURL(blobUrl);
+      localBlobUrlRef.current = '';
+      setUrlInput(serverUrl);
+      setAvatarUrl(serverUrl);
+      addToast('Avatar salvo no servidor — não será perdido ao recarregar.', 'success');
+    } catch {
+      addToast('Avatar carregado localmente. Será perdido ao recarregar a página.', 'warning', 6000);
+    } finally {
+      setIsUploadingGlb(false);
+    }
   };
 
   // ── Speech handlers ─────────────────────────────────────────
@@ -209,9 +229,10 @@ export default function LeftPanel({
               </button>
               <button
                 onClick={handlePickLocalGlb}
-                className="flex-1 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
+                disabled={isUploadingGlb}
+                className="flex-1 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-medium transition-colors"
               >
-                GLB / VRM
+                {isUploadingGlb ? '⏳ Enviando...' : 'GLB / VRM'}
               </button>
             </div>
 

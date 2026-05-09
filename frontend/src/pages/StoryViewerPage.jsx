@@ -222,7 +222,7 @@ export default function StoryViewerPage() {
           {!fullscreen && (
           <div className="shrink-0 border-b border-gray-700 bg-gray-800 px-4 py-3 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold">{story?.metadata?.title || 'Story'}</h2>
+              <h2 className="font-semibold">{story?.metadata?.title || t('appTitle')}</h2>
               {story?.metadata?.description && (
                 <p className="text-xs text-gray-400">{story.metadata.description}</p>
               )}
@@ -238,7 +238,7 @@ export default function StoryViewerPage() {
               </button>
               <button onClick={() => setIndex((p) => Math.max(0, p - 1))} disabled={index <= 0 || !hasStarted}
                 className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center">
-                Prev
+                {t('viewerPrev')}
               </button>
               <span className="text-xs text-gray-300">
                 {storyScenes.length ? `${index + 1}/${storyScenes.length}` : '0/0'}
@@ -246,7 +246,7 @@ export default function StoryViewerPage() {
               <button onClick={() => setIndex((p) => Math.min(storyScenes.length - 1, p + 1))}
                 disabled={index >= storyScenes.length - 1 || !hasStarted}
                 className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center">
-                Next
+                {t('viewerNext')}
               </button>
               <label className="flex items-center gap-2 rounded bg-gray-900/60 px-3 py-1.5 text-xs">
                 <span className="text-gray-300">{t('scale')}</span>
@@ -268,7 +268,7 @@ export default function StoryViewerPage() {
                 <div className="flex flex-col items-center gap-6 text-center max-w-sm w-full">
                   <div>
                     <h1 className="text-2xl font-bold text-white leading-snug">
-                      {story?.metadata?.title || 'História'}
+                      {story?.metadata?.title || t('appTitle')}
                     </h1>
                     {story?.metadata?.description && (
                       <p className="text-sm text-gray-400 mt-2 leading-relaxed">
@@ -280,7 +280,7 @@ export default function StoryViewerPage() {
                   <button
                     onClick={handleStart}
                     className="w-24 h-24 rounded-full bg-cyan-600 hover:bg-cyan-500 active:scale-95 flex items-center justify-center transition-all duration-150 shadow-2xl shadow-cyan-900/60 hover:shadow-cyan-600/40 hover:scale-105"
-                    aria-label="Iniciar história"
+                    aria-label={t('viewerStart')}
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 ml-1 text-white">
                       <path d="M8 5v14l11-7z" />
@@ -288,8 +288,9 @@ export default function StoryViewerPage() {
                   </button>
 
                   <p className="text-xs text-gray-500">
-                    {storyScenes.length} cena{storyScenes.length !== 1 ? 's' : ''}
-                    {' · '}com narração em áudio
+                    {t('viewerSceneCount', { count: storyScenes.length })}
+                    {' · '}
+                    {t('viewerAudioNote')}
                   </p>
                 </div>
               </div>
@@ -321,12 +322,12 @@ export default function StoryViewerPage() {
               <div className="flex items-center gap-2">
                 <Link to={arHref}
                   className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center">
-                  AR
+                  {t('ar')}
                 </Link>
                 {!hasStarted ? (
                   <button onClick={handleStart}
                     className="flex-1 px-4 py-2 min-h-12 rounded bg-cyan-600 hover:bg-cyan-500 text-sm font-bold flex items-center justify-center gap-2">
-                    ▶ Iniciar
+                    {t('viewerStart')}
                   </button>
                 ) : (
                   <button onClick={() => setIsPlaying((p) => !p)}
@@ -336,12 +337,12 @@ export default function StoryViewerPage() {
                 )}
                 <button onClick={() => setIndex((p) => Math.max(0, p - 1))} disabled={index <= 0 || !hasStarted}
                   className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center">
-                  Prev
+                  {t('viewerPrev')}
                 </button>
                 <button onClick={() => setIndex((p) => Math.min(storyScenes.length - 1, p + 1))}
                   disabled={index >= storyScenes.length - 1 || !hasStarted}
                   className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-xs flex items-center">
-                  Next
+                  {t('viewerNext')}
                 </button>
               </div>
               <div className="mt-3 flex items-center gap-2">
@@ -371,8 +372,8 @@ export default function StoryViewerPage() {
                   <div className="flex h-full items-center justify-center bg-gray-900">
                     <div className="flex flex-col items-center gap-4">
                       <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-                      <p className="text-sm text-cyan-200 font-medium">Preparando a cena...</p>
-                      <p className="text-xs text-gray-500">Aguarde um momento</p>
+                      <p className="text-sm text-cyan-200 font-medium">{t('viewerPreparing')}</p>
+                      <p className="text-xs text-gray-500">{t('viewerWait')}</p>
                     </div>
                   </div>
                 }>
@@ -389,7 +390,7 @@ export default function StoryViewerPage() {
                 </Suspense>
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-400">
-                  Cena não encontrada.
+                  {t('viewerSceneNotFound')}
                 </div>
               )}
             </div>

@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import { useAuth } from '../auth/AuthContext';
 import { updateAccount, changePassword } from '../api/sceneApi';
+import { useTranslation } from 'react-i18next';
 
 export default function AccountPage() {
+  const { t } = useTranslation();
   const { user, refreshUser } = useAuth();
 
   const [name, setName]           = useState(user?.name || '');
@@ -26,10 +28,10 @@ export default function AccountPage() {
     try {
       await updateAccount({ name: name.trim() });
       await refreshUser();
-      setNameMsg('Nome atualizado!');
+      setNameMsg(t('accountProfileSuccess'));
       setTimeout(() => setNameMsg(''), 3000);
     } catch (err) {
-      setNameMsg(err?.response?.data?.error || 'Erro ao atualizar nome');
+      setNameMsg(err?.response?.data?.error || t('accountProfileSuccess'));
     } finally {
       setNameSaving(false);
     }
@@ -39,16 +41,16 @@ export default function AccountPage() {
     e.preventDefault();
     setPwError('');
     setPwMsg('');
-    if (newPw !== confirmPw) { setPwError('As senhas não coincidem.'); return; }
-    if (newPw.length < 6)    { setPwError('A nova senha deve ter ao menos 6 caracteres.'); return; }
+    if (newPw !== confirmPw) { setPwError(t('accountPasswordMismatch')); return; }
+    if (newPw.length < 6)    { setPwError(t('accountPasswordTooShort')); return; }
     setPwSaving(true);
     try {
       await changePassword(currentPw, newPw);
-      setPwMsg('Senha alterada com sucesso!');
+      setPwMsg(t('accountPasswordSuccess'));
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
       setTimeout(() => setPwMsg(''), 4000);
     } catch (err) {
-      setPwError(err?.response?.data?.error || 'Erro ao alterar senha');
+      setPwError(err?.response?.data?.error || t('accountPasswordSuccess'));
     } finally {
       setPwSaving(false);
     }
@@ -60,16 +62,16 @@ export default function AccountPage() {
       <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6 max-w-lg w-full mx-auto">
 
         <div>
-          <h1 className="text-xl font-bold">Minha Conta</h1>
+          <h1 className="text-xl font-bold">{t('accountTitle')}</h1>
           <p className="text-sm text-gray-400 mt-0.5">{user?.email}</p>
         </div>
 
         {/* Nome */}
         <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 flex flex-col gap-4">
-          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Perfil</h2>
+          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">{t('accountProfileSection')}</h2>
           <form onSubmit={saveName} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">Nome</label>
+              <label className="text-xs text-gray-400">{t('accountProfileName')}</label>
               <input
                 type="text" value={name} onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
@@ -79,7 +81,7 @@ export default function AccountPage() {
             <div className="flex items-center gap-3">
               <button type="submit" disabled={nameSaving}
                 className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">
-                {nameSaving ? 'Salvando...' : 'Salvar nome'}
+                {nameSaving ? t('accountProfileSaving') : t('accountProfileSave')}
               </button>
               {nameMsg && <span className="text-sm text-emerald-400">{nameMsg}</span>}
             </div>
@@ -88,7 +90,7 @@ export default function AccountPage() {
 
         {/* Senha */}
         <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 flex flex-col gap-4">
-          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Alterar Senha</h2>
+          <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">{t('accountPasswordSection')}</h2>
           {pwError && (
             <div className="rounded-md border border-red-700/60 bg-red-950/70 px-3 py-2 text-sm text-red-200">
               {pwError}
@@ -101,21 +103,21 @@ export default function AccountPage() {
           )}
           <form onSubmit={savePassword} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">Senha atual</label>
+              <label className="text-xs text-gray-400">{t('accountPasswordCurrent')}</label>
               <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)}
                 autoComplete="current-password" required
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-blue-500"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">Nova senha</label>
+              <label className="text-xs text-gray-400">{t('accountPasswordNew')}</label>
               <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)}
                 autoComplete="new-password" required minLength={6}
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-blue-500"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">Confirmar nova senha</label>
+              <label className="text-xs text-gray-400">{t('accountPasswordConfirm')}</label>
               <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)}
                 autoComplete="new-password" required
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-blue-500"
@@ -123,14 +125,14 @@ export default function AccountPage() {
             </div>
             <button type="submit" disabled={pwSaving}
               className="self-start px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">
-              {pwSaving ? 'Salvando...' : 'Alterar senha'}
+              {pwSaving ? t('accountPasswordSaving') : t('accountPasswordSave')}
             </button>
           </form>
         </section>
 
         <div className="border-t border-gray-800 pt-4 flex gap-4">
-          <Link to="/scenes"  className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">← Minhas Cenas</Link>
-          <Link to="/stories" className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">← Minhas Histórias</Link>
+          <Link to="/scenes"  className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">{t('accountLinksScenes')}</Link>
+          <Link to="/stories" className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">{t('accountLinksStories')}</Link>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import { listScenes, deleteScene } from '../api/sceneApi';
+import { useTranslation } from 'react-i18next';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -16,6 +17,7 @@ function timeAgo(dateStr) {
 }
 
 export default function ScenesPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [scenes, setScenes]   = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,20 +31,20 @@ export default function ScenesPage() {
       const data = await listScenes();
       setScenes(data?.scenes || []);
     } catch (err) {
-      setError(err?.response?.data?.error || err.message || 'Erro ao carregar cenas');
+      setError(err?.response?.data?.error || err.message || t('scenesErrorLoad'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (sceneId, title) => {
-    if (!window.confirm(`Excluir a cena "${title || 'Sem título'}"? Esta ação não pode ser desfeita.`)) return;
+  const handleDelete = async (sceneId, scene) => {
+    if (!window.confirm(t('scenesDeleteConfirm', { title: scene.metadata?.title || '' }))) return;
     setDeleting(sceneId);
     try {
       await deleteScene(sceneId);
       setScenes((prev) => prev.filter((s) => s.sceneId !== sceneId));
     } catch (err) {
-      setError(err?.response?.data?.error || 'Erro ao excluir cena');
+      setError(err?.response?.data?.error || t('scenesErrorDelete'));
     } finally {
       setDeleting(null);
     }
@@ -58,21 +60,21 @@ export default function ScenesPage() {
         {/* Header row */}
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold">Minhas Cenas</h1>
-            <p className="text-sm text-gray-400 mt-0.5">Cenas salvas na sua conta. Clique em uma para continuar editando.</p>
+            <h1 className="text-xl font-bold">{t('scenesPageTitle')}</h1>
+            <p className="text-sm text-gray-400 mt-0.5">{t('scenesSubtitle')}</p>
           </div>
           <div className="flex gap-2 shrink-0">
             <button
               onClick={load}
               className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs transition-colors"
             >
-              Atualizar
+              {t('scenesRefresh')}
             </button>
             <button
               onClick={() => navigate('/editor')}
               className="px-4 py-1.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-semibold transition-colors"
             >
-              + Nova Cena
+              {t('scenesNewBtn')}
             </button>
           </div>
         </div>
@@ -86,18 +88,18 @@ export default function ScenesPage() {
         {loading ? (
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
-            Carregando cenas...
+            {t('loading')}
           </div>
         ) : scenes.length === 0 ? (
           <div className="rounded-2xl border border-gray-700 bg-gray-800/60 p-10 text-center flex flex-col items-center gap-4">
             <span className="text-5xl">🎬</span>
-            <p className="text-gray-300 font-medium">Nenhuma cena ainda</p>
-            <p className="text-sm text-gray-500">Crie sua primeira cena no editor e ela aparecerá aqui.</p>
+            <p className="text-gray-300 font-medium">{t('scenesEmptyTitle')}</p>
+            <p className="text-sm text-gray-500">{t('scenesEmptyDesc')}</p>
             <button
               onClick={() => navigate('/editor')}
               className="mt-2 px-5 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors"
             >
-              Criar primeira cena
+              {t('scenesEmptyBtn')}
             </button>
           </div>
         ) : (
@@ -118,13 +120,13 @@ export default function ScenesPage() {
 
                 <div className="flex-1">
                   <h3 className="font-semibold text-sm truncate" title={scene.metadata?.title}>
-                    {scene.metadata?.title || 'Sem título'}
+                    {scene.metadata?.title || t('scenesEmptyTitle')}
                   </h3>
                   <p className="text-[11px] text-gray-500 mt-0.5">
-                    Editada {timeAgo(scene.updatedAt)}
+                    {t('scenesCardEdited', { time: timeAgo(scene.updatedAt) })}
                   </p>
                   {scene.posePreset && scene.posePreset !== 'idle' && (
-                    <p className="text-[11px] text-cyan-500/70 mt-0.5">Pose: {scene.posePreset}</p>
+                    <p className="text-[11px] text-cyan-500/70 mt-0.5">{t('scenesCardPose', { pose: scene.posePreset })}</p>
                   )}
                 </div>
 
@@ -133,20 +135,20 @@ export default function ScenesPage() {
                     to={`/editor?sceneId=${encodeURIComponent(scene.sceneId)}`}
                     className="flex-1 text-center py-1.5 rounded-lg bg-blue-700 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
                   >
-                    Editar
+                    {t('scenesCardEdit')}
                   </Link>
                   <Link
                     to={`/scene/${encodeURIComponent(scene.sceneId)}`}
                     className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs transition-colors"
                     target="_blank" rel="noopener noreferrer"
                   >
-                    Ver
+                    {t('scenesCardView')}
                   </Link>
                   <button
-                    onClick={() => handleDelete(scene.sceneId, scene.metadata?.title)}
+                    onClick={() => handleDelete(scene.sceneId, scene)}
                     disabled={deleting === scene.sceneId}
                     className="px-3 py-1.5 rounded-lg bg-red-900/70 hover:bg-red-800 disabled:opacity-50 text-red-200 text-xs transition-colors"
-                    title="Excluir cena"
+                    title={t('delete')}
                   >
                     {deleting === scene.sceneId ? '…' : '🗑'}
                   </button>
@@ -158,7 +160,7 @@ export default function ScenesPage() {
 
         <div className="border-t border-gray-800 pt-4">
           <Link to="/stories" className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
-            → Ver Minhas Histórias
+            {t('scenesMyStories')}
           </Link>
         </div>
       </div>

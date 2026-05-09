@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import { listStories, saveStory, deleteStory } from '../api/sceneApi';
+import { useTranslation } from 'react-i18next';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -38,6 +39,7 @@ function SkeletonCard() {
 }
 
 function StoryCard({ story, onDelete, deleting }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const shareUrl = `${window.location.origin}/story/${encodeURIComponent(story.storyId)}`;
 
@@ -55,7 +57,7 @@ function StoryCard({ story, onDelete, deleting }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-white truncate" title={story.metadata?.title}>
-            {story.metadata?.title || 'Sem título'}
+            {story.metadata?.title || t('storiesEmptyTitle')}
           </h3>
           {story.metadata?.description && (
             <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
@@ -66,13 +68,13 @@ function StoryCard({ story, onDelete, deleting }) {
         {/* Scene count badge */}
         <div className="shrink-0 flex items-center gap-1 rounded-full bg-gray-700/60 px-2.5 py-1 text-[11px] text-gray-300">
           <span>🎬</span>
-          <span>{story.sceneCount ?? 0} cena{story.sceneCount !== 1 ? 's' : ''}</span>
+          <span>{t('storiesCardScenes', { count: story.sceneCount ?? 0 })}</span>
         </div>
       </div>
 
       {/* Date */}
       <p className="text-[11px] text-gray-500">
-        Editada {timeAgo(story.updatedAt)}
+        {t('storiesCardEdited', { time: timeAgo(story.updatedAt) })}
       </p>
 
       {/* Share link */}
@@ -86,7 +88,7 @@ function StoryCard({ story, onDelete, deleting }) {
               : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
           }`}
         >
-          {copied ? '✓ Copiado' : 'Copiar'}
+          {copied ? t('storiesCardCopied') : t('storiesCardCopy')}
         </button>
       </div>
 
@@ -96,7 +98,7 @@ function StoryCard({ story, onDelete, deleting }) {
           to={`/editor?storyId=${encodeURIComponent(story.storyId)}`}
           className="flex-1 text-center py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
         >
-          Editar
+          {t('storiesCardEdit')}
         </Link>
         <Link
           to={`/story/${encodeURIComponent(story.storyId)}`}
@@ -104,12 +106,12 @@ function StoryCard({ story, onDelete, deleting }) {
           rel="noopener noreferrer"
           className="flex-1 text-center py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs transition-colors"
         >
-          ▶ Ver
+          {t('storiesCardView')}
         </Link>
         <button
           onClick={() => onDelete(story.storyId, story.metadata?.title)}
           disabled={deleting === story.storyId}
-          title="Excluir história"
+          title={t('delete')}
           className="px-3 py-2 rounded-xl bg-red-900/40 hover:bg-red-900/70 disabled:opacity-40 text-red-300 text-xs transition-colors"
         >
           {deleting === story.storyId ? '…' : '🗑'}
@@ -120,6 +122,7 @@ function StoryCard({ story, onDelete, deleting }) {
 }
 
 export default function StoriesPage() {
+  const { t } = useTranslation();
   const navigate  = useNavigate();
   const titleRef  = useRef(null);
 
@@ -139,7 +142,7 @@ export default function StoriesPage() {
       const data = await listStories();
       setStories(data?.stories || []);
     } catch (err) {
-      setError(err?.response?.data?.error || err.message || 'Erro ao carregar histórias');
+      setError(err?.response?.data?.error || err.message || t('storiesErrorLoad'));
     } finally {
       setLoading(false);
     }
@@ -159,7 +162,7 @@ export default function StoriesPage() {
     try {
       const result = await saveStory({
         metadata: {
-          title:       newTitle.trim() || 'Nova história',
+          title:       newTitle.trim() || t('storiesCreateSectionTitle'),
           description: newDesc.trim()  || '',
           language:    'pt',
         },
@@ -167,20 +170,20 @@ export default function StoriesPage() {
       });
       navigate(`/editor?storyId=${encodeURIComponent(result.storyId)}`);
     } catch (err) {
-      setError(err?.response?.data?.error || 'Erro ao criar história');
+      setError(err?.response?.data?.error || t('storiesErrorCreate'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (storyId, title) => {
-    if (!window.confirm(`Excluir "${title || 'Sem título'}"? Essa ação não pode ser desfeita.`)) return;
+    if (!window.confirm(t('storiesDeleteConfirm', { title: title || '' }))) return;
     setDeleting(storyId);
     try {
       await deleteStory(storyId);
       setStories((prev) => prev.filter((s) => s.storyId !== storyId));
     } catch (err) {
-      setError(err?.response?.data?.error || 'Erro ao excluir história');
+      setError(err?.response?.data?.error || t('storiesErrorDelete'));
     } finally {
       setDeleting(null);
     }
@@ -196,9 +199,9 @@ export default function StoriesPage() {
           {/* Page header */}
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold">Minhas Histórias</h1>
+              <h1 className="text-xl font-bold">{t('storiesPageTitle')}</h1>
               <p className="text-sm text-gray-400 mt-0.5">
-                {loading ? '...' : `${stories.length} história${stories.length !== 1 ? 's' : ''}`}
+                {loading ? '...' : t('storiesCount', { count: stories.length })}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -206,13 +209,13 @@ export default function StoriesPage() {
                 to="/scenes"
                 className="px-3 py-2 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-xs transition-colors hidden sm:inline-flex"
               >
-                Minhas Cenas
+                {t('storiesMyScenes')}
               </Link>
               <button
                 onClick={() => { setShowCreate((v) => !v); setNewTitle(''); setNewDesc(''); }}
                 className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
               >
-                {showCreate ? '✕ Cancelar' : '+ Nova História'}
+                {showCreate ? t('storiesCancelBtn') : t('storiesNewBtn')}
               </button>
             </div>
           </div>
@@ -223,20 +226,20 @@ export default function StoriesPage() {
               onSubmit={handleCreate}
               className="rounded-2xl border border-emerald-700/40 bg-emerald-950/20 p-5 flex flex-col gap-3"
             >
-              <p className="text-sm font-semibold text-emerald-300">Nova história</p>
+              <p className="text-sm font-semibold text-emerald-300">{t('storiesCreateSectionTitle')}</p>
               <input
                 ref={titleRef}
                 type="text"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Título da história"
+                placeholder={t('storiesCreateTitlePlaceholder')}
                 className="w-full rounded-xl bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2.5 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
               />
               <textarea
                 rows={2}
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                placeholder="Descrição (opcional)"
+                placeholder={t('storiesCreateDescPlaceholder')}
                 className="w-full rounded-xl bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
               />
               <div className="flex gap-2">
@@ -245,14 +248,14 @@ export default function StoriesPage() {
                   disabled={saving}
                   className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-medium transition-colors"
                 >
-                  {saving ? 'Criando...' : 'Criar e abrir editor'}
+                  {saving ? t('storiesCreateSubmitting') : t('storiesCreateSubmit')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreate(false)}
                   className="px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-800 text-gray-400 text-sm transition-colors"
                 >
-                  Cancelar
+                  {t('cancel')}
                 </button>
               </div>
             </form>
@@ -275,21 +278,21 @@ export default function StoriesPage() {
             <div className="rounded-2xl border border-gray-700 bg-gray-800/50 p-12 flex flex-col items-center gap-5 text-center">
               <span className="text-6xl">📖</span>
               <div>
-                <p className="font-semibold text-gray-200 text-lg">Nenhuma história ainda</p>
+                <p className="font-semibold text-gray-200 text-lg">{t('storiesEmptyTitle')}</p>
                 <p className="text-sm text-gray-500 mt-1.5 max-w-sm">
-                  Crie a primeira história, adicione cenas com avatares narradores e compartilhe com quem quiser.
+                  {t('storiesEmptyDesc')}
                 </p>
               </div>
               <button
                 onClick={() => setShowCreate(true)}
                 className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
               >
-                + Criar primeira história
+                {t('storiesEmptyBtn')}
               </button>
               <p className="text-xs text-gray-600">
                 Ou comece criando cenas em{' '}
                 <Link to="/scenes" className="text-cyan-500 hover:text-cyan-400 underline underline-offset-2">
-                  Minhas Cenas
+                  {t('storiesEmptySceneLink')}
                 </Link>
               </p>
             </div>

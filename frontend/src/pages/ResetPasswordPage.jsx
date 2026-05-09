@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../api/sceneApi';
+import { useTranslation } from 'react-i18next';
 
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
 
@@ -16,9 +18,9 @@ export default function ResetPasswordPage() {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-4">
         <div className="w-full max-w-md rounded-2xl border border-red-700/50 bg-gray-900 p-6 text-center flex flex-col gap-4">
-          <p className="text-red-300 font-medium">Link inválido ou expirado.</p>
+          <p className="text-red-300 font-medium">{t('resetPwInvalidToken')}</p>
           <Link to="/login" className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">
-            Solicitar novo link
+            {t('resetPwRequestNew')}
           </Link>
         </div>
       </div>
@@ -28,14 +30,14 @@ export default function ResetPasswordPage() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (password !== confirm) { setError('As senhas não coincidem.'); return; }
-    if (password.length < 6)  { setError('A senha deve ter ao menos 6 caracteres.'); return; }
+    if (password !== confirm) { setError(t('resetPwMismatch')); return; }
+    if (password.length < 6)  { setError(t('resetPwTooShort')); return; }
     setSubmitting(true);
     try {
       await resetPassword(token, password);
       setDone(true);
     } catch (err) {
-      setError(err?.response?.data?.error || 'Não foi possível redefinir a senha.');
+      setError(err?.response?.data?.error || t('resetPwInvalidToken'));
     } finally {
       setSubmitting(false);
     }
@@ -46,8 +48,8 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-6 flex flex-col gap-4">
 
         <div>
-          <h1 className="text-xl font-bold">Nova senha</h1>
-          <p className="text-sm text-gray-400 mt-1">Escolha uma nova senha para sua conta ContAR.</p>
+          <h1 className="text-xl font-bold">{t('resetPwTitle')}</h1>
+          <p className="text-sm text-gray-400 mt-1">{t('resetPwSubtitle')}</p>
         </div>
 
         {error && (
@@ -59,32 +61,32 @@ export default function ResetPasswordPage() {
         {done ? (
           <div className="flex flex-col gap-3">
             <div className="rounded-xl border border-emerald-700/50 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200">
-              Senha redefinida com sucesso!
+              {t('resetPwSuccessMsg')}
             </div>
             <Link to="/login"
               className="w-full text-center py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors">
-              Ir para o login
+              {t('resetPwGoToLogin')}
             </Link>
           </div>
         ) : (
           <form onSubmit={submit} className="flex flex-col gap-3">
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nova senha" required minLength={6} autoComplete="new-password"
+              placeholder={t('resetPwNewPw')} required minLength={6} autoComplete="new-password"
               className="w-full rounded-lg bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
             <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Confirmar nova senha" required autoComplete="new-password"
+              placeholder={t('resetPwConfirmPw')} required autoComplete="new-password"
               className="w-full rounded-lg bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
             <button type="submit" disabled={submitting}
               className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">
-              {submitting ? 'Salvando...' : 'Salvar nova senha'}
+              {submitting ? t('resetPwSubmitting') : t('resetPwSubmit')}
             </button>
           </form>
         )}
 
         <Link to="/login" className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
-          ← Voltar ao login
+          {t('resetPwBackToLogin')}
         </Link>
       </div>
     </div>

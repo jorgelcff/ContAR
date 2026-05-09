@@ -146,6 +146,26 @@ export async function resendVerification() {
   return data;
 }
 
+export async function deleteScene(sceneId) {
+  const { data } = await api.delete(`/scene/${encodeURIComponent(sceneId)}`);
+  return data;
+}
+
+export async function deleteStory(storyId) {
+  const { data } = await api.delete(`/story/${encodeURIComponent(storyId)}`);
+  return data;
+}
+
+export async function updateAccount(payload) {
+  const { data } = await api.put('/auth/account', payload);
+  return data;
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  const { data } = await api.put('/auth/change-password', { currentPassword, newPassword });
+  return data;
+}
+
 export async function forgotPassword(email) {
   const { data } = await api.post('/auth/forgot-password', { email });
   return data;

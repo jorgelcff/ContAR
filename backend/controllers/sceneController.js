@@ -77,4 +77,20 @@ async function getScene(req, res) {
   }
 }
 
-module.exports = { saveScene, listScenes, getScene };
+// DELETE /api/scene/:id — delete a scene (owner only)
+async function deleteScene(req, res) {
+  try {
+    const id      = safeString(req.params.id);
+    const ownerId = req.user?.userId || '';
+    if (!id || !UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid scene ID' });
+
+    const result = await Scene.deleteOne({ sceneId: id, ownerId });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Scene not found or not yours' });
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error('deleteScene error:', err);
+    res.status(500).json({ error: 'Failed to delete scene' });
+  }
+}
+
+module.exports = { saveScene, listScenes, getScene, deleteScene };

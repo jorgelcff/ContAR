@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
-import { listScenes } from '../api/sceneApi';
+import { listScenes, deleteScene } from '../api/sceneApi';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -17,9 +17,10 @@ function timeAgo(dateStr) {
 
 export default function ScenesPage() {
   const navigate = useNavigate();
-  const [scenes, setScenes] = useState([]);
+  const [scenes, setScenes]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
+  const [deleting, setDeleting] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -31,6 +32,19 @@ export default function ScenesPage() {
       setError(err?.response?.data?.error || err.message || 'Erro ao carregar cenas');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (sceneId, title) => {
+    if (!window.confirm(`Excluir a cena "${title || 'Sem título'}"? Esta ação não pode ser desfeita.`)) return;
+    setDeleting(sceneId);
+    try {
+      await deleteScene(sceneId);
+      setScenes((prev) => prev.filter((s) => s.sceneId !== sceneId));
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Erro ao excluir cena');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -124,11 +138,18 @@ export default function ScenesPage() {
                   <Link
                     to={`/scene/${encodeURIComponent(scene.sceneId)}`}
                     className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    target="_blank" rel="noopener noreferrer"
                   >
                     Ver
                   </Link>
+                  <button
+                    onClick={() => handleDelete(scene.sceneId, scene.metadata?.title)}
+                    disabled={deleting === scene.sceneId}
+                    className="px-3 py-1.5 rounded-lg bg-red-900/70 hover:bg-red-800 disabled:opacity-50 text-red-200 text-xs transition-colors"
+                    title="Excluir cena"
+                  >
+                    {deleting === scene.sceneId ? '…' : '🗑'}
+                  </button>
                 </div>
               </div>
             ))}

@@ -7,6 +7,7 @@ import StoriesPage from './pages/StoriesPage';
 import ScenesPage from './pages/ScenesPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import AccountPage from './pages/AccountPage';
 import StoryViewerPage from './pages/StoryViewerPage';
 import ARPage from './pages/ARPage';
 import WelcomePage from './pages/WelcomePage';
@@ -63,6 +64,14 @@ export default function App() {
         />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email"   element={<VerifyEmailPage />} />
+        <Route
+          path="/account"
+          element={(
+            <ProtectedRoute>
+              <AccountPage />
+            </ProtectedRoute>
+          )}
+        />
         <Route path="/scene/:id" element={<ViewerPage />} />
         <Route path="/story/:id" element={<StoryViewerPage />} />
         <Route path="/story" element={<Navigate to="/" replace />} />

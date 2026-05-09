@@ -93,12 +93,16 @@ export default function Header({ autosaveStatus }) {
           ❓ Ajuda
         </button>
         {isAuthenticated && (
-          <button
-            onClick={logout}
-            className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors"
-          >
-            Logout
-          </button>
+          <>
+            <Link to="/account"
+              className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors hidden sm:inline-flex">
+              Conta
+            </Link>
+            <button onClick={logout}
+              className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors">
+              Sair
+            </button>
+          </>
         )}
       </div>
     </header>

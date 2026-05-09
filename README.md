@@ -4,7 +4,7 @@ A full-stack web application for creating, publishing, and viewing educational 3
 Users paste a GLB avatar URL (or create one via the embedded Avaturn editor), position it in a 3D scene, add speech bubbles, then publish a shareable link.
 
 ![Avaturn Three.js example](https://assets.avaturn.me/docs/three-js-example.jpg)
-
+r/virtualreality
 ## Features
 
 | Feature | Detail |

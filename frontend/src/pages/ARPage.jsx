@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
+import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import Header from '../components/ui/Header';
 import SceneCanvas from '../components/3d/SceneCanvas';
 
@@ -72,13 +73,24 @@ function SurfaceARScene({ modelUrl, onBack }) {
   const lockPlacementRef = useRef(true);
   const placedRef = useRef(false);
   const scaleRef = useRef(1);
-  const [supported, setSupported] = useState(true);
+  const [supported, setSupported] = useState(null); // null = checking
   const [loadingModel, setLoadingModel] = useState(false);
   const [scale, setScale] = useState(1);
   const [lockPlacement, setLockPlacement] = useState(true);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const scaleLabel = `${Math.round(scale * 100)}%`;
+
+  // Async WebXR support check — avoids false negatives on browsers
+  // that have navigator.xr but don't actually support immersive-ar.
+  useEffect(() => {
+    if (!navigator?.xr) { setSupported(false); return; }
+    let active = true;
+    navigator.xr.isSessionSupported('immersive-ar')
+      .then((ok) => { if (active) setSupported(ok); })
+      .catch(() => { if (active) setSupported(false); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     lockPlacementRef.current = lockPlacement;
@@ -93,12 +105,7 @@ function SurfaceARScene({ modelUrl, onBack }) {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return undefined;
-
-    if (!navigator.xr) {
-      setSupported(false);
-      return undefined;
-    }
+    if (!container || supported === null || !supported) return undefined;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x05070c);
@@ -142,6 +149,7 @@ function SurfaceARScene({ modelUrl, onBack }) {
     const gltfLoader = new GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
     gltfLoader.setCrossOrigin('anonymous');
+    gltfLoader.register((parser) => new VRMLoaderPlugin(parser)); // VRM support
     loaderRef.current = gltfLoader;
 
     const controller = renderer.xr.getController(0);
@@ -284,7 +292,7 @@ function SurfaceARScene({ modelUrl, onBack }) {
         modelRootRef.current.add(model);
         modelRootRef.current.scale.setScalar(scaleRef.current);
         setLoadingModel(false);
-        setStatus(t('tapToPlace'));
+        setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
       },
       undefined,
       (err) => {
@@ -294,6 +302,15 @@ function SurfaceARScene({ modelUrl, onBack }) {
       }
     );
   }, [modelUrl, t]);
+
+  if (supported === null) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-black text-white flex-col gap-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+        <p className="text-sm text-gray-300">Verificando suporte AR...</p>
+      </div>
+    );
+  }
 
   if (!supported) {
     return <ThreeJsFallbackScene modelUrl={modelUrl} onBack={onBack} />;
@@ -310,66 +327,68 @@ function SurfaceARScene({ modelUrl, onBack }) {
       <div className="absolute left-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
         <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{t('arTitle')}</p>
         <p className="mt-2 text-sm text-gray-200">{status || t('tapToPlace')}</p>
-        <p className="mt-1 text-xs text-gray-400">{loadingModel ? 'Loading model…' : error || ''}</p>
+        {loadingModel && (
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent shrink-0" />
+            <p className="text-xs text-cyan-300">Carregando personagem...</p>
+          </div>
+        )}
+        {!loadingModel && error && (
+          <p className="mt-1 text-xs text-red-400">{error}</p>
+        )}
       </div>
 
       <div className="absolute bottom-4 left-4 right-4 z-20 rounded-2xl border border-white/10 bg-black/80 p-4 backdrop-blur-sm md:left-1/2 md:right-auto md:w-[520px] md:-translate-x-1/2">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        {/* Mobile-first controls: large touch targets */}
+        <div className="grid grid-cols-2 gap-2 md:flex md:flex-row md:items-center">
           <button
             onClick={onBack}
-            className="rounded-lg border border-white/10 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
+            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600"
           >
-            {t('back')}
+            ← {t('back')}
           </button>
           <button
             onClick={() => {
               placedRef.current = false;
-              setStatus(t('tapToPlace'));
-              if (modelRootRef.current) {
-                modelRootRef.current.visible = false;
-              }
+              setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
+              if (modelRootRef.current) modelRootRef.current.visible = false;
             }}
-            className="rounded-lg border border-white/10 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
+            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600"
           >
-            {t('reset')}
+            🔄 {t('reset')}
           </button>
-          <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-gray-900 px-4 py-2 text-sm text-gray-200">
+          <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
             <input
               type="checkbox"
               checked={lockPlacement}
               onChange={(e) => setLockPlacement(e.target.checked)}
-              className="accent-cyan-400"
+              className="w-5 h-5 accent-cyan-400 cursor-pointer"
             />
-            {lockPlacement ? t('fixPlacement') : t('unlockPlacement')}
-          </label>
-          <label className="flex flex-1 flex-col gap-1 text-sm text-gray-200">
-            <span>{t('scale')}</span>
-            <input
-              type="range"
-              min="0.2"
-              max="2.0"
-              step="0.01"
-              value={scale}
-              onChange={(e) => setScale(Number(e.target.value))}
-              className="accent-cyan-400"
-            />
+            <span>{lockPlacement ? '🔒 Posição fixada' : '🔓 Mover avatar'}</span>
           </label>
         </div>
-        <div ref={buttonHostRef} className="mt-3 flex justify-center" />
-      </div>
 
-      <div className="absolute right-4 top-16 z-20 rounded-full border border-cyan-300/30 bg-black/70 px-3 py-1 text-xs text-cyan-200 backdrop-blur-sm">
-        {`${t('scale')}: ${scaleLabel}`}
+        <label className="mt-3 flex items-center gap-3 text-sm text-gray-200">
+          <span className="shrink-0 w-14 text-right text-xs text-gray-400">{scaleLabel}</span>
+          <input
+            type="range" min="0.2" max="2.0" step="0.01" value={scale}
+            onChange={(e) => setScale(Number(e.target.value))}
+            className="flex-1 accent-cyan-400 cursor-pointer"
+          />
+          <span className="shrink-0 text-xs text-gray-400">{t('scale')}</span>
+        </label>
+
+        <div ref={buttonHostRef} className="mt-3 flex justify-center" />
       </div>
     </div>
   );
 }
 
-function MarkerFrame({ modelUrl, markerUrl }) {
+function MarkerFrame({ modelUrl, markerUrl, useHiro }) {
   const { t } = useTranslation();
   const iframeSrc = useMemo(
-    () => buildQueryUrl('/ar-marker.html', { modelUrl, markerUrl }),
-    [markerUrl, modelUrl]
+    () => buildQueryUrl('/ar-marker.html', { modelUrl, markerUrl, useHiro: useHiro ? '1' : '' }),
+    [markerUrl, modelUrl, useHiro]
   );
 
   return (
@@ -378,7 +397,7 @@ function MarkerFrame({ modelUrl, markerUrl }) {
       <div className="border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">{t('markerUrl')}</h2>
-          <p className="text-xs text-gray-400">Use a custom pattern file and a .glb model.</p>
+          <p className="text-xs text-gray-400">Use um arquivo de padrão personalizado e um modelo .glb.</p>
         </div>
         <Link
           to="/ar"
@@ -420,73 +439,140 @@ export default function ARPage() {
   }
 
   if (mode === 'marker') {
-    return <MarkerFrame modelUrl={modelUrl} markerUrl={markerUrl} />;
+    return (
+      <MarkerFrame
+        modelUrl={modelUrl}
+        markerUrl={markerUrl}
+        useHiro={searchParams.get('useHiro') === '1'}
+      />
+    );
   }
 
+  const isHttp = typeof window !== 'undefined'
+    && window.location.protocol !== 'https:'
+    && window.location.hostname !== 'localhost'
+    && window.location.hostname !== '127.0.0.1';
+
+  const hiroHref = buildQueryUrl('/ar', {
+    mode: 'marker',
+    modelUrl: modelUrl || '/default_model.glb',
+    useHiro: '1',
+  });
+
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-gray-950 via-slate-950 to-black text-white overflow-hidden">
+    <div className="flex flex-col h-screen bg-linear-to-b from-gray-950 via-slate-950 to-black text-white overflow-hidden">
       <Header />
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur-sm md:p-8">
-          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">{t('arTitle')}</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">{t('arDescription')}</h1>
-          <p className="mt-3 max-w-2xl text-sm text-gray-300">
-            Use surface mode to anchor the avatar on a plane with WebXR, or use marker mode with a custom pattern file.
-          </p>
+        <div className="mx-auto max-w-3xl flex flex-col gap-5">
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-black/30 p-4">
-              <span className="text-sm font-medium text-gray-200">{t('modelUrl')}</span>
-              <input
-                type="text"
-                value={modelUrl}
-                onChange={(e) => setModelUrl(e.target.value)}
-                placeholder="https://.../avatar.glb"
-                className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-black/30 p-4">
-              <span className="text-sm font-medium text-gray-200">{t('markerUrl')}</span>
-              <input
-                type="text"
-                value={markerUrl}
-                onChange={(e) => setMarkerUrl(e.target.value)}
-                placeholder="https://.../pattern-marker.patt"
-                className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-              />
-            </label>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 md:flex-row">
-            <Link
-              to={surfaceHref}
-              className="inline-flex items-center justify-center rounded-xl bg-cyan-700 px-5 py-3 text-sm font-semibold text-white hover:bg-cyan-600"
-            >
-              {t('openSurfaceAr')}
-            </Link>
-            <Link
-              to={markerHref}
-              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-gray-800 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-700"
-            >
-              {t('openMarkerAr')}
-            </Link>
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-950/30 p-4">
-              <h3 className="font-semibold text-cyan-200">Surface AR</h3>
-              <p className="mt-2 text-sm text-gray-300">
-                Move the phone, tap the reticle, and the avatar stays fixed on the plane.
-              </p>
+          {/* HTTPS warning */}
+          {isHttp && (
+            <div className="rounded-2xl border border-amber-600/50 bg-amber-950/40 px-4 py-3 flex gap-3 items-start">
+              <span className="text-xl shrink-0">⚠️</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-300">HTTPS necessário para AR</p>
+                <p className="text-xs text-amber-200/70 mt-0.5">
+                  O WebXR e o acesso à câmera exigem HTTPS em produção. Acesse via <strong>https://</strong> ou teste localmente em <strong>localhost</strong>.
+                </p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-950/30 p-4">
-              <h3 className="font-semibold text-fuchsia-200">Marker AR</h3>
-              <p className="mt-2 text-sm text-gray-300">
-                Upload a custom marker pattern and keep the model locked to the printed target.
-              </p>
+          )}
+
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">{t('arTitle')}</p>
+            <h1 className="mt-2 text-2xl font-bold md:text-3xl">Experimente o avatar em Realidade Aumentada</h1>
+          </div>
+
+          {/* Mode cards */}
+          <div className="grid gap-4 md:grid-cols-2">
+
+            {/* Surface AR */}
+            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-950/20 p-5 flex flex-col gap-4">
+              <div>
+                <span className="text-2xl">🏠</span>
+                <h2 className="mt-2 text-lg font-bold text-cyan-200">AR de Superfície</h2>
+                <p className="mt-1 text-sm text-gray-300">
+                  Ancora o avatar em uma mesa, chão ou parede usando WebXR. Toque para posicionar.
+                </p>
+              </div>
+              <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
+                <p className="font-semibold text-gray-300 mb-1">Requisitos:</p>
+                <p>📱 Android com <strong className="text-white">Chrome 81+</strong> e ARCore</p>
+                <p>🍎 iPhone/iPad com <strong className="text-white">Safari iOS 15+</strong></p>
+                <p>🔒 Página em <strong className="text-white">HTTPS</strong> (ou localhost)</p>
+              </div>
+              <Link to={surfaceHref}
+                className="mt-auto inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                {t('openSurfaceAr')} →
+              </Link>
+            </div>
+
+            {/* Marker AR */}
+            <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-950/20 p-5 flex flex-col gap-4">
+              <div>
+                <span className="text-2xl">🎯</span>
+                <h2 className="mt-2 text-lg font-bold text-fuchsia-200">AR de Marcador</h2>
+                <p className="mt-1 text-sm text-gray-300">
+                  Aponte a câmera para um marcador impresso — o avatar aparece ancorado sobre ele.
+                </p>
+              </div>
+              <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
+                <p className="font-semibold text-gray-300 mb-1">Requisitos:</p>
+                <p>📱 <strong className="text-white">Qualquer celular</strong> com câmera</p>
+                <p>🌐 Chrome, Safari, Firefox</p>
+                <p>🖨️ Marcador impresso (ou na tela)</p>
+              </div>
+              <div className="mt-auto flex flex-col gap-2">
+                <Link to={hiroHref}
+                  className="inline-flex items-center justify-center rounded-xl bg-fuchsia-700 hover:bg-fuchsia-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                  ▶ Demo com Marcador Hiro
+                </Link>
+                <Link to={markerHref}
+                  className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-gray-800 hover:bg-gray-700 px-4 py-2 text-xs font-medium text-gray-300 transition-colors">
+                  Usar marcador personalizado
+                </Link>
+              </div>
             </div>
           </div>
+
+          {/* Demo instructions */}
+          <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+            <p className="text-sm font-semibold text-white mb-3">🎯 Como testar o Demo Hiro agora</p>
+            <ol className="space-y-2 text-sm text-gray-300">
+              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">1.</span> Abra esta página no celular</li>
+              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">2.</span> Imprima ou exiba na tela outro dispositivo o marcador Hiro:
+                <a href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
+                  target="_blank" rel="noreferrer"
+                  className="text-cyan-400 hover:text-cyan-300 underline ml-1">
+                  ver marcador Hiro ↗
+                </a>
+              </li>
+              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">3.</span> Clique em "Demo com Marcador Hiro" e aponte a câmera para o marcador</li>
+              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">4.</span> O avatar aparece sobre o papel!</li>
+            </ol>
+          </div>
+
+          {/* URL inputs */}
+          <details className="rounded-2xl border border-white/5 bg-white/3">
+            <summary className="px-5 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
+              ⚙️ Configurações avançadas (URL do modelo e marcador)
+            </summary>
+            <div className="px-5 pb-5 pt-2 grid gap-4 md:grid-cols-2">
+              <label className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-gray-400">{t('modelUrl')}</span>
+                <input type="text" value={modelUrl} onChange={(e) => setModelUrl(e.target.value)}
+                  placeholder="https://.../avatar.glb"
+                  className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+              </label>
+              <label className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-gray-400">{t('markerUrl')}</span>
+                <input type="text" value={markerUrl} onChange={(e) => setMarkerUrl(e.target.value)}
+                  placeholder="https://.../pattern.patt"
+                  className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+              </label>
+            </div>
+          </details>
+
         </div>
       </div>
     </div>
@@ -511,15 +597,21 @@ function ThreeJsFallbackScene({ modelUrl, onBack }) {
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
       <Header />
-      <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-center justify-between gap-3">
+      <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold">Three.js</h2>
-          <p className="text-xs text-gray-400">{t('arFallback')}</p>
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            <h2 className="font-semibold text-amber-300">AR não disponível neste dispositivo</h2>
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5">
+            WebXR Surface AR requer Android Chrome + ARCore ou iOS Safari 15+. Mostrando visualização 3D normal.
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Tente o <a href="/ar?mode=marker&modelUrl=/default_model.glb&useHiro=1" className="text-fuchsia-400 hover:underline">Demo com Marcador Hiro</a> — funciona em qualquer celular.
+          </p>
         </div>
-        <button
-          onClick={onBack}
-          className="rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600"
-        >
+        <button onClick={onBack}
+          className="shrink-0 rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600">
           {t('back')}
         </button>
       </div>

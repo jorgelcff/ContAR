@@ -270,7 +270,7 @@ export default function AvaturnEmbed({ onExport, onClose }) {
       <div className="relative rounded-xl overflow-hidden border border-gray-600" style={{ height: 480 }}>
         {!ready && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-400 text-sm">
-            Loading Avaturn…
+            Carregando criador de avatares…
           </div>
         )}
         {error && (

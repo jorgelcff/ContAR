@@ -22,7 +22,39 @@ function signToken(user) {
 }
 
 function sanitizeUser(user) {
-  return { id: String(user._id), name: user.name || '', email: user.email, createdAt: user.createdAt };
+  return {
+    id: String(user._id),
+    name: user.name || '',
+    email: user.email,
+    emailVerified: Boolean(user.emailVerified),
+    createdAt: user.createdAt,
+  };
+}
+
+async function sendVerificationEmail(user) {
+  const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const link        = `${frontendUrl}/verify-email?token=${user.emailVerificationToken}`;
+  const fromEmail   = process.env.RESEND_FROM_EMAIL || 'ContAR <onboarding@resend.dev>';
+  const resend      = new Resend(process.env.RESEND_API_KEY);
+
+  await resend.emails.send({
+    from:    fromEmail,
+    to:      user.email,
+    subject: 'Confirme seu email — ContAR',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#111827;color:#f9fafb;border-radius:16px;">
+        <h2 style="margin:0 0 8px;color:#22d3ee;">Bem-vindo ao ContAR!</h2>
+        <p style="color:#9ca3af;margin:0 0 24px;">Confirme seu email para ativar sua conta e ter acesso completo à plataforma.</p>
+        <a href="${link}"
+           style="background:#0891b2;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;display:inline-block;font-weight:600;margin-bottom:24px;">
+          Confirmar meu email
+        </a>
+        <p style="color:#6b7280;font-size:13px;margin:0;">
+          Se você não criou uma conta no ContAR, ignore este email.
+        </p>
+      </div>
+    `,
+  });
 }
 
 function ensureDatabaseReady(res) {
@@ -44,8 +76,17 @@ async function register(req, res) {
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'Email already registered' });
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user  = await User.create({ name, email, passwordHash });
+    const passwordHash           = await bcrypt.hash(password, 10);
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    const user = await User.create({ name, email, passwordHash, emailVerificationToken });
+
+    // Send verification email — non-blocking: registration succeeds even if email fails
+    if (process.env.RESEND_API_KEY) {
+      sendVerificationEmail(user).catch((err) =>
+        console.error('Failed to send verification email:', err.message)
+      );
+    }
+
     const token = signToken(user);
     return res.status(201).json({ token, user: sanitizeUser(user) });
   } catch (err) {
@@ -168,4 +209,45 @@ async function resetPassword(req, res) {
   }
 }
 
-module.exports = { register, login, me, forgotPassword, resetPassword };
+async function verifyEmail(req, res) {
+  try {
+    if (!ensureDatabaseReady(res)) return;
+    const token = String(req.body?.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'token is required' });
+
+    const user = await User.findOne({ emailVerificationToken: token });
+    if (!user) return res.status(400).json({ error: 'Token inválido ou já utilizado.' });
+
+    user.emailVerified          = true;
+    user.emailVerificationToken = null;
+    await user.save();
+
+    return res.json({ message: 'Email confirmado com sucesso!', user: sanitizeUser(user) });
+  } catch (err) {
+    console.error('verifyEmail error:', err);
+    return res.status(500).json({ error: 'Não foi possível confirmar o email.' });
+  }
+}
+
+async function resendVerification(req, res) {
+  try {
+    if (!ensureDatabaseReady(res)) return;
+    const userId = req.user?.userId;
+    const user   = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.emailVerified) return res.json({ message: 'Email já verificado.' });
+
+    if (!user.emailVerificationToken) {
+      user.emailVerificationToken = crypto.randomBytes(32).toString('hex');
+      await user.save();
+    }
+
+    await sendVerificationEmail(user);
+    return res.json({ message: 'Email de confirmação reenviado.' });
+  } catch (err) {
+    console.error('resendVerification error:', err);
+    return res.status(500).json({ error: 'Não foi possível reenviar o email.' });
+  }
+}
+
+module.exports = { register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification };

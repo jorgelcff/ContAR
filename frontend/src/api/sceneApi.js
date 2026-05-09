@@ -136,6 +136,16 @@ export async function listScenes() {
   return data;
 }
 
+export async function verifyEmail(token) {
+  const { data } = await api.post('/auth/verify-email', { token });
+  return data;
+}
+
+export async function resendVerification() {
+  const { data } = await api.post('/auth/resend-verification');
+  return data;
+}
+
 export async function forgotPassword(email) {
   const { data } = await api.post('/auth/forgot-password', { email });
   return data;

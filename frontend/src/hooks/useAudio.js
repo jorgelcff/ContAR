@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { generateTTS } from '../api/sceneApi';
 
 const DEFAULT_AUDIO_PROCESSING = {
   inputGain: 1.35,
@@ -60,6 +61,7 @@ export default function useAudio() {
   const [visemeTimeline, setVisemeTimeline] = useState([]);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [isTTSLoading, setIsTTSLoading] = useState(false);
 
   // Web Audio refs
   const audioCtxRef = useRef(null);
@@ -249,6 +251,60 @@ export default function useAudio() {
     setVisemeTimeline([]);
   }
 
+  async function generateWithElevenLabs(text, voiceId) {
+    const src = String(text || '').trim();
+    if (!src) { setError('Escreva um texto antes de gerar a fala.'); return; }
+
+    setIsTTSLoading(true);
+    setError('');
+    try {
+      const { audioBase64, alignment } = await generateTTS(src, voiceId);
+
+      // Base64 → Blob → object URL
+      const bytes = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'audio/mpeg' });
+      teardownSource();
+      revokeCurrentUrl();
+      setIsPlaying(false);
+      setAudioCurrentTime(0);
+      setAudioDuration(0);
+      setUrl(URL.createObjectURL(blob));
+
+      // Convert ElevenLabs character alignment → Rhubarb viseme timeline
+      const { characters, character_start_times_seconds, character_end_times_seconds } =
+        alignment || {};
+      if (Array.isArray(characters) && characters.length) {
+        const raw = characters
+          .map((ch, i) => {
+            const start = character_start_times_seconds[i];
+            const end = character_end_times_seconds[i];
+            const value = charToRhubarbCue(ch, characters[i + 1] || '');
+            if (!value || !Number.isFinite(start) || !Number.isFinite(end)) return null;
+            return { start, end, value };
+          })
+          .filter(Boolean);
+
+        // Merge adjacent identical cues
+        const merged = [];
+        raw.forEach((cue) => {
+          const last = merged[merged.length - 1];
+          if (last && last.value === cue.value && Math.abs(last.end - cue.start) < 1e-4) {
+            last.end = cue.end;
+          } else {
+            merged.push({ ...cue });
+          }
+        });
+
+        setVisemeTimeline(merged);
+        setLipSyncConfig((prev) => ({ ...prev, visemeMode: 'timeline' }));
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || 'Falha ao gerar fala.');
+    } finally {
+      setIsTTSLoading(false);
+    }
+  }
+
   function generateVisemeTimelineFromText(text) {
     const source = String(text || '').trim();
     if (!source) {
@@ -424,6 +480,7 @@ export default function useAudio() {
     audioUrl,
     isPlaying,
     isRecording,
+    isTTSLoading,
     error,
     audioMetrics,
     audioProcessing,
@@ -436,6 +493,7 @@ export default function useAudio() {
     loadVisemeTimeline,
     clearVisemeTimeline,
     generateVisemeTimelineFromText,
+    generateWithElevenLabs,
     play,
     pause,
     stop,

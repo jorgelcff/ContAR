@@ -384,14 +384,17 @@ export default function LeftPanel({
 
             {audio && (
               <AudioPanel
+                speechText={speechText}
                 audioUrl={audio.audioUrl}
                 isPlaying={audio.isPlaying}
                 isRecording={audio.isRecording}
+                isTTSLoading={audio.isTTSLoading}
                 error={audio.error}
                 audioMetrics={audio.audioMetrics}
                 audioProcessing={audio.audioProcessing}
                 lipSyncConfig={audio.lipSyncConfig}
                 visemeTimeline={audio.visemeTimeline}
+                onGenerateTTS={audio.generateWithElevenLabs}
                 onLoadFile={audio.loadFile}
                 onLoadVisemeFile={audio.loadVisemeTimeline}
                 onClearVisemeTimeline={audio.clearVisemeTimeline}

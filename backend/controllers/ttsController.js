@@ -17,37 +17,37 @@ exports.generateTTS = async (req, res) => {
   const safeText = String(text).trim().slice(0, 2500);
 
   try {
-    const upstream = await fetch(`${ELEVENLABS_API_BASE}/text-to-speech/${voice}`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': apiKey,
-        'Content-Type': 'application/json',
-        Accept: 'audio/mpeg',
-      },
-      body: JSON.stringify({
-        text: safeText,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-      }),
-    });
+    const upstream = await fetch(
+      `${ELEVENLABS_API_BASE}/text-to-speech/${voice}/with-timestamps`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          text: safeText,
+          model_id: 'eleven_multilingual_v2',
+          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+        }),
+      }
+    );
 
     if (!upstream.ok) {
       const detail = await upstream.json().catch(() => ({}));
-      const msg = detail?.detail?.message || detail?.message || `ElevenLabs error ${upstream.status}`;
+      const msg =
+        detail?.detail?.message || detail?.message || `ElevenLabs error ${upstream.status}`;
       return res.status(upstream.status).json({ error: msg });
     }
 
-    res.set('Content-Type', 'audio/mpeg');
-    res.set('Cache-Control', 'no-store');
+    // { audio_base64, alignment: { characters, character_start_times_seconds, character_end_times_seconds } }
+    const data = await upstream.json();
 
-    const reader = upstream.body.getReader();
-    const pump = async () => {
-      const { done, value } = await reader.read();
-      if (done) { res.end(); return; }
-      res.write(Buffer.from(value));
-      return pump();
-    };
-    await pump();
+    res.json({
+      audioBase64: data.audio_base64,
+      alignment: data.alignment || null,
+    });
   } catch (err) {
     if (!res.headersSent) {
       res.status(500).json({ error: err.message || 'TTS generation failed' });

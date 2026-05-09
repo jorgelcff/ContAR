@@ -175,3 +175,8 @@ export async function resetPassword(token, password) {
   const { data } = await api.post('/auth/reset-password', { token, password });
   return data;
 }
+
+export async function generateTTS(text, voiceId) {
+  const { data } = await api.post('/tts/generate', { text, voiceId });
+  return data; // { audioBase64, alignment }
+}

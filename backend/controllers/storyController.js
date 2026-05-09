@@ -136,4 +136,19 @@ async function getPublicStory(req, res) {
   }
 }
 
-module.exports = { saveStory, getStory, listStories, getPublicStory };
+async function deleteStory(req, res) {
+  try {
+    const storyId = safeString(req.params?.id);
+    const ownerId = String(req.user?.userId || '');
+    if (!storyId || !UUID_RE.test(storyId)) return res.status(400).json({ error: 'Invalid story ID' });
+
+    const result = await Story.deleteOne({ storyId, ownerId });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Story not found or not yours' });
+    return res.json({ deleted: true });
+  } catch (err) {
+    console.error('deleteStory error:', err);
+    return res.status(500).json({ error: 'Failed to delete story' });
+  }
+}
+
+module.exports = { saveStory, getStory, listStories, getPublicStory, deleteStory };

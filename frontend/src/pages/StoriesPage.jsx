@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
-import { listStories, saveStory } from '../api/sceneApi';
+import { listStories, saveStory, deleteStory } from '../api/sceneApi';
 
 export default function StoriesPage() {
   const navigate = useNavigate();
   const [stories, setStories] = useState([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
+  const [deleting, setDeleting] = useState(null);
 
   const loadStories = async () => {
     setLoading(true);
@@ -29,6 +30,19 @@ export default function StoriesPage() {
   useEffect(() => {
     loadStories();
   }, []);
+
+  const handleDelete = async (storyId, title) => {
+    if (!window.confirm(`Excluir a história "${title || 'Sem título'}"? Esta ação não pode ser desfeita.`)) return;
+    setDeleting(storyId);
+    try {
+      await deleteStory(storyId);
+      setStories((prev) => prev.filter((s) => s.storyId !== storyId));
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Erro ao excluir história');
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const createStory = async () => {
     setSaving(true);
@@ -108,12 +122,29 @@ export default function StoriesPage() {
                       <p className="text-sm text-gray-300 mt-2">{story.metadata.description}</p>
                     )}
                   </div>
-                  <Link
-                    to={`/editor?storyId=${encodeURIComponent(story.storyId)}`}
-                    className="inline-flex self-start px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-600 text-white text-xs"
-                  >
-                    Open in editor
-                  </Link>
+                  <div className="flex gap-2 flex-wrap">
+                    <Link
+                      to={`/editor?storyId=${encodeURIComponent(story.storyId)}`}
+                      className="inline-flex px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-600 text-white text-xs"
+                    >
+                      Editar
+                    </Link>
+                    <Link
+                      to={`/story/${encodeURIComponent(story.storyId)}`}
+                      className="inline-flex px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs"
+                      target="_blank" rel="noopener noreferrer"
+                    >
+                      Ver
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(story.storyId, story.metadata?.title)}
+                      disabled={deleting === story.storyId}
+                      className="px-3 py-1.5 rounded-lg bg-red-900/70 hover:bg-red-800 disabled:opacity-50 text-red-200 text-xs transition-colors"
+                      title="Excluir história"
+                    >
+                      {deleting === story.storyId ? '…' : '🗑'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

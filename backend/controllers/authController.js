@@ -250,4 +250,47 @@ async function resendVerification(req, res) {
   }
 }
 
-module.exports = { register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification };
+async function updateAccount(req, res) {
+  try {
+    if (!ensureDatabaseReady(res)) return;
+    const name = String(req.body?.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'name is required' });
+
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { name },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    return res.json({ user: sanitizeUser(user) });
+  } catch (err) {
+    console.error('updateAccount error:', err);
+    return res.status(500).json({ error: 'Failed to update account' });
+  }
+}
+
+async function changePassword(req, res) {
+  try {
+    if (!ensureDatabaseReady(res)) return;
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword     = String(req.body?.newPassword     || '');
+
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword are required' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'A nova senha deve ter ao menos 6 caracteres' });
+
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'Senha atual incorreta' });
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    return res.json({ message: 'Senha alterada com sucesso' });
+  } catch (err) {
+    console.error('changePassword error:', err);
+    return res.status(500).json({ error: 'Failed to change password' });
+  }
+}
+
+module.exports = { register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification, updateAccount, changePassword };

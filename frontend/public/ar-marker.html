@@ -75,8 +75,8 @@
         <input id="markerInput" type="file" accept=".patt" />
       </div>
       <div class="row">
-        <label for="scaleInput">Escala</label>
-        <input id="scaleInput" type="range" min="0.1" max="2.0" step="0.01" value="0.4" />
+        <label for="scaleInput">Escala: <span id="scaleLabel">—</span></label>
+        <input id="scaleInput" type="range" min="0.1" max="3.0" step="0.05" value="0.4" />
       </div>
       <div class="buttons">
         <button id="playBtn">Ouvir fala</button>
@@ -121,6 +121,8 @@
       const initialModelUrl = params.get('modelUrl') || '';
       const initialMarkerUrl = params.get('markerUrl') || '';
       const useHiro = params.get('useHiro') === '1';
+      const paramScale = parseFloat(params.get('scale'));
+      const initialScaleValue = Number.isFinite(paramScale) && paramScale > 0 ? paramScale : 0.4;
 
       let modelBlobUrl = '';
       let markerBlobUrl = '';
@@ -183,6 +185,7 @@
 
       scaleInput.addEventListener('input', (event) => {
         applyScale(event.target.value);
+        document.getElementById('scaleLabel').textContent = Math.round(Number(event.target.value) * 100) + '%';
       });
 
       playBtn.addEventListener('click', () => {
@@ -206,7 +209,10 @@
         setStatus('Reiniciado.');
       });
 
-      applyScale(scaleInput.value);
+      // Apply initial scale from URL param
+      scaleInput.value = initialScaleValue;
+      applyScale(initialScaleValue);
+      document.getElementById('scaleLabel').textContent = Math.round(initialScaleValue * 100) + '%';
       setStatus('Aponte a câmera para o marcador e carregue um .glb se necessário.');
     </script>
   </body>

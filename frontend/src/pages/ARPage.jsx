@@ -10,6 +10,18 @@ import Header from '../components/ui/Header';
 import SceneCanvas from '../components/3d/SceneCanvas';
 import { useSceneStore } from '../store/useSceneStore';
 
+const AR_SCALE_KEY = 'contar:ar-scale';
+const AR_SCALE_DEFAULT = 1.0;
+
+function readSavedScale() {
+  const v = parseFloat(localStorage.getItem(AR_SCALE_KEY));
+  return Number.isFinite(v) && v > 0 ? v : AR_SCALE_DEFAULT;
+}
+
+function saveScale(v) {
+  localStorage.setItem(AR_SCALE_KEY, String(v));
+}
+
 function normalizeAvatarUrl(url) {
   if (typeof url !== 'string') return '';
   const value = url.trim();
@@ -58,7 +70,7 @@ function buildQueryUrl(path, params) {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-function SurfaceARScene({ modelUrl, onBack }) {
+function SurfaceARScene({ modelUrl, initialScale = 1, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const buttonHostRef = useRef(null);
@@ -73,10 +85,10 @@ function SurfaceARScene({ modelUrl, onBack }) {
   const referenceSpaceRef = useRef(null);
   const lockPlacementRef = useRef(true);
   const placedRef = useRef(false);
-  const scaleRef = useRef(1);
+  const scaleRef = useRef(initialScale);
   const [supported, setSupported] = useState(null); // null = checking
   const [loadingModel, setLoadingModel] = useState(false);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(initialScale);
   const [lockPlacement, setLockPlacement] = useState(true);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -99,6 +111,7 @@ function SurfaceARScene({ modelUrl, onBack }) {
 
   useEffect(() => {
     scaleRef.current = scale;
+    saveScale(scale);
     if (modelRootRef.current) {
       modelRootRef.current.scale.setScalar(scale);
     }
@@ -385,11 +398,11 @@ function SurfaceARScene({ modelUrl, onBack }) {
   );
 }
 
-function MarkerFrame({ modelUrl, markerUrl, useHiro }) {
+function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1 }) {
   const { t } = useTranslation();
   const iframeSrc = useMemo(
-    () => buildQueryUrl('/ar-marker.html', { modelUrl, markerUrl, useHiro: useHiro ? '1' : '' }),
-    [markerUrl, modelUrl, useHiro]
+    () => buildQueryUrl('/ar-marker.html', { modelUrl, markerUrl, useHiro: useHiro ? '1' : '', scale: initialScale }),
+    [markerUrl, modelUrl, useHiro, initialScale]
   );
 
   return (
@@ -431,12 +444,18 @@ export default function ARPage() {
     () => resolveUrl(searchParams.get('modelUrl'), storedAvatarUrl)
   );
   const [markerUrl, setMarkerUrl] = useState(searchParams.get('markerUrl') || '');
+  const [initialScale, setInitialScale] = useState(readSavedScale);
 
   // Re-resolve when store rehydrates or params change
   useEffect(() => {
     setModelUrl(resolveUrl(searchParams.get('modelUrl'), storedAvatarUrl));
     setMarkerUrl(searchParams.get('markerUrl') || '');
   }, [searchParams, storedAvatarUrl]);
+
+  const handleScaleChange = (v) => {
+    setInitialScale(v);
+    saveScale(v);
+  };
 
   const isUsingStoredAvatar =
     storedAvatarUrl &&
@@ -448,24 +467,29 @@ export default function ARPage() {
     storedAvatarUrl?.startsWith('blob:') && !searchParams.get('modelUrl');
 
   const surfaceHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'surface', modelUrl }),
-    [modelUrl]
+    () => buildQueryUrl('/ar', { mode: 'surface', modelUrl, scale: initialScale }),
+    [modelUrl, initialScale]
   );
   const markerHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'marker', modelUrl, markerUrl }),
-    [markerUrl, modelUrl]
+    () => buildQueryUrl('/ar', { mode: 'marker', modelUrl, markerUrl, scale: initialScale }),
+    [markerUrl, modelUrl, initialScale]
   );
 
   if (mode === 'surface') {
-    return <SurfaceARScene modelUrl={modelUrl} onBack={() => window.location.assign('/ar')} />;
+    const scaleParam = parseFloat(searchParams.get('scale'));
+    const startScale = Number.isFinite(scaleParam) && scaleParam > 0 ? scaleParam : readSavedScale();
+    return <SurfaceARScene modelUrl={modelUrl} initialScale={startScale} onBack={() => window.location.assign('/ar')} />;
   }
 
   if (mode === 'marker') {
+    const scaleParam = parseFloat(searchParams.get('scale'));
+    const startScale = Number.isFinite(scaleParam) && scaleParam > 0 ? scaleParam : readSavedScale();
     return (
       <MarkerFrame
         modelUrl={modelUrl}
         markerUrl={markerUrl}
         useHiro={searchParams.get('useHiro') === '1'}
+        initialScale={startScale}
       />
     );
   }
@@ -479,6 +503,7 @@ export default function ARPage() {
     mode: 'marker',
     modelUrl,
     useHiro: '1',
+    scale: initialScale,
   });
 
   return (
@@ -614,24 +639,54 @@ export default function ARPage() {
             </ol>
           </div>
 
-          {/* URL inputs */}
+          {/* Scale pre-config + URL inputs */}
           <details className="rounded-2xl border border-white/5 bg-white/3">
             <summary className="px-5 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
-              ⚙️ Configurações avançadas (URL do modelo e marcador)
+              ⚙️ Configurações avançadas
             </summary>
-            <div className="px-5 pb-5 pt-2 grid gap-4 md:grid-cols-2">
-              <label className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-gray-400">{t('modelUrl')}</span>
-                <input type="text" value={modelUrl} onChange={(e) => setModelUrl(e.target.value)}
-                  placeholder="https://.../avatar.glb"
-                  className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-gray-400">{t('markerUrl')}</span>
-                <input type="text" value={markerUrl} onChange={(e) => setMarkerUrl(e.target.value)}
-                  placeholder="https://.../pattern.patt"
-                  className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
-              </label>
+            <div className="px-5 pb-5 pt-2 flex flex-col gap-4">
+
+              {/* Scale slider */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-200">Tamanho inicial do avatar</span>
+                  <span className="text-sm font-bold text-cyan-300 tabular-nums w-14 text-right">
+                    {Math.round(initialScale * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="3.0"
+                  step="0.05"
+                  value={initialScale}
+                  onChange={(e) => handleScaleChange(Number(e.target.value))}
+                  className="w-full accent-cyan-400 cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>10%</span>
+                  <span>100%</span>
+                  <span>300%</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Valor salvo automaticamente — aplicado ao abrir qualquer modo AR.
+                </p>
+              </div>
+
+              <div className="border-t border-white/5 pt-4 grid gap-4 md:grid-cols-2">
+                <label className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-gray-400">{t('modelUrl')}</span>
+                  <input type="text" value={modelUrl} onChange={(e) => setModelUrl(e.target.value)}
+                    placeholder="https://.../avatar.glb"
+                    className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-gray-400">{t('markerUrl')}</span>
+                  <input type="text" value={markerUrl} onChange={(e) => setMarkerUrl(e.target.value)}
+                    placeholder="https://.../pattern.patt"
+                    className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                </label>
+              </div>
             </div>
           </details>
 

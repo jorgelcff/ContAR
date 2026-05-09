@@ -8,6 +8,16 @@ import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import SpeechBubble from './SpeechBubble';
 import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
+import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
+
+const BONE_LABELS = {
+  hips: 'Quadril', spine: 'Coluna', chest: 'Tórax', upperChest: 'Tórax superior',
+  neck: 'Pescoço', head: 'Cabeça', jaw: 'Mandíbula',
+  leftShoulder: 'Ombro esq.', leftUpperArm: 'Braço esq.', leftLowerArm: 'Antebraço esq.', leftHand: 'Mão esq.',
+  rightShoulder: 'Ombro dir.', rightUpperArm: 'Braço dir.', rightLowerArm: 'Antebraço dir.', rightHand: 'Mão dir.',
+  leftUpperLeg: 'Coxa esq.', leftLowerLeg: 'Perna esq.', leftFoot: 'Pé esq.',
+  rightUpperLeg: 'Coxa dir.', rightLowerLeg: 'Perna dir.', rightFoot: 'Pé dir.',
+};
 
 const DEFAULT_LIP_SYNC_CONFIG = {
   amplitudeMultiplier: 18,
@@ -132,6 +142,9 @@ export default function SceneCanvas({
   const avatarClipsRef = useRef([]);
   const posePresetRef = useRef(posePreset);
   const loaderRef = useRef(null);
+  const boneMapperRef = useRef(null);
+  const baseBoneMapperRef = useRef(null);
+  const skeletonHelperRef = useRef(null);
   const activeAvatarLoadIdRef = useRef(0);
   const isVisibleRef = useRef(true);
   const mouthMarkerRef = useRef(null);
@@ -186,6 +199,8 @@ export default function SceneCanvas({
   const [blendshapeMeshFilter, setBlendshapeMeshFilter] = useState('all');
   const [mouthMarkerInfo, setMouthMarkerInfo] = useState({ source: 'none', name: '' });
   const [rigCopyState, setRigCopyState] = useState('');
+  const [boneOverrides, setBoneOverrides] = useState({});
+  const [boneMapperInfo, setBoneMapperInfo] = useState({ source: 'none', resolvedCount: 0 });
 
   const mergedLipSyncConfig = {
     ...DEFAULT_LIP_SYNC_CONFIG,
@@ -204,8 +219,42 @@ export default function SceneCanvas({
 
   useEffect(() => {
     if (!avatarRef.current) return;
-    jawBonesRef.current = resolveJawBones(avatarRef.current, manualJawBoneName);
+    jawBonesRef.current = resolveJawBones(avatarRef.current, manualJawBoneName, boneMapperRef.current);
   }, [manualJawBoneName]);
+
+  // Bone override: rebuild effective BoneMapper and reapply pose
+  useEffect(() => {
+    const base = baseBoneMapperRef.current;
+    const model = avatarRef.current;
+    if (!base || !model) return;
+
+    const effective = base.clone();
+    const overrideEntries = Object.entries(boneOverrides);
+    if (overrideEntries.length > 0) {
+      model.traverse((node) => {
+        if (!node?.isBone) return;
+        for (const [standard, boneName] of overrideEntries) {
+          if (boneName && node.name === boneName) effective.set(standard, node);
+        }
+      });
+    }
+    boneMapperRef.current = effective;
+
+    if (animControllerRef.current) {
+      animControllerRef.current._boneMapper = effective;
+      animControllerRef.current._speakerBones = undefined;
+      animControllerRef.current._chestBone = undefined;
+    }
+
+    applyPosePreset(
+      model,
+      animControllerRef.current,
+      idleClipRef.current,
+      avatarClipsRef.current,
+      posePresetRef.current,
+      effective
+    );
+  }, [boneOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Scene initialisation (once) ─────────────────────────────────── */
   useEffect(() => {
@@ -316,7 +365,8 @@ export default function SceneCanvas({
               animControllerRef.current,
               idleClipRef.current,
               avatarClipsRef.current,
-              posePresetRef.current
+              posePresetRef.current,
+              boneMapperRef.current
             );
           }
         }
@@ -628,6 +678,12 @@ export default function SceneCanvas({
       avatarRef.current = null;
       avatarClipsRef.current = [];
       jawBonesRef.current = [];
+      boneMapperRef.current = null;
+      baseBoneMapperRef.current = null;
+      if (skeletonHelperRef.current) {
+        sceneRef.current.remove(skeletonHelperRef.current);
+        skeletonHelperRef.current = null;
+      }
       mouthMarkerInfoRef.current = { source: 'none', name: '' };
       setMouthMarkerInfo({ source: 'none', name: '' });
       if (mouthMarkerRef.current) {
@@ -669,12 +725,16 @@ export default function SceneCanvas({
         sceneRef.current.add(model);
         avatarRef.current = model;
 
+        // Build bone mapper (VRM → Mixamo → CC3 → Generic fallback)
+        const boneMapper = BoneMapper.fromGLTF(gltf);
+        boneMapperRef.current = boneMapper;
+
         // Set up LipSync controller
         lipSyncControllerRef.current?.dispose();
         const lipSyncController = new LipSyncController(model);
         lipSyncControllerRef.current = lipSyncController;
 
-        const jawBones = resolveJawBones(model, manualJawBoneName);
+        const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
 
         const boneNames = [];
         const meshNames = [];
@@ -688,7 +748,21 @@ export default function SceneCanvas({
             if (name) meshNames.push(name);
           }
         });
-        
+        setBoneCatalogSnapshot(boneNames);
+        setMeshCatalogSnapshot(meshNames);
+        setBoneMapperInfo({ source: boneMapper.source, resolvedCount: boneMapper.resolvedCount });
+        baseBoneMapperRef.current = boneMapper;
+
+        // Skeleton wireframe in dev mode
+        if (showDevTools) {
+          if (skeletonHelperRef.current) {
+            sceneRef.current?.remove(skeletonHelperRef.current);
+          }
+          const helper = new THREE.SkeletonHelper(model);
+          sceneRef.current.add(helper);
+          skeletonHelperRef.current = helper;
+        }
+
         jawBonesRef.current = jawBones;
 
         // Set up animation controller (crossfade + procedural micro-animation).
@@ -696,7 +770,7 @@ export default function SceneCanvas({
         if (!idleClipRef.current && gltf.animations?.length) {
           idleClipRef.current = gltf.animations[0];
         }
-        const animController = new AnimationController(model, avatarClipsRef.current);
+        const animController = new AnimationController(model, avatarClipsRef.current, boneMapper);
         if (idleClipRef.current) {
           animController.addClips([idleClipRef.current]);
         }
@@ -707,7 +781,8 @@ export default function SceneCanvas({
           animController,
           idleClipRef.current,
           avatarClipsRef.current,
-          posePreset
+          posePreset,
+          boneMapper
         );
       },
       undefined,
@@ -740,7 +815,8 @@ export default function SceneCanvas({
       animControllerRef.current,
       idleClipRef.current,
       avatarClipsRef.current,
-      posePreset
+      posePreset,
+      boneMapperRef.current
     );
   }, [posePreset]);
 
@@ -808,10 +884,14 @@ export default function SceneCanvas({
       </div>
       )}
       {showDevTools && (
-      <div className="absolute left-3 bottom-3 z-20 w-96 max-h-72 overflow-y-auto rounded-md border border-amber-700/70 bg-amber-950/80 px-3 py-2 text-xs text-amber-100">
+      <div className="absolute left-3 bottom-3 z-20 w-96 max-h-[80vh] overflow-y-auto rounded-md border border-amber-700/70 bg-amber-950/90 px-3 py-2 text-xs text-amber-100">
         <p className="font-semibold uppercase tracking-wide text-amber-200">Rig Debug</p>
-        <p>Bones: {boneCatalogSnapshot.length}</p>
-        <p>Meshes: {meshCatalogSnapshot.length}</p>
+        <p>
+          Esqueleto detectado:{' '}
+          <span className="font-bold text-amber-300">{boneMapperInfo.source}</span>
+          {' '}({boneMapperInfo.resolvedCount} padrões mapeados)
+        </p>
+        <p>Ossos totais: {boneCatalogSnapshot.length} · Meshes: {meshCatalogSnapshot.length}</p>
         <button
           onClick={handleCopyRigReport}
           className="mt-2 w-full rounded border border-amber-700 bg-amber-900/60 px-2 py-1 text-xs text-amber-100 hover:bg-amber-800/70"
@@ -819,7 +899,37 @@ export default function SceneCanvas({
           Copy rig report
         </button>
         {rigCopyState && <p className="mt-1 text-[11px] text-amber-300">{rigCopyState}</p>}
-        <label className="mt-2 block text-amber-300">Manual jaw bone override</label>
+
+        <p className="mt-3 font-semibold text-amber-200">Calibrar mapeamento de ossos</p>
+        <p className="text-[11px] text-amber-400 mb-1">
+          Selecione qual osso do avatar corresponde a cada parte do corpo.
+          "Auto" usa a detecção automática.
+        </p>
+        {STANDARD_BONES.map((standard) => (
+          <div key={standard} className="flex items-center gap-1 mt-1">
+            <span className="w-28 shrink-0 text-amber-300">{BONE_LABELS[standard] ?? standard}</span>
+            <select
+              value={boneOverrides[standard] ?? ''}
+              onChange={(e) => setBoneOverrides((prev) => ({ ...prev, [standard]: e.target.value }))}
+              className="flex-1 rounded border border-amber-700 bg-amber-950 px-1 py-0.5 text-xs text-amber-100"
+            >
+              <option value="">Auto</option>
+              {boneCatalogSnapshot.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+        {Object.values(boneOverrides).some(Boolean) && (
+          <button
+            onClick={() => setBoneOverrides({})}
+            className="mt-2 w-full rounded border border-red-700 bg-red-950/60 px-2 py-1 text-xs text-red-200 hover:bg-red-900/60"
+          >
+            Limpar overrides (voltar ao automático)
+          </button>
+        )}
+
+        <label className="mt-3 block text-amber-300">Override mandíbula</label>
         <select
           value={manualJawBoneName}
           onChange={(e) => setManualJawBoneName(e.target.value)}
@@ -830,7 +940,7 @@ export default function SceneCanvas({
             <option key={name} value={name}>{name}</option>
           ))}
         </select>
-        <p className="mt-2 text-[11px] text-amber-300">Detected bones</p>
+        <p className="mt-2 text-[11px] text-amber-300">Todos os ossos detectados</p>
         <ul className="max-h-20 overflow-y-auto rounded border border-amber-900/70 bg-amber-950/60 p-1">
           {boneCatalogSnapshot.slice(0, 40).map((name) => (
             <li key={name} className="truncate" title={name}>{name}</li>
@@ -948,10 +1058,18 @@ function averageRange(freqData, hzPerBin, minHz, maxHz) {
   return sum / Math.max(1, maxBin - minBin + 1);
 }
 
-function resolveJawBones(model, manualJawBoneName) {
+function resolveJawBones(model, manualJawBoneName, boneMapper = null) {
   if (!model) return [];
 
   const selected = String(manualJawBoneName || '').trim().toLowerCase();
+
+  // BoneMapper provides an exact jaw bone — use it unless the user overrides manually
+  if (!selected && boneMapper?.has('jaw')) {
+    const jaw = boneMapper.get('jaw');
+    jaw.userData.__jawRestQuat = jaw.quaternion.clone();
+    return [jaw];
+  }
+
   const jawBones = [];
   model.traverse((node) => {
     if (!node?.isBone) return;
@@ -1081,7 +1199,7 @@ function disposeObject3D(object) {
   });
 }
 
-function applyPosePreset(model, animationController, idleClip, avatarClips, posePreset) {
+function applyPosePreset(model, animationController, idleClip, avatarClips, posePreset, boneMapper = null) {
   const normalized = String(posePreset || 'idle').toLowerCase();
 
   if (animationController) {
@@ -1110,17 +1228,17 @@ function applyPosePreset(model, animationController, idleClip, avatarClips, pose
   }
 
   if (normalized === 'speaker') {
-    applySpeakerPose(model);
+    applySpeakerPose(model, boneMapper);
   } else if (normalized === 'wave') {
-    applyWavePose(model);
+    applyWavePose(model, boneMapper);
   } else if (normalized === 'hands_on_hips') {
-    applyHandsOnHipsPose(model);
+    applyHandsOnHipsPose(model, boneMapper);
   } else if (normalized === 'salute') {
-    applySalutePose(model);
+    applySalutePose(model, boneMapper);
   } else if (normalized === 'arms_crossed') {
-    applyArmsCrossedPose(model);
+    applyArmsCrossedPose(model, boneMapper);
   } else if (normalized === 't_pose') {
-    applyTPose(model);
+    applyTPose(model, boneMapper);
   }
 
   model.updateMatrixWorld(true);
@@ -1178,6 +1296,10 @@ function findBone(model, patterns) {
   return result;
 }
 
+function getBone(model, boneMapper, standardName, patterns) {
+  return boneMapper?.get(standardName) ?? findBone(model, patterns);
+}
+
 function rotateBoneDeg(bone, x = 0, y = 0, z = 0) {
   if (!bone) return;
   bone.rotateX((x * Math.PI) / 180);
@@ -1185,23 +1307,23 @@ function rotateBoneDeg(bone, x = 0, y = 0, z = 0) {
   bone.rotateZ((z * Math.PI) / 180);
 }
 
-function applyWavePose(model) {
-  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-  const rightHand = findBone(model, [/righthand/, /hand_r/, /mixamorigrighthand/]);
+function applyWavePose(model, boneMapper = null) {
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
 
   rotateBoneDeg(rightUpperArm, -45, 0, -65);
   rotateBoneDeg(rightForeArm, -20, 0, -35);
   rotateBoneDeg(rightHand, 10, 0, -20);
 }
 
-function applySpeakerPose(model) {
-  const spine = findBone(model, [/spine(?:0?1)?/, /chest/, /mixamorigspine/]);
-  const neck = findBone(model, [/neck/, /mixamorigneck/]);
-  const leftUpperArm = findBone(model, [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const leftForeArm = findBone(model, [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
-  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+function applySpeakerPose(model, boneMapper = null) {
+  const spine         = getBone(model, boneMapper, 'spine',         [/spine(?:0?1)?/, /chest/, /mixamorigspine/]);
+  const neck          = getBone(model, boneMapper, 'neck',          [/neck/, /mixamorigneck/]);
+  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
 
   rotateBoneDeg(spine, -4, 0, 0);
   rotateBoneDeg(neck, 2, 0, 0);
@@ -1211,11 +1333,11 @@ function applySpeakerPose(model) {
   rotateBoneDeg(rightForeArm, -38, 0, 10);
 }
 
-function applyHandsOnHipsPose(model) {
-  const leftUpperArm = findBone(model, [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const leftForeArm = findBone(model, [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
-  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+function applyHandsOnHipsPose(model, boneMapper = null) {
+  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
 
   rotateBoneDeg(leftUpperArm, 0, 0, 45);
   rotateBoneDeg(rightUpperArm, 0, 0, -45);
@@ -1223,21 +1345,21 @@ function applyHandsOnHipsPose(model) {
   rotateBoneDeg(rightForeArm, -30, 0, 30);
 }
 
-function applySalutePose(model) {
-  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-  const rightHand = findBone(model, [/righthand/, /hand_r/, /mixamorigrighthand/]);
+function applySalutePose(model, boneMapper = null) {
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
 
   rotateBoneDeg(rightUpperArm, -35, 0, -40);
   rotateBoneDeg(rightForeArm, -70, 0, 20);
   rotateBoneDeg(rightHand, -10, 0, 25);
 }
 
-function applyArmsCrossedPose(model) {
-  const leftUpperArm = findBone(model, [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const leftForeArm = findBone(model, [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
-  const rightForeArm = findBone(model, [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+function applyArmsCrossedPose(model, boneMapper = null) {
+  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
 
   rotateBoneDeg(leftUpperArm, 0, 0, 20);
   rotateBoneDeg(rightUpperArm, 0, 0, -20);
@@ -1245,9 +1367,9 @@ function applyArmsCrossedPose(model) {
   rotateBoneDeg(rightForeArm, -70, 0, 35);
 }
 
-function applyTPose(model) {
-  const leftUpperArm = findBone(model, [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = findBone(model, [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+function applyTPose(model, boneMapper = null) {
+  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   rotateBoneDeg(leftUpperArm, 0, 0, 90);
   rotateBoneDeg(rightUpperArm, 0, 0, -90);
 }

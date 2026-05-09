@@ -6,8 +6,14 @@ import * as THREE from 'three';
  * idle sway, speaker gestures).
  */
 export class AnimationController {
-  constructor(model, clips = []) {
+  /**
+   * @param {THREE.Object3D} model
+   * @param {THREE.AnimationClip[]} clips
+   * @param {import('../utils/BoneMapper').BoneMapper|null} boneMapper
+   */
+  constructor(model, clips = [], boneMapper = null) {
     this._model = model;
+    this._boneMapper = boneMapper;
     this._mixer = new THREE.AnimationMixer(model);
     this._actions = new Map();
     this._currentAction = null;
@@ -179,15 +185,22 @@ export class AnimationController {
     if (this._currentAction !== null) return;
 
     if (this._chestBone === undefined) {
-      let chest = null;
-      this._model.traverse((node) => {
-        if (!chest && node.isBone && /spine(?:0?[12])?|chest/i.test(String(node.name ?? ''))) {
-          chest = node;
-          // Capture rest quaternion so we can offset from it, not accumulate
-          chest.userData.__breathBaseQuat = chest.quaternion.clone();
+      const mapped = this._boneMapper?.get('chest') ?? this._boneMapper?.get('spine') ?? null;
+      if (mapped) {
+        this._chestBone = mapped;
+        if (!mapped.userData.__breathBaseQuat) {
+          mapped.userData.__breathBaseQuat = mapped.quaternion.clone();
         }
-      });
-      this._chestBone = chest ?? null;
+      } else {
+        let chest = null;
+        this._model.traverse((node) => {
+          if (!chest && node.isBone && /spine(?:0?[12])?|chest/i.test(String(node.name ?? ''))) {
+            chest = node;
+            chest.userData.__breathBaseQuat = chest.quaternion.clone();
+          }
+        });
+        this._chestBone = chest ?? null;
+      }
     }
 
     if (!this._chestBone) return;
@@ -311,18 +324,21 @@ export class AnimationController {
       return found;
     };
 
+    const resolve = (standardName, patterns) =>
+      this._boneMapper?.get(standardName) ?? findBone(patterns);
+
     const capture = (bone) => (bone ? { bone, baseQuat: bone.quaternion.clone() } : null);
 
     const bones = {
-      head:          capture(findBone([/\bhead\b/, /mixamorighead/])),
-      neck:          capture(findBone([/\bneck\b/, /mixamorigneck/])),
-      spine:         capture(findBone([/spine(?:0?1)?$/, /mixamorigspine/])),
-      leftUpperArm:  capture(findBone([/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/])),
-      rightUpperArm: capture(findBone([/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/])),
-      leftForeArm:   capture(findBone([/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/])),
-      rightForeArm:  capture(findBone([/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/])),
-      leftHand:      capture(findBone([/lefthand/, /hand_l/, /mixamoriglefthand/])),
-      rightHand:     capture(findBone([/righthand/, /hand_r/, /mixamorigrighthand/])),
+      head:          capture(resolve('head',          [/\bhead\b/, /mixamorighead/])),
+      neck:          capture(resolve('neck',          [/\bneck\b/, /mixamorigneck/])),
+      spine:         capture(resolve('spine',         [/spine(?:0?1)?$/, /mixamorigspine/])),
+      leftUpperArm:  capture(resolve('leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/])),
+      rightUpperArm: capture(resolve('rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/])),
+      leftForeArm:   capture(resolve('leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/])),
+      rightForeArm:  capture(resolve('rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/])),
+      leftHand:      capture(resolve('leftHand',      [/lefthand/, /hand_l/, /mixamoriglefthand/])),
+      rightHand:     capture(resolve('rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/])),
     };
 
     this._speakerBones = Object.values(bones).some(Boolean) ? bones : null;

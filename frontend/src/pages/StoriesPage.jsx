@@ -1,38 +1,180 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import { listStories, saveStory, deleteStory } from '../api/sceneApi';
 
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1)  return 'agora mesmo';
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24)   return `há ${h}h`;
+  const d = Math.floor(h / 24);
+  if (d < 30)   return `há ${d} dia${d > 1 ? 's' : ''}`;
+  const m = Math.floor(d / 30);
+  return `há ${m} ${m > 1 ? 'meses' : 'mês'}`;
+}
+
+function SkeletonCard() {
+  return (
+    <div className="rounded-2xl border border-gray-700 bg-gray-800 p-5 flex flex-col gap-3 animate-pulse">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 space-y-2">
+          <div className="h-4 w-3/4 rounded bg-gray-700" />
+          <div className="h-3 w-1/2 rounded bg-gray-700/60" />
+        </div>
+        <div className="h-5 w-14 rounded-full bg-gray-700/60" />
+      </div>
+      <div className="h-3 w-full rounded bg-gray-700/40" />
+      <div className="flex gap-2 mt-1">
+        <div className="h-8 w-16 rounded-lg bg-gray-700/60" />
+        <div className="h-8 w-12 rounded-lg bg-gray-700/60" />
+        <div className="h-8 w-8 rounded-lg bg-gray-700/40" />
+      </div>
+    </div>
+  );
+}
+
+function StoryCard({ story, onDelete, deleting }) {
+  const [copied, setCopied] = useState(false);
+  const shareUrl = `${window.location.origin}/story/${encodeURIComponent(story.storyId)}`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="group rounded-2xl border border-gray-700 bg-gray-800 p-5 flex flex-col gap-4 hover:border-gray-600 transition-colors">
+      {/* Title row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-white truncate" title={story.metadata?.title}>
+            {story.metadata?.title || 'Sem título'}
+          </h3>
+          {story.metadata?.description && (
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+              {story.metadata.description}
+            </p>
+          )}
+        </div>
+        {/* Scene count badge */}
+        <div className="shrink-0 flex items-center gap-1 rounded-full bg-gray-700/60 px-2.5 py-1 text-[11px] text-gray-300">
+          <span>🎬</span>
+          <span>{story.sceneCount ?? 0} cena{story.sceneCount !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+
+      {/* Date */}
+      <p className="text-[11px] text-gray-500">
+        Editada {timeAgo(story.updatedAt)}
+      </p>
+
+      {/* Share link */}
+      <div className="flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-900/60 px-3 py-2">
+        <span className="text-[10px] text-gray-500 truncate flex-1 font-mono">{shareUrl}</span>
+        <button
+          onClick={handleCopy}
+          className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+            copied
+              ? 'bg-emerald-700/60 text-emerald-300'
+              : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+          }`}
+        >
+          {copied ? '✓ Copiado' : 'Copiar'}
+        </button>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <Link
+          to={`/editor?storyId=${encodeURIComponent(story.storyId)}`}
+          className="flex-1 text-center py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
+        >
+          Editar
+        </Link>
+        <Link
+          to={`/story/${encodeURIComponent(story.storyId)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 text-center py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs transition-colors"
+        >
+          ▶ Ver
+        </Link>
+        <button
+          onClick={() => onDelete(story.storyId, story.metadata?.title)}
+          disabled={deleting === story.storyId}
+          title="Excluir história"
+          className="px-3 py-2 rounded-xl bg-red-900/40 hover:bg-red-900/70 disabled:opacity-40 text-red-300 text-xs transition-colors"
+        >
+          {deleting === story.storyId ? '…' : '🗑'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function StoriesPage() {
-  const navigate = useNavigate();
-  const [stories, setStories] = useState([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const navigate  = useNavigate();
+  const titleRef  = useRef(null);
+
+  const [stories, setStories]   = useState([]);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
   const [deleting, setDeleting] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newTitle, setNewTitle]     = useState('');
+  const [newDesc, setNewDesc]       = useState('');
 
-  const loadStories = async () => {
+  const load = async () => {
     setLoading(true);
     setError('');
     try {
       const data = await listStories();
       setStories(data?.stories || []);
     } catch (err) {
-      const apiError = err?.response?.data?.error;
-      setError(apiError || err.message || 'Failed to load stories');
+      setError(err?.response?.data?.error || err.message || 'Erro ao carregar histórias');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => { load(); }, []);
+
+  // Focus title input when form opens
   useEffect(() => {
-    loadStories();
-  }, []);
+    if (showCreate) setTimeout(() => titleRef.current?.focus(), 50);
+  }, [showCreate]);
+
+  const handleCreate = async (e) => {
+    e?.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      const result = await saveStory({
+        metadata: {
+          title:       newTitle.trim() || 'Nova história',
+          description: newDesc.trim()  || '',
+          language:    'pt',
+        },
+        scenes: [],
+      });
+      navigate(`/editor?storyId=${encodeURIComponent(result.storyId)}`);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Erro ao criar história');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleDelete = async (storyId, title) => {
-    if (!window.confirm(`Excluir a história "${title || 'Sem título'}"? Esta ação não pode ser desfeita.`)) return;
+    if (!window.confirm(`Excluir "${title || 'Sem título'}"? Essa ação não pode ser desfeita.`)) return;
     setDeleting(storyId);
     try {
       await deleteStory(storyId);
@@ -44,112 +186,127 @@ export default function StoriesPage() {
     }
   };
 
-  const createStory = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      const result = await saveStory({
-        metadata: {
-          title: title || 'Untitled Story',
-          description: description || '',
-          language: 'en',
-        },
-        scenes: [],
-      });
-      navigate(`/editor?storyId=${encodeURIComponent(result.storyId)}`);
-    } catch (err) {
-      const apiError = err?.response?.data?.error;
-      setError(apiError || err.message || 'Failed to create story');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
       <Header />
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
-        <section className="rounded-2xl border border-gray-700 bg-gray-800 p-4 md:p-5 flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">Create Story</h2>
-          <p className="text-sm text-gray-400">Start from story structure, then jump to the scene editor.</p>
-          {error && <div className="rounded-md border border-red-700 bg-red-950/70 px-3 py-2 text-sm text-red-200">{error}</div>}
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Story title"
-            className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          />
-          <textarea
-            rows={2}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Story description"
-            className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
-          />
-          <button
-            onClick={createStory}
-            disabled={saving}
-            className="w-full md:w-auto md:self-start px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-medium transition-colors"
-          >
-            {saving ? 'Creating...' : 'Create and open editor'}
-          </button>
-        </section>
 
-        <section className="flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 flex flex-col gap-6">
+
+          {/* Page header */}
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">My Stories</h2>
-            <button
-              onClick={loadStories}
-              className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs"
-            >
-              Refresh
-            </button>
+            <div>
+              <h1 className="text-xl font-bold">Minhas Histórias</h1>
+              <p className="text-sm text-gray-400 mt-0.5">
+                {loading ? '...' : `${stories.length} história${stories.length !== 1 ? 's' : ''}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/scenes"
+                className="px-3 py-2 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-xs transition-colors hidden sm:inline-flex"
+              >
+                Minhas Cenas
+              </Link>
+              <button
+                onClick={() => { setShowCreate((v) => !v); setNewTitle(''); setNewDesc(''); }}
+                className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
+              >
+                {showCreate ? '✕ Cancelar' : '+ Nova História'}
+              </button>
+            </div>
           </div>
 
+          {/* Create form */}
+          {showCreate && (
+            <form
+              onSubmit={handleCreate}
+              className="rounded-2xl border border-emerald-700/40 bg-emerald-950/20 p-5 flex flex-col gap-3"
+            >
+              <p className="text-sm font-semibold text-emerald-300">Nova história</p>
+              <input
+                ref={titleRef}
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Título da história"
+                className="w-full rounded-xl bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2.5 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+              />
+              <textarea
+                rows={2}
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+                placeholder="Descrição (opcional)"
+                className="w-full rounded-xl bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                >
+                  {saving ? 'Criando...' : 'Criar e abrir editor'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-800 text-gray-400 text-sm transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="rounded-xl border border-red-700/60 bg-red-950/70 px-4 py-3 text-sm text-red-200 flex items-center justify-between gap-2">
+              <span>{error}</span>
+              <button onClick={() => setError('')} className="text-red-400 hover:text-red-200 text-lg leading-none">×</button>
+            </div>
+          )}
+
+          {/* Stories list */}
           {loading ? (
-            <div className="text-sm text-gray-400">Loading stories...</div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
+            </div>
           ) : stories.length === 0 ? (
-            <div className="text-sm text-gray-500">No stories yet.</div>
+            <div className="rounded-2xl border border-gray-700 bg-gray-800/50 p-12 flex flex-col items-center gap-5 text-center">
+              <span className="text-6xl">📖</span>
+              <div>
+                <p className="font-semibold text-gray-200 text-lg">Nenhuma história ainda</p>
+                <p className="text-sm text-gray-500 mt-1.5 max-w-sm">
+                  Crie a primeira história, adicione cenas com avatares narradores e compartilhe com quem quiser.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
+              >
+                + Criar primeira história
+              </button>
+              <p className="text-xs text-gray-600">
+                Ou comece criando cenas em{' '}
+                <Link to="/scenes" className="text-cyan-500 hover:text-cyan-400 underline underline-offset-2">
+                  Minhas Cenas
+                </Link>
+              </p>
+            </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               {stories.map((story) => (
-                <div key={story.storyId} className="rounded-xl border border-gray-700 bg-gray-800 p-4 flex flex-col gap-3">
-                  <div>
-                    <h3 className="font-medium">{story.metadata?.title || 'Untitled Story'}</h3>
-                    <p className="text-xs text-gray-400 break-all">{story.storyId}</p>
-                    {story.metadata?.description && (
-                      <p className="text-sm text-gray-300 mt-2">{story.metadata.description}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Link
-                      to={`/editor?storyId=${encodeURIComponent(story.storyId)}`}
-                      className="inline-flex px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-600 text-white text-xs"
-                    >
-                      Editar
-                    </Link>
-                    <Link
-                      to={`/story/${encodeURIComponent(story.storyId)}`}
-                      className="inline-flex px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs"
-                      target="_blank" rel="noopener noreferrer"
-                    >
-                      Ver
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(story.storyId, story.metadata?.title)}
-                      disabled={deleting === story.storyId}
-                      className="px-3 py-1.5 rounded-lg bg-red-900/70 hover:bg-red-800 disabled:opacity-50 text-red-200 text-xs transition-colors"
-                      title="Excluir história"
-                    >
-                      {deleting === story.storyId ? '…' : '🗑'}
-                    </button>
-                  </div>
-                </div>
+                <StoryCard
+                  key={story.storyId}
+                  story={story}
+                  onDelete={handleDelete}
+                  deleting={deleting}
+                />
               ))}
             </div>
           )}
-        </section>
+
+        </div>
       </div>
     </div>
   );

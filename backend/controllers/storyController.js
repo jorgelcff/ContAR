@@ -102,12 +102,20 @@ async function listStories(_req, res) {
 
     const stories = await Story.find(
       { ownerId },
-      { _id: 0, storyId: 1, metadata: 1, createdAt: 1, updatedAt: 1 }
+      { _id: 0, storyId: 1, metadata: 1, scenes: 1, createdAt: 1, updatedAt: 1 }
     )
       .sort({ updatedAt: -1 })
       .limit(100);
 
-    return res.json({ stories });
+    return res.json({
+      stories: stories.map((s) => ({
+        storyId:    s.storyId,
+        metadata:   s.metadata,
+        sceneCount: Array.isArray(s.scenes) ? s.scenes.length : 0,
+        createdAt:  s.createdAt,
+        updatedAt:  s.updatedAt,
+      })),
+    });
   } catch (err) {
     console.error('listStories error:', err);
     return res.status(500).json({ error: 'Failed to list stories' });

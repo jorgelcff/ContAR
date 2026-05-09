@@ -6,6 +6,7 @@ import Header from '../components/ui/Header';
 import LeftPanel from '../components/ui/LeftPanel';
 import BottomNav from '../components/ui/BottomNav';
 import OnboardingOverlay, { shouldShowOnboarding } from '../components/ui/OnboardingOverlay';
+import WalkthroughTour, { shouldShowTour } from '../components/ui/WalkthroughTour';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import TimelinePanel from '../components/ui/TimelinePanel';
 import { useSceneStore, hadLocalAvatarOnInit } from '../store/useSceneStore';
@@ -57,6 +58,7 @@ export default function EditorPage() {
   });
 
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
+  const [showTour, setShowTour] = useState(shouldShowTour);
   const [mobilePanelTab, setMobilePanelTab] = useState(null);
 
   useEffect(() => {
@@ -230,6 +232,7 @@ export default function EditorPage() {
       {showOnboarding && (
         <OnboardingOverlay onDone={() => setShowOnboarding(false)} />
       )}
+      <WalkthroughTour isOpen={showTour} onClose={() => setShowTour(false)} />
       <Header autosaveStatus={autosaveStatus} />
       {error && (
         <div className="shrink-0 bg-red-900/80 text-red-200 text-sm px-4 py-2 border-b border-red-700 flex items-center justify-between gap-2">
@@ -238,6 +241,12 @@ export default function EditorPage() {
         </div>
       )}
       <div className="shrink-0 border-b border-gray-800 bg-gray-950 px-4 py-2 flex items-center justify-end gap-2 md:hidden">
+        <button
+          onClick={() => setShowTour(true)}
+          className="rounded-full border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors"
+        >
+          ? Tour
+        </button>
         <Link to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
           {t('openSurfaceAr')}
         </Link>
@@ -258,12 +267,19 @@ export default function EditorPage() {
           onMobilePanelClose={() => setMobilePanelTab(null)}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950">
-            <Link to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
+          <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950 gap-2">
+            <button
+              onClick={() => setShowTour(true)}
+              className="rounded-full border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white hover:border-gray-400 transition-colors"
+              title="Iniciar tour guiado"
+            >
+              ? Tour
+            </button>
+            <Link data-tour="ar-btn" to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
               {t('openSurfaceAr')}
             </Link>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden" data-tour="scene-canvas">
             <Suspense fallback={
               <div className="flex h-full items-center justify-center bg-gray-900">
                 <div className="flex flex-col items-center gap-4">

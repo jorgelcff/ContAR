@@ -167,10 +167,11 @@ export default function LeftPanel({
       />
 
       {/* Tab navigation */}
-      <div className="flex shrink-0 border-b border-gray-700">
+      <div data-tour="panel-tabs" className="flex shrink-0 border-b border-gray-700">
         {TABS.map((tab) => (
           <button
             key={tab.id}
+            data-tour={`tab-${tab.id}`}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[11px] font-medium transition-colors ${
               activeTab === tab.id
@@ -191,6 +192,7 @@ export default function LeftPanel({
         {activeTab === 'avatar' && (
           <>
             <button
+              data-tour="avatar-upload"
               onClick={() => setShowAvaturn((v) => !v)}
               className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
             >
@@ -246,7 +248,7 @@ export default function LeftPanel({
             </div>
 
             {/* Pose */}
-            <div className="flex flex-col gap-2">
+            <div data-tour="pose-selector" className="flex flex-col gap-2">
               <div className="flex items-center gap-1">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pose</p>
                 <TooltipIcon text="Define a animação base do avatar: idle (parado), wave (acenando), speaker (palestrando) e outros." />
@@ -476,7 +478,7 @@ export default function LeftPanel({
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-80 md:shrink-0 md:flex-col bg-gray-800 border-r border-gray-700 overflow-hidden">
+      <aside data-tour="left-panel" className="hidden md:flex md:w-80 md:shrink-0 md:flex-col bg-gray-800 border-r border-gray-700 overflow-hidden">
         {innerContent}
       </aside>
 

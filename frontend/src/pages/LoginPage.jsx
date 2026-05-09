@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { forgotPassword } from '../api/sceneApi';
+import { useTranslation } from 'react-i18next';
 
 // view: 'login' | 'register' | 'forgot' | 'forgot-sent'
 export default function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, login, register } = useAuth();
 
@@ -29,7 +31,7 @@ export default function LoginPage() {
       }
       navigate('/stories', { replace: true });
     } catch (err) {
-      setError(err?.response?.data?.error || err.message || 'Falha na autenticação');
+      setError(err?.response?.data?.error || err.message || t('loginAuthError'));
     } finally {
       setSubmitting(false);
     }
@@ -43,17 +45,17 @@ export default function LoginPage() {
       await forgotPassword(email);
       setView('forgot-sent');
     } catch (err) {
-      setError(err?.response?.data?.error || 'Não foi possível enviar o email. Tente novamente.');
+      setError(err?.response?.data?.error || t('loginAuthError'));
     } finally {
       setSubmitting(false);
     }
   };
 
   const titles = {
-    login: 'Entrar',
-    register: 'Criar conta',
-    forgot: 'Recuperar senha',
-    'forgot-sent': 'Email enviado',
+    login: t('loginTitle'),
+    register: t('registerTitle'),
+    forgot: t('forgotTitle'),
+    'forgot-sent': t('forgotSentTitle'),
   };
 
   return (
@@ -63,10 +65,10 @@ export default function LoginPage() {
         <div>
           <h1 className="text-xl font-bold">{titles[view]}</h1>
           <p className="text-sm text-gray-400 mt-1">
-            {view === 'login'        && 'Entre para acessar suas histórias e cenas.'}
-            {view === 'register'     && 'Crie sua conta para começar a narrar.'}
-            {view === 'forgot'       && 'Informe seu email para receber o link de redefinição.'}
-            {view === 'forgot-sent'  && `Verifique a caixa de entrada de ${email}.`}
+            {view === 'login'        && t('loginSubtitle')}
+            {view === 'register'     && t('registerSubtitle')}
+            {view === 'forgot'       && t('forgotSubtitle')}
+            {view === 'forgot-sent'  && t('forgotSentSubtitle', { email })}
           </p>
         </div>
 
@@ -81,21 +83,21 @@ export default function LoginPage() {
           <form onSubmit={submit} className="flex flex-col gap-3">
             {view === 'register' && (
               <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                placeholder="Nome" autoComplete="name"
+                placeholder={t('loginName')} autoComplete="name"
                 className="w-full rounded-lg bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
               />
             )}
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email" required autoComplete="email"
+              placeholder={t('loginEmail')} required autoComplete="email"
               className="w-full rounded-lg bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="Senha" required minLength={6} autoComplete={view === 'register' ? 'new-password' : 'current-password'}
+              placeholder={t('loginPassword')} required minLength={6} autoComplete={view === 'register' ? 'new-password' : 'current-password'}
               className="w-full rounded-lg bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
             <button type="submit" disabled={submitting}
               className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">
-              {submitting ? 'Aguarde...' : view === 'register' ? 'Criar conta' : 'Entrar'}
+              {submitting ? t('loginSubmitting') : view === 'register' ? t('registerSubmit') : t('loginSubmit')}
             </button>
           </form>
         )}
@@ -104,12 +106,12 @@ export default function LoginPage() {
         {view === 'forgot' && (
           <form onSubmit={submitForgot} className="flex flex-col gap-3">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="Seu email" required autoComplete="email"
+              placeholder={t('loginEmail')} required autoComplete="email"
               className="w-full rounded-lg bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
             <button type="submit" disabled={submitting}
               className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">
-              {submitting ? 'Enviando...' : 'Enviar link de redefinição'}
+              {submitting ? t('forgotSubmitting') : t('forgotSubmit')}
             </button>
           </form>
         )}
@@ -117,8 +119,7 @@ export default function LoginPage() {
         {/* ── Sent confirmation ────────────────── */}
         {view === 'forgot-sent' && (
           <div className="rounded-xl border border-emerald-700/50 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200">
-            Link enviado! Verifique sua caixa de entrada e clique no link para criar uma nova senha.
-            O link expira em 1 hora.
+            {t('loginForgotSentMsg')}
           </div>
         )}
 
@@ -128,24 +129,24 @@ export default function LoginPage() {
             <>
               <button onClick={() => { setView('register'); setError(''); }}
                 className="text-sm text-gray-300 hover:text-white transition-colors text-left">
-                Não tem conta? Criar uma
+                {t('loginToggleToRegister')}
               </button>
               <button onClick={() => { setView('forgot'); setError(''); }}
                 className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-left">
-                Esqueci minha senha
+                {t('loginForgotLink')}
               </button>
             </>
           )}
           {view === 'register' && (
             <button onClick={() => { setView('login'); setError(''); }}
               className="text-sm text-gray-300 hover:text-white transition-colors text-left">
-              Já tem conta? Entrar
+              {t('loginToggleToLogin')}
             </button>
           )}
           {(view === 'forgot' || view === 'forgot-sent') && (
             <button onClick={() => { setView('login'); setError(''); }}
               className="text-sm text-gray-300 hover:text-white transition-colors text-left">
-              ← Voltar ao login
+              {t('loginBackToLogin')}
             </button>
           )}
         </div>

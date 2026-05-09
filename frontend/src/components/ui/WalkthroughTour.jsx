@@ -1,95 +1,23 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const TOUR_KEY = 'contar:tour-done';
 
-const STEPS = [
-  {
-    id: 'welcome',
-    target: null,
-    title: 'Bem-vindo ao ContAR! 🎉',
-    description:
-      'Este é seu estúdio para criar narradores virtuais 3D interativos. Vamos fazer um tour rápido — menos de 2 minutos.',
-  },
-  {
-    id: 'canvas',
-    target: '[data-tour="scene-canvas"]',
-    title: 'Palco 3D',
-    description:
-      'Aqui seu avatar é exibido em tempo real. Arraste para orbitar a câmera, scroll para dar zoom. O que você configura no painel reflete aqui instantaneamente.',
-    prefer: 'left',
-  },
-  {
-    id: 'left-panel',
-    target: '[data-tour="left-panel"]',
-    title: 'Painel de Criação',
-    description:
-      'Todo o controle da cena fica aqui. Está dividido em abas: Avatar, Fala, Cena e História.',
-    prefer: 'right',
-  },
-  {
-    id: 'tabs',
-    target: '[data-tour="panel-tabs"]',
-    title: 'Abas de Navegação',
-    description:
-      'Alterne entre as seções clicando nas abas. Cada uma trata de uma parte do fluxo de criação.',
-    prefer: 'right',
-  },
-  {
-    id: 'avatar-upload',
-    target: '[data-tour="avatar-upload"]',
-    title: 'Carregar Avatar',
-    description:
-      'Crie um avatar personalizado com o criador integrado, importe um arquivo GLB/VRM do seu computador, ou cole um link direto.',
-    prefer: 'right',
-  },
-  {
-    id: 'pose',
-    target: '[data-tour="pose-selector"]',
-    title: 'Pose do Narrador',
-    description:
-      'Escolha entre idle, palestrando, acenando, saudando e outras poses. Na pose "Speaker" o avatar faz gestos procedurais enquanto fala.',
-    prefer: 'right',
-  },
-  {
-    id: 'tab-fala',
-    target: '[data-tour="tab-fala"]',
-    title: 'Aba Fala',
-    description:
-      'Clique nesta aba para escrever o que o narrador vai dizer e gerar a voz com IA (TTS). Os lábios do avatar sincronizam automaticamente com o áudio.',
-    prefer: 'right',
-  },
-  {
-    id: 'tab-cena',
-    target: '[data-tour="tab-cena"]',
-    title: 'Aba Cena',
-    description:
-      'Dê um título e salve a configuração atual como uma cena. Uma história é composta por várias cenas em sequência.',
-    prefer: 'right',
-  },
-  {
-    id: 'tab-historia',
-    target: '[data-tour="tab-historia"]',
-    title: 'Aba História',
-    description:
-      'Organize suas cenas em uma história, publique e compartilhe o link com alunos ou colegas. Funciona em qualquer dispositivo.',
-    prefer: 'right',
-  },
-  {
-    id: 'ar-btn',
-    target: '[data-tour="ar-btn"]',
-    title: 'Realidade Aumentada',
-    description:
-      'Coloque seu narrador no mundo real pela câmera do celular — sem precisar instalar nenhum aplicativo.',
-    prefer: 'bottom',
-  },
-  {
-    id: 'done',
-    target: null,
-    title: 'Pronto para criar! ✨',
-    description:
-      'Você já conhece a interface. Comece carregando um avatar, escreva uma fala e salve a primeira cena. Clique no ícone ? ao lado de cada seção se tiver dúvidas.',
-  },
-];
+function getSteps(t) {
+  return [
+    { id: 'welcome',       target: null,                           prefer: undefined, title: t('tourStep0Title'),  description: t('tourStep0Desc') },
+    { id: 'canvas',        target: '[data-tour="scene-canvas"]',  prefer: 'left',    title: t('tourStep1Title'),  description: t('tourStep1Desc') },
+    { id: 'left-panel',    target: '[data-tour="left-panel"]',    prefer: 'right',   title: t('tourStep2Title'),  description: t('tourStep2Desc') },
+    { id: 'tabs',          target: '[data-tour="panel-tabs"]',    prefer: 'right',   title: t('tourStep3Title'),  description: t('tourStep3Desc') },
+    { id: 'avatar-upload', target: '[data-tour="avatar-upload"]', prefer: 'right',   title: t('tourStep4Title'),  description: t('tourStep4Desc') },
+    { id: 'pose',          target: '[data-tour="pose-selector"]', prefer: 'right',   title: t('tourStep5Title'),  description: t('tourStep5Desc') },
+    { id: 'tab-fala',      target: '[data-tour="tab-fala"]',      prefer: 'right',   title: t('tourStep6Title'),  description: t('tourStep6Desc') },
+    { id: 'tab-cena',      target: '[data-tour="tab-cena"]',      prefer: 'right',   title: t('tourStep7Title'),  description: t('tourStep7Desc') },
+    { id: 'tab-historia',  target: '[data-tour="tab-historia"]',  prefer: 'right',   title: t('tourStep8Title'),  description: t('tourStep8Desc') },
+    { id: 'ar-btn',        target: '[data-tour="ar-btn"]',        prefer: 'bottom',  title: t('tourStep9Title'),  description: t('tourStep9Desc') },
+    { id: 'done',          target: null,                           prefer: undefined, title: t('tourStep10Title'), description: t('tourStep10Desc') },
+  ];
+}
 
 export function shouldShowTour() {
   try { return !localStorage.getItem(TOUR_KEY); } catch { return false; }
@@ -157,6 +85,9 @@ function computeTooltipStyle(spotlight, prefer, vw, vh) {
 }
 
 export default function WalkthroughTour({ isOpen, onClose }) {
+  const { t } = useTranslation();
+  const STEPS = getSteps(t);
+
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState(null);
   const [dims, setDims] = useState({ vw: window.innerWidth, vh: window.innerHeight });
@@ -253,7 +184,7 @@ export default function WalkthroughTour({ isOpen, onClose }) {
               className={`h-1.5 rounded-full transition-all duration-300 ${i === step ? 'w-6 bg-cyan-400' : 'w-1.5 bg-gray-600'}`}
             />
           ))}
-          <span className="ml-auto text-[10px] text-gray-500">{step + 1}/{STEPS.length}</span>
+          <span className="ml-auto text-[10px] text-gray-500">{t('tourProgress', { current: step + 1, total: STEPS.length })}</span>
         </div>
 
         <div>
@@ -263,7 +194,7 @@ export default function WalkthroughTour({ isOpen, onClose }) {
 
         <div className="flex items-center justify-between gap-2 pt-1">
           <button onClick={close} className="text-xs text-gray-500 hover:text-gray-300 transition-colors shrink-0">
-            Pular tour
+            {t('tourSkip')}
           </button>
           <div className="flex gap-2">
             {step > 0 && (
@@ -271,14 +202,14 @@ export default function WalkthroughTour({ isOpen, onClose }) {
                 onClick={prev}
                 className="px-3 py-1.5 rounded-lg border border-gray-600 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
               >
-                ← Anterior
+                {t('tourPrev')}
               </button>
             )}
             <button
               onClick={next}
               className="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition-colors"
             >
-              {step === STEPS.length - 1 ? 'Começar! 🚀' : 'Próximo →'}
+              {step === STEPS.length - 1 ? t('tourStart') : t('tourNext')}
             </button>
           </div>
         </div>

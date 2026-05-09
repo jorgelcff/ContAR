@@ -1,75 +1,82 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 
-// ── Static data ────────────────────────────────────────────────────────────
+// ── Static data factories ───────────────────────────────────────────────────
 
-const FEATURES = [
-  {
-    icon: '🎭',
-    title: 'Avatares 3D personalizados',
-    color: 'from-cyan-500/20 to-cyan-500/5',
-    border: 'border-cyan-500/20',
-    desc: 'Crie seu personagem com uma selfie ou customize do zero. Importe arquivos GLB/VRM de qualquer fonte.',
-  },
-  {
-    icon: '🎙️',
-    title: 'Voz gerada por IA',
-    color: 'from-purple-500/20 to-purple-500/5',
-    border: 'border-purple-500/20',
-    desc: 'Digite o texto, gere áudio com IA e os lábios do avatar se sincronizam automaticamente em tempo real.',
-  },
-  {
-    icon: '📖',
-    title: 'Histórias em sequência',
-    color: 'from-blue-500/20 to-blue-500/5',
-    border: 'border-blue-500/20',
-    desc: 'Monte cenas em ordem, adicione transições e publique uma história completa com link único e público.',
-  },
-  {
-    icon: '📱',
-    title: 'Realidade Aumentada',
-    color: 'from-emerald-500/20 to-emerald-500/5',
-    border: 'border-emerald-500/20',
-    desc: 'Coloque o avatar no mundo real pela câmera do celular com WebXR — sem instalar nenhum aplicativo.',
-  },
-];
+function getFeatures(t) {
+  return [
+    {
+      icon: '🎭',
+      title: t('landingFeature1Title'),
+      color: 'from-cyan-500/20 to-cyan-500/5',
+      border: 'border-cyan-500/20',
+      desc: t('landingFeature1Desc'),
+    },
+    {
+      icon: '🎙️',
+      title: t('landingFeature2Title'),
+      color: 'from-purple-500/20 to-purple-500/5',
+      border: 'border-purple-500/20',
+      desc: t('landingFeature2Desc'),
+    },
+    {
+      icon: '📖',
+      title: t('landingFeature3Title'),
+      color: 'from-blue-500/20 to-blue-500/5',
+      border: 'border-blue-500/20',
+      desc: t('landingFeature3Desc'),
+    },
+    {
+      icon: '📱',
+      title: t('landingFeature4Title'),
+      color: 'from-emerald-500/20 to-emerald-500/5',
+      border: 'border-emerald-500/20',
+      desc: t('landingFeature4Desc'),
+    },
+  ];
+}
 
-const AUDIENCES = [
-  {
-    icon: '👩‍🏫',
-    title: 'Professores e educadores',
-    desc: 'Crie narradores virtuais para aulas, explicações e tutoriais. Engaje alunos com conteúdo interativo.',
-  },
-  {
-    icon: '🎨',
-    title: 'Criadores de conteúdo',
-    desc: 'Apresente ideias, produtos ou histórias com personagens 3D que falam pela sua marca.',
-  },
-  {
-    icon: '🔬',
-    title: 'Pesquisadores e inovadores',
-    desc: 'Explore narrativas interativas com realidade aumentada, lip sync e avatares humanoides.',
-  },
-];
+function getAudiences(t) {
+  return [
+    {
+      icon: '👩‍🏫',
+      title: t('landingAudience1Title'),
+      desc: t('landingAudience1Desc'),
+    },
+    {
+      icon: '🎨',
+      title: t('landingAudience2Title'),
+      desc: t('landingAudience2Desc'),
+    },
+    {
+      icon: '🔬',
+      title: t('landingAudience3Title'),
+      desc: t('landingAudience3Desc'),
+    },
+  ];
+}
 
-const STEPS = [
-  {
-    n: '1', icon: '👤',
-    title: 'Crie seu avatar',
-    desc: 'Use o criador integrado, importe um arquivo GLB/VRM ou cole um link. Seu personagem aparece instantaneamente.',
-  },
-  {
-    n: '2', icon: '💬',
-    title: 'Escreva e gere a fala',
-    desc: 'Digite o que o narrador vai dizer, clique em Gerar Voz e o avatar fala com lábios sincronizados.',
-  },
-  {
-    n: '3', icon: '🚀',
-    title: 'Publique e compartilhe',
-    desc: 'Salve a cena, monte a história e copie o link — qualquer pessoa pode assistir, sem login.',
-  },
-];
+function getSteps(t) {
+  return [
+    {
+      n: '1', icon: '👤',
+      title: t('landingStep1Title'),
+      desc: t('landingStep1Desc'),
+    },
+    {
+      n: '2', icon: '💬',
+      title: t('landingStep2Title'),
+      desc: t('landingStep2Desc'),
+    },
+    {
+      n: '3', icon: '🚀',
+      title: t('landingStep3Title'),
+      desc: t('landingStep3Desc'),
+    },
+  ];
+}
 
 // ── Animated counter ───────────────────────────────────────────────────────
 
@@ -140,7 +147,7 @@ function ProductPreview() {
             <div className="w-10 h-16 rounded-t-xl bg-linear-to-b from-cyan-600/30 to-blue-700/20 border border-cyan-500/20" />
           </div>
 
-          {/* Speech bubble */}
+          {/* Speech bubble — illustrative demo content, kept as-is */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-gray-900/90 border border-white/10 rounded-xl px-4 py-2 text-xs text-gray-200 shadow-lg max-w-50 text-center">
             <span className="italic">"Bem-vindo à nossa aula interativa!"</span>
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-gray-900/90" />
@@ -156,7 +163,7 @@ function ProductPreview() {
             <div className="w-7 h-7 rounded bg-cyan-700/80 flex items-center justify-center text-[10px] text-white font-bold">AR</div>
           </div>
 
-          {/* Floating badge */}
+          {/* Floating badge — illustrative demo content, kept as-is */}
           <div className="absolute top-3 right-3 rounded-full bg-purple-600/80 px-2 py-0.5 text-[10px] text-white font-semibold backdrop-blur-sm">
             🎙️ Ao vivo
           </div>
@@ -180,9 +187,14 @@ function ProductPreview() {
 
 export default function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useTranslation();
 
   const primaryHref  = isAuthenticated ? '/stories' : '/login';
-  const primaryLabel = isAuthenticated ? 'Ir para minhas histórias →' : 'Criar conta grátis';
+  const primaryLabel = isAuthenticated ? t('landingCtaPrimaryAuth') : t('landingCtaPrimary');
+
+  const AUDIENCES = getAudiences(t);
+  const FEATURES  = getFeatures(t);
+  const STEPS     = getSteps(t);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
@@ -199,17 +211,17 @@ export default function LandingPage() {
               isAuthenticated ? (
                 <Link to="/stories"
                   className="rounded-full bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition-colors">
-                  Minhas histórias
+                  {t('landingNavMyStories')}
                 </Link>
               ) : (
                 <>
                   <Link to="/login"
                     className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-2 hidden sm:inline">
-                    Entrar
+                    {t('landingNavEnter')}
                   </Link>
                   <Link to="/login"
                     className="rounded-full bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition-colors">
-                    Criar conta grátis
+                    {t('landingNavCreate')}
                   </Link>
                 </>
               )
@@ -222,20 +234,20 @@ export default function LandingPage() {
       <section className="flex flex-col items-center text-center px-5 pt-20 pb-10">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300 mb-8">
-          🎓 Ferramenta educacional · Sem código · Sem instalação
+          {t('landingHeroBadge')}
         </div>
 
         {/* Headline */}
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight max-w-3xl">
-          Narradores virtuais 3D{' '}
+          {t('landingHeroTitle')}{' '}
           <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-purple-400">
-            para suas aulas
+            {t('landingHeroTitleHighlight')}
           </span>
-          {' '}e histórias
+          {' '}{t('landingHeroTitleSuffix')}
         </h1>
 
         <p className="mt-6 text-lg text-gray-400 max-w-xl leading-relaxed">
-          Crie personagens 3D que falam com voz gerada por IA, monte sequências de cenas e compartilhe com um link — tudo no navegador, em minutos.
+          {t('landingHeroSubtitle')}
         </p>
 
         {/* CTAs */}
@@ -247,7 +259,7 @@ export default function LandingPage() {
           {!isAuthenticated && (
             <Link to="/login"
               className="inline-flex items-center justify-center rounded-2xl border-2 border-gray-700 hover:border-cyan-500/50 px-8 py-4 text-base font-medium text-gray-300 hover:text-white transition-all active:scale-95">
-              Já tenho conta →
+              {t('landingCtaSecondary')}
             </Link>
           )}
         </div>
@@ -260,9 +272,9 @@ export default function LandingPage() {
       <section className="py-12 px-5 border-y border-white/5 bg-white/2">
         <div className="max-w-3xl mx-auto grid grid-cols-3 gap-6 text-center">
           {[
-            { value: 3,   suffix: ' min',  label: 'para criar a primeira cena' },
-            { value: 100, suffix: '%',     label: 'no navegador, sem instalar' },
-            { value: 0,   suffix: ' apps', label: 'necessários para o espectador' },
+            { value: 3,   suffix: ' min',  label: t('landingStatsMinLabel') },
+            { value: 100, suffix: '%',     label: t('landingStatsBrowserLabel') },
+            { value: 0,   suffix: ' apps', label: t('landingStatsAppsLabel') },
           ].map(({ value, suffix, label }) => (
             <div key={label} className="flex flex-col gap-1">
               <span className="text-3xl sm:text-4xl font-extrabold text-cyan-400">
@@ -278,9 +290,9 @@ export default function LandingPage() {
       <section className="py-20 px-5 border-b border-white/5">
         <div className="max-w-5xl mx-auto">
           <p className="text-center text-xs font-semibold uppercase tracking-widest text-purple-400 mb-3">
-            Para quem é
+            {t('landingAudienceLabel')}
           </p>
-          <h2 className="text-center text-3xl font-bold mb-12">Feito para quem cria e ensina</h2>
+          <h2 className="text-center text-3xl font-bold mb-12">{t('landingAudienceTitle')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {AUDIENCES.map((a) => (
               <div key={a.title}
@@ -298,9 +310,9 @@ export default function LandingPage() {
       <section className="py-20 px-5 border-b border-white/5 bg-gray-900/30">
         <div className="max-w-5xl mx-auto">
           <p className="text-center text-xs font-semibold uppercase tracking-widest text-cyan-400 mb-3">
-            Funcionalidades
+            {t('landingFeaturesLabel')}
           </p>
-          <h2 className="text-center text-3xl font-bold mb-12">Tudo que você precisa, num só lugar</h2>
+          <h2 className="text-center text-3xl font-bold mb-12">{t('landingFeaturesTitle')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {FEATURES.map((f) => (
               <div key={f.title}
@@ -318,9 +330,9 @@ export default function LandingPage() {
       <section className="py-20 px-5 border-b border-white/5">
         <div className="max-w-4xl mx-auto">
           <p className="text-center text-xs font-semibold uppercase tracking-widest text-cyan-400 mb-3">
-            Como funciona
+            {t('landingStepsLabel')}
           </p>
-          <h2 className="text-center text-3xl font-bold mb-14">Pronto em 3 passos</h2>
+          <h2 className="text-center text-3xl font-bold mb-14">{t('landingStepsTitle')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {STEPS.map((s, i) => (
               <div key={s.n} className="flex flex-col items-center text-center gap-4">
@@ -350,14 +362,14 @@ export default function LandingPage() {
           <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-gray-900 px-6 py-4">
             <span className="text-3xl">🎓</span>
             <div className="text-left">
-              <p className="text-sm font-semibold text-white">Projeto de pesquisa acadêmica</p>
+              <p className="text-sm font-semibold text-white">{t('landingSocialBadgeTitle')}</p>
               <p className="text-xs text-gray-400 mt-0.5">
-                Desenvolvido como Trabalho de Conclusão de Curso em Ciência da Computação · UFPE
+                {t('landingSocialBadgeDesc')}
               </p>
             </div>
           </div>
           <blockquote className="max-w-lg text-gray-400 text-sm italic leading-relaxed border-l-2 border-cyan-500/40 pl-4 text-left">
-            "ContAR propõe um ecossistema no-code para criação e publicação de narradores virtuais 3D interativos, com foco em aplicações educacionais e de realidade aumentada."
+            {t('landingSocialQuote')}
           </blockquote>
         </div>
       </section>
@@ -366,9 +378,9 @@ export default function LandingPage() {
       <section className="py-24 px-5 text-center">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-6">
           <div className="text-5xl">🎬</div>
-          <h2 className="text-3xl font-bold">Pronto para criar?</h2>
+          <h2 className="text-3xl font-bold">{t('landingCtaFinalTitle')}</h2>
           <p className="text-gray-400 max-w-md leading-relaxed">
-            Crie sua primeira cena com avatar 3D falante em menos de 5 minutos — gratuitamente, sem instalar nada.
+            {t('landingCtaFinalSubtitle')}
           </p>
           <Link to={primaryHref}
             className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-10 py-4 text-base font-semibold text-white shadow-xl shadow-blue-900/30 transition-all active:scale-95">
@@ -376,9 +388,9 @@ export default function LandingPage() {
           </Link>
           {!isAuthenticated && (
             <p className="text-xs text-gray-600">
-              Já tem conta?{' '}
+              {t('landingAlreadyHaveAccount')}{' '}
               <Link to="/login" className="text-gray-400 hover:text-white transition-colors underline underline-offset-2">
-                Entrar
+                {t('landingEnterLink')}
               </Link>
             </p>
           )}
@@ -394,9 +406,9 @@ export default function LandingPage() {
             <span>· © {new Date().getFullYear()}</span>
           </div>
           <div className="flex gap-6">
-            <Link to="/login" className="hover:text-gray-400 transition-colors">Entrar</Link>
-            <Link to="/ar" className="hover:text-gray-400 transition-colors">Realidade Aumentada</Link>
-            <Link to="/login" className="hover:text-gray-400 transition-colors">Criar conta</Link>
+            <Link to="/login" className="hover:text-gray-400 transition-colors">{t('landingFooterEnter')}</Link>
+            <Link to="/ar" className="hover:text-gray-400 transition-colors">{t('landingFooterAr')}</Link>
+            <Link to="/login" className="hover:text-gray-400 transition-colors">{t('landingFooterCreate')}</Link>
           </div>
         </div>
       </footer>

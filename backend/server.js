@@ -23,9 +23,22 @@ app.set('trust proxy', TRUST_PROXY);
 
 app.use(
   cors({
-    origin: CORS_ORIGIN.split(',').map((origin) => origin.trim()),
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = CORS_ORIGIN.split(",").map((o) => o.trim());
+      if (
+        allowedOrigins.indexOf(origin) !== -1 ||
+        origin.startsWith("http://localhost:")
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
-  })
+  }),
 );
 app.use(express.json({ limit: '2mb' }));
 

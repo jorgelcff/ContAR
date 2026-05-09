@@ -8,7 +8,7 @@ import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import Header from '../components/ui/Header';
 import SceneCanvas from '../components/3d/SceneCanvas';
-import useSceneStore from '../store/useSceneStore';
+import { useSceneStore } from '../store/useSceneStore';
 
 function normalizeAvatarUrl(url) {
   if (typeof url !== 'string') return '';

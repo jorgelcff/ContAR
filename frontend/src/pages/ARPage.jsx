@@ -8,6 +8,7 @@ import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import Header from '../components/ui/Header';
 import SceneCanvas from '../components/3d/SceneCanvas';
+import useSceneStore from '../store/useSceneStore';
 
 function normalizeAvatarUrl(url) {
   if (typeof url !== 'string') return '';
@@ -417,13 +418,34 @@ export default function ARPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || '';
-  const [modelUrl, setModelUrl] = useState(searchParams.get('modelUrl') || '');
+  const storedAvatarUrl = useSceneStore((s) => s.avatarUrl);
+
+  // Resolve effective URL: query param → stored avatar (HTTP only) → default
+  const resolveUrl = (param, stored) => {
+    if (param) return param;
+    if (stored && !stored.startsWith('blob:') && /^https?:\/\//i.test(stored)) return stored;
+    return '/default_model.glb';
+  };
+
+  const [modelUrl, setModelUrl] = useState(
+    () => resolveUrl(searchParams.get('modelUrl'), storedAvatarUrl)
+  );
   const [markerUrl, setMarkerUrl] = useState(searchParams.get('markerUrl') || '');
 
+  // Re-resolve when store rehydrates or params change
   useEffect(() => {
-    setModelUrl(searchParams.get('modelUrl') || '');
+    setModelUrl(resolveUrl(searchParams.get('modelUrl'), storedAvatarUrl));
     setMarkerUrl(searchParams.get('markerUrl') || '');
-  }, [searchParams]);
+  }, [searchParams, storedAvatarUrl]);
+
+  const isUsingStoredAvatar =
+    storedAvatarUrl &&
+    !storedAvatarUrl.startsWith('blob:') &&
+    /^https?:\/\//i.test(storedAvatarUrl) &&
+    !searchParams.get('modelUrl');
+
+  const isBlobOnly =
+    storedAvatarUrl?.startsWith('blob:') && !searchParams.get('modelUrl');
 
   const surfaceHref = useMemo(
     () => buildQueryUrl('/ar', { mode: 'surface', modelUrl }),
@@ -455,7 +477,7 @@ export default function ARPage() {
 
   const hiroHref = buildQueryUrl('/ar', {
     mode: 'marker',
-    modelUrl: modelUrl || '/default_model.glb',
+    modelUrl,
     useHiro: '1',
   });
 
@@ -482,6 +504,46 @@ export default function ARPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">{t('arTitle')}</p>
             <h1 className="mt-2 text-2xl font-bold md:text-3xl">Experimente o avatar em Realidade Aumentada</h1>
           </div>
+
+          {/* Avatar source banner */}
+          {isUsingStoredAvatar ? (
+            <div className="rounded-2xl border border-emerald-600/30 bg-emerald-950/30 px-4 py-3 flex items-center gap-3">
+              <span className="text-xl shrink-0">✅</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-emerald-300">Usando seu avatar salvo</p>
+                <p className="text-xs text-emerald-200/60 mt-0.5 truncate">{storedAvatarUrl}</p>
+              </div>
+              <Link to="/editor" className="shrink-0 text-xs text-emerald-400 hover:text-emerald-300 underline">
+                Trocar
+              </Link>
+            </div>
+          ) : isBlobOnly ? (
+            <div className="rounded-2xl border border-amber-600/40 bg-amber-950/30 px-4 py-3 flex items-center gap-3">
+              <span className="text-xl shrink-0">⚠️</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-300">Avatar local detectado</p>
+                <p className="text-xs text-amber-200/60 mt-0.5">
+                  Seu avatar foi carregado localmente e não pode ser usado no AR. Salve a cena no editor para gerar uma URL permanente.
+                </p>
+              </div>
+              <Link to="/editor" className="shrink-0 text-xs text-amber-400 hover:text-amber-300 underline">
+                Editor
+              </Link>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/8 bg-white/3 px-4 py-3 flex items-center gap-3">
+              <span className="text-xl shrink-0">ℹ️</span>
+              <div className="flex-1">
+                <p className="text-sm text-gray-300">Usando avatar padrão de demonstração</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Configure um avatar no editor e salve a cena para usá-lo aqui automaticamente.
+                </p>
+              </div>
+              <Link to="/editor" className="shrink-0 text-xs text-cyan-400 hover:text-cyan-300 underline">
+                Abrir editor
+              </Link>
+            </div>
+          )}
 
           {/* Mode cards */}
           <div className="grid gap-4 md:grid-cols-2">
@@ -582,6 +644,7 @@ export default function ARPage() {
 function ThreeJsFallbackScene({ modelUrl, onBack }) {
   const { t } = useTranslation();
   const [scale, setScale] = useState(1);
+  const hiroHref = buildQueryUrl('/ar', { mode: 'marker', modelUrl: modelUrl || '/default_model.glb', useHiro: '1' });
 
   const transform = useMemo(
     () => ({
@@ -607,7 +670,7 @@ function ThreeJsFallbackScene({ modelUrl, onBack }) {
             WebXR Surface AR requer Android Chrome + ARCore ou iOS Safari 15+. Mostrando visualização 3D normal.
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            Tente o <a href="/ar?mode=marker&modelUrl=/default_model.glb&useHiro=1" className="text-fuchsia-400 hover:underline">Demo com Marcador Hiro</a> — funciona em qualquer celular.
+            Tente o <a href={hiroHref} className="text-fuchsia-400 hover:underline">Demo com Marcador Hiro</a> — funciona em qualquer celular.
           </p>
         </div>
         <button onClick={onBack}

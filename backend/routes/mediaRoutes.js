@@ -5,6 +5,18 @@ const fs = require('fs');
 const rateLimit = require('express-rate-limit');
 const { requireAuth } = require('../middleware/authMiddleware');
 
+// Resolve the public base URL for constructing file URLs.
+// In production (Docker/Render) req.get('host') returns the internal container
+// address, not the public hostname. BACKEND_URL overrides this.
+function serverBaseUrl(req) {
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL.replace(/\/$/, '');
+  }
+  const proto = req.get('X-Forwarded-Proto') || req.protocol;
+  const host  = req.get('X-Forwarded-Host')  || req.get('host');
+  return `${proto}://${host}`;
+}
+
 // ── Audio ─────────────────────────────────────────────────────────────────────
 
 const AUDIO_DIR = path.join(__dirname, '..', 'uploads', 'audio');
@@ -43,7 +55,7 @@ const modelStorage = multer.diskStorage({
 
 const modelUpload = multer({
   storage: modelStorage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ok = /\.(glb|vrm)$/i.test(file.originalname)
       || ['model/gltf-binary', 'model/vrm', 'application/octet-stream'].includes(file.mimetype);
@@ -62,13 +74,13 @@ const router = express.Router();
 
 router.post('/audio', audioLimiter, requireAuth, audioUpload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-  const url = `${req.protocol}://${req.get('host')}/uploads/audio/${req.file.filename}`;
+  const url = `${serverBaseUrl(req)}/uploads/audio/${req.file.filename}`;
   res.json({ url });
 });
 
 router.post('/model', modelLimiter, requireAuth, modelUpload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-  const url = `${req.protocol}://${req.get('host')}/uploads/models/${req.file.filename}`;
+  const url = `${serverBaseUrl(req)}/uploads/models/${req.file.filename}`;
   res.json({ url, filename: req.file.filename, size: req.file.size });
 });
 

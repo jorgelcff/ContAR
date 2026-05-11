@@ -9,6 +9,9 @@ import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import Header from '../components/ui/Header';
 import SceneCanvas from '../components/3d/SceneCanvas';
 import { useSceneStore } from '../store/useSceneStore';
+import { LipSyncController } from '../controllers/LipSyncController';
+import { getPublicStory, getScene } from '../api/sceneApi';
+import useAudio from '../hooks/useAudio';
 
 const AR_SCALE_KEY = 'contar:ar-scale';
 const AR_SCALE_DEFAULT = 1.0;
@@ -70,7 +73,158 @@ function buildQueryUrl(path, params) {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-function SurfaceARScene({ modelUrl, initialScale = 1, onBack }) {
+// ── Story player hook ─────────────────────────────────────────────────────────
+// Manages story state and an <audio> element (rendered by the host component).
+// Host must render: <audio ref={story.audioRef} crossOrigin="anonymous" />
+function useARStory(storyId) {
+  const audioRef = useRef(null);
+  const [story, setStory] = useState(null);
+  const [scenes, setScenes] = useState([]);
+  const [index, setIndex] = useState(0);
+  const [currentScene, setCurrentScene] = useState(null);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [storyLoading, setStoryLoading] = useState(false);
+  const [storyError, setStoryError] = useState('');
+
+  useEffect(() => {
+    if (!storyId) { setStory(null); setScenes([]); setCurrentScene(null); return; }
+    let active = true;
+    setStoryLoading(true);
+    setStoryError('');
+    getPublicStory(storyId)
+      .then((data) => {
+        if (!active) return;
+        setStory(data);
+        const ordered = [...(data.scenes || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        setScenes(ordered);
+        setIndex(0);
+        setHasStarted(false);
+        setIsPlaying(false);
+      })
+      .catch((err) => { if (active) setStoryError(err?.response?.data?.error || 'Erro ao carregar história'); })
+      .finally(() => { if (active) setStoryLoading(false); });
+    return () => { active = false; };
+  }, [storyId]);
+
+  useEffect(() => {
+    const sceneId = scenes[index]?.sceneId;
+    if (!sceneId) { setCurrentScene(null); return; }
+    let active = true;
+    getScene(sceneId)
+      .then((d) => { if (active) setCurrentScene(d); })
+      .catch(() => { if (active) setCurrentScene(null); });
+    return () => { active = false; };
+  }, [scenes, index]);
+
+  // Load + play audio when scene changes (after start)
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !hasStarted) return;
+    const audioUrl = currentScene?.content?.narrative?.audioUrl;
+    if (audioUrl) {
+      el.src = audioUrl;
+      el.load();
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+      el.src = '';
+      // No audio — auto-advance after scene duration
+      const dur = Math.max(2, Number(scenes[index]?.durationSeconds) || 5) * 1000;
+      const tid = setTimeout(() => setIndex((i) => Math.min(i + 1, scenes.length - 1)), dur);
+      return () => clearTimeout(tid);
+    }
+  }, [currentScene, hasStarted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-advance when audio ends
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const onEnded = () => setIndex((i) => {
+      const next = i + 1;
+      if (next < scenes.length) return next;
+      setIsPlaying(false);
+      return i;
+    });
+    el.addEventListener('ended', onEnded);
+    return () => el.removeEventListener('ended', onEnded);
+  }, [scenes.length]);
+
+  // start() must be called directly in a click handler to satisfy autoplay policy
+  const start = (onUnlock) => {
+    const el = audioRef.current;
+    if (el) el.play().catch(() => {}); // unlock audio context
+    if (onUnlock) onUnlock();
+    setHasStarted(true);
+    setIsPlaying(true);
+  };
+
+  const next = () => setIndex((i) => Math.min(i + 1, scenes.length - 1));
+  const prev = () => setIndex((i) => Math.max(i - 1, 0));
+  const togglePlay = () => {
+    const el = audioRef.current;
+    setIsPlaying((p) => {
+      if (el) { p ? el.pause() : el.play().catch(() => {}); }
+      return !p;
+    });
+  };
+
+  return { story, scenes, currentScene, index, hasStarted, isPlaying, storyLoading, storyError, audioRef, start, next, prev, togglePlay };
+}
+
+// ── Story player overlay (shared UI across modes) ─────────────────────────────
+function StoryOverlay({ story, storyId, compact = false, onStart }) {
+  if (!storyId || !story.story) return null;
+
+  if (!story.hasStarted) {
+    return (
+      <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/65 backdrop-blur-sm">
+        <div className="mx-6 w-full max-w-sm rounded-2xl border border-white/10 bg-black/90 p-6 text-center">
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300 mb-2">História em AR</p>
+          <h2 className="text-xl font-bold text-white mb-1">{story.story?.metadata?.title}</h2>
+          <p className="text-sm text-gray-400 mb-5">{story.scenes.length} cenas</p>
+          <button
+            onClick={onStart}
+            className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-[0.98] text-white font-semibold transition-all"
+          >
+            ▶ Iniciar história
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${compact ? 'absolute top-16 left-3 right-3 z-25' : ''} rounded-xl border border-white/10 bg-black/80 px-3 py-2.5 backdrop-blur-sm`}>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs text-cyan-300 font-medium truncate max-w-[75%]">
+          {story.currentScene?.content?.narrative?.text
+            ? `"${story.currentScene.content.narrative.text.slice(0, 55)}…"`
+            : story.story?.metadata?.title}
+        </p>
+        <p className="text-xs text-gray-500 shrink-0 ml-2">{story.index + 1}/{story.scenes.length}</p>
+      </div>
+      <div className="h-1 bg-gray-700 rounded-full overflow-hidden mb-2">
+        <div
+          className="h-full bg-cyan-400 transition-all duration-300"
+          style={{ width: `${((story.index) / Math.max(1, story.scenes.length - 1)) * 100}%` }}
+        />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={story.prev} disabled={story.index === 0}
+          className="flex-1 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-white disabled:opacity-40">◀</button>
+        <button onClick={story.togglePlay}
+          className="flex-1 py-1.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-xs text-white font-semibold">
+          {story.isPlaying ? '⏸' : '▶'}
+        </button>
+        <button onClick={story.next} disabled={story.index >= story.scenes.length - 1}
+          className="flex-1 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-white disabled:opacity-40">▶▶</button>
+      </div>
+    </div>
+  );
+}
+
+function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const buttonHostRef = useRef(null);
@@ -86,13 +240,36 @@ function SurfaceARScene({ modelUrl, initialScale = 1, onBack }) {
   const lockPlacementRef = useRef(true);
   const placedRef = useRef(false);
   const scaleRef = useRef(initialScale);
-  const [supported, setSupported] = useState(null); // null = checking
+  // Lip sync
+  const lipSyncRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const analyserRef = useRef(null);
+  const lipSyncDataRef = useRef(null);
+  const webAudioInitRef = useRef(false);
+  const [supported, setSupported] = useState(null);
   const [loadingModel, setLoadingModel] = useState(false);
   const [scale, setScale] = useState(initialScale);
   const [lockPlacement, setLockPlacement] = useState(true);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const scaleLabel = `${Math.round(scale * 100)}%`;
+  const story = useARStory(storyId);
+
+  // Set up Web Audio API once (must be called in a user-gesture handler)
+  const initWebAudio = () => {
+    if (webAudioInitRef.current || !story.audioRef.current) return;
+    try {
+      const ctx = new AudioContext();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      const src = ctx.createMediaElementSource(story.audioRef.current);
+      src.connect(analyser);
+      analyser.connect(ctx.destination);
+      audioCtxRef.current = ctx;
+      analyserRef.current = analyser;
+      webAudioInitRef.current = true;
+    } catch (e) { /* audio context blocked or already connected */ }
+  };
 
   // Async WebXR support check — avoids false negatives on browsers
   // that have navigator.xr but don't actually support immersive-ar.
@@ -220,6 +397,27 @@ function SurfaceARScene({ modelUrl, initialScale = 1, onBack }) {
         }
       }
 
+      // Heuristic lip sync driven by audio analyser
+      if (analyserRef.current && lipSyncRef.current?.hasTargets) {
+        const binCount = analyserRef.current.frequencyBinCount;
+        if (!lipSyncDataRef.current || lipSyncDataRef.current.length !== binCount) {
+          lipSyncDataRef.current = new Uint8Array(binCount);
+        }
+        analyserRef.current.getByteTimeDomainData(lipSyncDataRef.current);
+        let sum = 0;
+        for (let i = 0; i < binCount; i++) {
+          const v = (lipSyncDataRef.current[i] - 128) / 128;
+          sum += v * v;
+        }
+        const mouthOpen = Math.min(1, Math.sqrt(sum / binCount) * 14);
+        if (mouthOpen > 0.04) {
+          lipSyncRef.current.setGroupValue('aa', mouthOpen * 0.9);
+          lipSyncRef.current.setGroupValue('mouthOpen', mouthOpen * 0.45);
+        } else {
+          lipSyncRef.current.resetGroups();
+        }
+      }
+
       renderer.render(scene, camera);
     });
 
@@ -305,6 +503,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, onBack }) {
         fitModelToGround(model);
         modelRootRef.current.add(model);
         modelRootRef.current.scale.setScalar(scaleRef.current);
+        // Init lip sync for this model
+        if (lipSyncRef.current) lipSyncRef.current.dispose();
+        lipSyncRef.current = new LipSyncController(model);
         setLoadingModel(false);
         setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
       },
@@ -327,38 +528,47 @@ function SurfaceARScene({ modelUrl, initialScale = 1, onBack }) {
   }
 
   if (!supported) {
-    return <ThreeJsFallbackScene modelUrl={modelUrl} onBack={onBack} />;
+    return <ThreeJsFallbackScene modelUrl={modelUrl} storyId={storyId} onBack={onBack} />;
   }
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black text-white">
+      {/* Hidden audio element for story playback */}
+      <audio ref={story.audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
+
       <div ref={containerRef} className="absolute inset-0" />
 
       <div className="absolute inset-x-0 top-0 z-20">
         <Header />
       </div>
 
-      <div className="absolute left-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
-        <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{t('arTitle')}</p>
-        <p className="mt-2 text-sm text-gray-200">{status || t('tapToPlace')}</p>
-        {loadingModel && (
-          <div className="mt-2 flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent shrink-0" />
-            <p className="text-xs text-cyan-300">Carregando personagem...</p>
-          </div>
-        )}
-        {!loadingModel && error && (
-          <p className="mt-1 text-xs text-red-400">{error}</p>
-        )}
-      </div>
+      {/* Story splash / controls */}
+      <StoryOverlay
+        story={story}
+        storyId={storyId}
+        compact
+        onStart={() => story.start(initWebAudio)}
+      />
 
-      <div className="absolute bottom-4 left-4 right-4 z-20 rounded-2xl border border-white/10 bg-black/80 p-4 backdrop-blur-sm md:left-1/2 md:right-auto md:w-[520px] md:-translate-x-1/2">
-        {/* Mobile-first controls: large touch targets */}
+      {/* Status panel (only shown when no story or story not started) */}
+      {(!storyId || !story.hasStarted) && (
+        <div className="absolute left-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{t('arTitle')}</p>
+          <p className="mt-2 text-sm text-gray-200">{status || t('tapToPlace')}</p>
+          {loadingModel && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent shrink-0" />
+              <p className="text-xs text-cyan-300">Carregando personagem...</p>
+            </div>
+          )}
+          {!loadingModel && error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+        </div>
+      )}
+
+      <div className="absolute bottom-4 left-4 right-4 z-20 rounded-2xl border border-white/10 bg-black/80 p-4 backdrop-blur-sm md:left-1/2 md:right-auto md:w-130 md:-translate-x-1/2">
         <div className="grid grid-cols-2 gap-2 md:flex md:flex-row md:items-center">
-          <button
-            onClick={onBack}
-            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600"
-          >
+          <button onClick={onBack}
+            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
             ← {t('back')}
           </button>
           <button
@@ -367,28 +577,20 @@ function SurfaceARScene({ modelUrl, initialScale = 1, onBack }) {
               setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
               if (modelRootRef.current) modelRootRef.current.visible = false;
             }}
-            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600"
-          >
+            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
             🔄 {t('reset')}
           </button>
           <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={lockPlacement}
-              onChange={(e) => setLockPlacement(e.target.checked)}
-              className="w-5 h-5 accent-cyan-400 cursor-pointer"
-            />
+            <input type="checkbox" checked={lockPlacement} onChange={(e) => setLockPlacement(e.target.checked)} className="w-5 h-5 accent-cyan-400 cursor-pointer" />
             <span>{lockPlacement ? '🔒 Posição fixada' : '🔓 Mover avatar'}</span>
           </label>
         </div>
 
         <label className="mt-3 flex items-center gap-3 text-sm text-gray-200">
           <span className="shrink-0 w-14 text-right text-xs text-gray-400">{scaleLabel}</span>
-          <input
-            type="range" min="0.2" max="2.0" step="0.01" value={scale}
+          <input type="range" min="0.2" max="2.0" step="0.01" value={scale}
             onChange={(e) => setScale(Number(e.target.value))}
-            className="flex-1 accent-cyan-400 cursor-pointer"
-          />
+            className="flex-1 accent-cyan-400 cursor-pointer" />
           <span className="shrink-0 text-xs text-gray-400">{t('scale')}</span>
         </label>
 
@@ -398,31 +600,46 @@ function SurfaceARScene({ modelUrl, initialScale = 1, onBack }) {
   );
 }
 
-function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1 }) {
+function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId }) {
   const { t } = useTranslation();
+  const story = useARStory(storyId);
+
   const iframeSrc = useMemo(
     () => buildQueryUrl('/ar-marker.html', { modelUrl, markerUrl, useHiro: useHiro ? '1' : '', scale: initialScale }),
     [markerUrl, modelUrl, useHiro, initialScale]
   );
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="relative flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
+      {/* Hidden audio element — plays story narration from React (not inside iframe) */}
+      <audio ref={story.audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
+
       <Header />
       <div className="border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold">{t('markerUrl')}</h2>
-          <p className="text-xs text-gray-400">Use um arquivo de padrão personalizado e um modelo .glb.</p>
+          <h2 className="font-semibold">{storyId ? story.story?.metadata?.title || 'Carregando…' : t('markerUrl')}</h2>
+          <p className="text-xs text-gray-400">
+            {storyId ? `${story.scenes.length} cenas` : 'Use um arquivo de padrão personalizado e um modelo .glb.'}
+          </p>
         </div>
-        <Link
-          to="/ar"
-          className="rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600"
-        >
+        <Link to="/ar" className="rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600">
           {t('back')}
         </Link>
       </div>
-      <div className="flex-1 overflow-hidden bg-black">
+
+      <div className="flex-1 overflow-hidden bg-black relative">
         <iframe title="Marker AR" src={iframeSrc} className="h-full w-full border-0" />
+
+        {/* Story splash overlay */}
+        <StoryOverlay story={story} storyId={storyId} onStart={() => story.start()} />
       </div>
+
+      {/* Story controls bar (shown after start) */}
+      {storyId && story.hasStarted && (
+        <div className="shrink-0 border-t border-gray-800 bg-gray-900/95 px-4 py-3">
+          <StoryOverlay story={story} storyId={storyId} />
+        </div>
+      )}
     </div>
   );
 }
@@ -445,11 +662,13 @@ export default function ARPage() {
   );
   const [markerUrl, setMarkerUrl] = useState(searchParams.get('markerUrl') || '');
   const [initialScale, setInitialScale] = useState(readSavedScale);
+  const [storyId, setStoryId] = useState(searchParams.get('storyId') || '');
 
   // Re-resolve when store rehydrates or params change
   useEffect(() => {
     setModelUrl(resolveUrl(searchParams.get('modelUrl'), storedAvatarUrl));
     setMarkerUrl(searchParams.get('markerUrl') || '');
+    setStoryId(searchParams.get('storyId') || '');
   }, [searchParams, storedAvatarUrl]);
 
   const handleScaleChange = (v) => {
@@ -467,18 +686,18 @@ export default function ARPage() {
     storedAvatarUrl?.startsWith('blob:') && !searchParams.get('modelUrl');
 
   const surfaceHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'surface', modelUrl, scale: initialScale }),
-    [modelUrl, initialScale]
+    () => buildQueryUrl('/ar', { mode: 'surface', modelUrl, scale: initialScale, storyId: storyId || undefined }),
+    [modelUrl, initialScale, storyId]
   );
   const markerHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'marker', modelUrl, markerUrl, scale: initialScale }),
-    [markerUrl, modelUrl, initialScale]
+    () => buildQueryUrl('/ar', { mode: 'marker', modelUrl, markerUrl, scale: initialScale, storyId: storyId || undefined }),
+    [markerUrl, modelUrl, initialScale, storyId]
   );
 
   if (mode === 'surface') {
     const scaleParam = parseFloat(searchParams.get('scale'));
     const startScale = Number.isFinite(scaleParam) && scaleParam > 0 ? scaleParam : readSavedScale();
-    return <SurfaceARScene modelUrl={modelUrl} initialScale={startScale} onBack={() => window.location.assign('/ar')} />;
+    return <SurfaceARScene modelUrl={modelUrl} initialScale={startScale} storyId={searchParams.get('storyId') || ''} onBack={() => window.location.assign('/ar')} />;
   }
 
   if (mode === 'marker') {
@@ -490,6 +709,7 @@ export default function ARPage() {
         markerUrl={markerUrl}
         useHiro={searchParams.get('useHiro') === '1'}
         initialScale={startScale}
+        storyId={searchParams.get('storyId') || ''}
       />
     );
   }
@@ -504,6 +724,7 @@ export default function ARPage() {
     modelUrl,
     useHiro: '1',
     scale: initialScale,
+    storyId: storyId || undefined,
   });
 
   return (
@@ -673,6 +894,31 @@ export default function ARPage() {
                 </p>
               </div>
 
+              {/* Story selector */}
+              <div className="border-t border-white/5 pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-200">História para reproduzir em AR</span>
+                  <Link to="/stories" className="text-xs text-cyan-400 hover:text-cyan-300">
+                    Ver minhas histórias ↗
+                  </Link>
+                </div>
+                <input
+                  type="text"
+                  value={storyId}
+                  onChange={(e) => setStoryId(e.target.value.trim())}
+                  placeholder="Cole aqui o ID da história (ex: 6abc...)"
+                  className="w-full rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                />
+                {storyId && (
+                  <p className="text-xs text-emerald-400 mt-1.5">
+                    ✓ História configurada — os botões acima já incluem o ID.
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Na página de histórias, copie o ID da URL: /story/<strong>ID</strong>
+                </p>
+              </div>
+
               <div className="border-t border-white/5 pt-4 grid gap-4 md:grid-cols-2">
                 <label className="flex flex-col gap-2">
                   <span className="text-xs font-medium text-gray-400">{t('modelUrl')}</span>
@@ -696,24 +942,90 @@ export default function ARPage() {
   );
 }
 
-function ThreeJsFallbackScene({ modelUrl, onBack }) {
+function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
   const { t } = useTranslation();
+  const audio = useAudio();
   const [scale, setScale] = useState(1);
+  const [scenes, setScenes] = useState([]);
+  const [index, setIndex] = useState(0);
+  const [currentScene, setCurrentScene] = useState(null);
+  const [storyMeta, setStoryMeta] = useState(null);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const prevAudioPlaying = useRef(false);
+
   const hiroHref = buildQueryUrl('/ar', { mode: 'marker', modelUrl: modelUrl || '/default_model.glb', useHiro: '1' });
 
-  const transform = useMemo(
-    () => ({
-      positionX: 0,
-      positionY: 0,
-      positionZ: 0,
-      rotationY: 0,
-      scale,
-    }),
-    [scale]
-  );
+  // Fetch story
+  useEffect(() => {
+    if (!storyId) return;
+    getPublicStory(storyId).then((data) => {
+      setStoryMeta(data);
+      const ordered = [...(data.scenes || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      setScenes(ordered);
+      setIndex(0);
+    }).catch(() => {});
+  }, [storyId]);
+
+  // Fetch current scene
+  useEffect(() => {
+    const id = scenes[index]?.sceneId;
+    if (!id) { setCurrentScene(null); return; }
+    let active = true;
+    getScene(id).then((d) => { if (active) setCurrentScene(d); }).catch(() => {});
+    return () => { active = false; };
+  }, [scenes, index]);
+
+  // Load audio + viseme timeline when scene changes
+  useEffect(() => {
+    const audioUrl = currentScene?.content?.narrative?.audioUrl;
+    const text = currentScene?.content?.narrative?.text || '';
+    if (audioUrl) {
+      audio.loadUrl(audioUrl);
+      if (text) audio.generateVisemeTimelineFromText(text);
+    } else {
+      audio.stop();
+      audio.clearVisemeTimeline();
+    }
+  }, [currentScene]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync play/pause
+  useEffect(() => {
+    if (!hasStarted || !audio.audioUrl) return;
+    if (isPlaying) audio.play().catch(() => {});
+    else audio.pause();
+  }, [hasStarted, isPlaying, audio.audioUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-advance: audio went from playing → stopped at end
+  useEffect(() => {
+    if (!hasStarted) return;
+    const ended = prevAudioPlaying.current && !audio.isPlaying
+      && audio.audioDuration > 0
+      && Math.abs(audio.audioCurrentTime - audio.audioDuration) < 0.5;
+    prevAudioPlaying.current = audio.isPlaying;
+    if (ended) {
+      setIndex((i) => {
+        if (i < scenes.length - 1) return i + 1;
+        setIsPlaying(false);
+        return i;
+      });
+    }
+  }, [audio.isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleStart = () => {
+    audio.play().catch(() => {}); // unlock audio in gesture handler
+    setHasStarted(true);
+    setIsPlaying(true);
+  };
+
+  const avatarUrl = currentScene?.content?.avatar?.modelUrl || modelUrl;
+  const posePreset = currentScene?.content?.avatar?.posePreset || 'idle';
+  const speechText = currentScene?.content?.narrative?.text || '';
+
+  const transform = useMemo(() => ({ positionX: 0, positionY: 0, positionZ: 0, rotationY: 0, scale }), [scale]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="relative flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
       <Header />
       <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-start justify-between gap-3">
         <div>
@@ -721,40 +1033,74 @@ function ThreeJsFallbackScene({ modelUrl, onBack }) {
             <span className="text-base">⚠️</span>
             <h2 className="font-semibold text-amber-300">AR não disponível neste dispositivo</h2>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">
-            WebXR Surface AR requer Android Chrome + ARCore ou iOS Safari 15+. Mostrando visualização 3D normal.
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Tente o <a href={hiroHref} className="text-fuchsia-400 hover:underline">Demo com Marcador Hiro</a> — funciona em qualquer celular.
-          </p>
+          <p className="text-xs text-gray-400 mt-0.5">WebXR requer Android+ARCore ou iOS Safari 15+. Mostrando 3D normal.</p>
+          {!storyId && (
+            <p className="text-xs text-gray-500 mt-1">
+              Tente o <a href={hiroHref} className="text-fuchsia-400 hover:underline">Demo com Marcador Hiro</a> — funciona em qualquer celular.
+            </p>
+          )}
         </div>
-        <button onClick={onBack}
-          className="shrink-0 rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600">
+        <button onClick={onBack} className="shrink-0 rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600">
           {t('back')}
         </button>
       </div>
 
+      {/* Story splash */}
+      {storyId && !hasStarted && storyMeta && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="mx-6 w-full max-w-sm rounded-2xl border border-white/10 bg-black/90 p-6 text-center">
+            <p className="text-xs uppercase tracking-widest text-cyan-300 mb-2">História</p>
+            <h2 className="text-xl font-bold text-white mb-1">{storyMeta?.metadata?.title}</h2>
+            <p className="text-sm text-gray-400 mb-5">{scenes.length} cenas</p>
+            <button onClick={handleStart}
+              className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold">
+              ▶ Iniciar história
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-hidden">
         <SceneCanvas
-          avatarUrl={modelUrl}
+          avatarUrl={avatarUrl}
           transform={transform}
-          posePreset="idle"
-          speechText=""
+          posePreset={posePreset}
+          speechText={speechText}
+          visemeTimeline={audio.visemeTimeline}
+          audioCurrentTime={audio.audioCurrentTime}
+          lipSyncConfig={audio.lipSyncConfig}
         />
       </div>
 
+      {/* Story controls */}
+      {storyId && hasStarted && (
+        <div className="shrink-0 border-t border-gray-800 bg-gray-900/95 px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-cyan-300 truncate max-w-[70%]">{speechText.slice(0, 60) || storyMeta?.metadata?.title}</p>
+            <p className="text-xs text-gray-500">{index + 1}/{scenes.length}</p>
+          </div>
+          <div className="h-1 bg-gray-700 rounded-full overflow-hidden mb-2">
+            <div className="h-full bg-cyan-400" style={{ width: `${(index / Math.max(1, scenes.length - 1)) * 100}%` }} />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
+              className="flex-1 py-2 rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">◀</button>
+            <button onClick={() => setIsPlaying((p) => !p)}
+              className="flex-1 py-2 rounded-lg bg-cyan-700 text-xs text-white font-semibold">
+              {isPlaying ? '⏸' : '▶'}
+            </button>
+            <button onClick={() => setIndex((i) => Math.min(scenes.length - 1, i + 1))} disabled={index >= scenes.length - 1}
+              className="flex-1 py-2 rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">▶▶</button>
+          </div>
+        </div>
+      )}
+
+      {/* Scale control */}
       <div className="shrink-0 border-t border-gray-800 bg-gray-950/95 px-4 py-3 backdrop-blur-sm">
         <label className="flex items-center gap-2 text-sm text-gray-200">
           <span>{t('scale')}</span>
-          <input
-            type="range"
-            min="0.2"
-            max="2.0"
-            step="0.01"
-            value={scale}
-            onChange={(e) => setScale(Number(e.target.value))}
-            className="flex-1 accent-cyan-400"
-          />
+          <input type="range" min="0.2" max="2.0" step="0.01" value={scale}
+            onChange={(e) => setScale(Number(e.target.value))} className="flex-1 accent-cyan-400" />
           <span className="w-12 text-right">{`${Math.round(scale * 100)}%`}</span>
         </label>
       </div>

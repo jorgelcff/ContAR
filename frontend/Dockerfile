@@ -14,8 +14,7 @@ ENV VITE_AVATURN_DISABLE_BACKEND_FALLBACK=${VITE_AVATURN_DISABLE_BACKEND_FALLBAC
 ENV VITE_AVATURN_USER_ID=${VITE_AVATURN_USER_ID}
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-COPY . .
-RUN if [ ! -f package.json ] && [ -f frontend/package.json ]; then cp -R frontend/. /app/; fi
+COPY frontend/ .
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 RUN npm run build
 

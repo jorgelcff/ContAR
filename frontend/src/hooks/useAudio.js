@@ -260,7 +260,8 @@ export default function useAudio() {
     setIsTTSLoading(true);
     setError('');
     try {
-      const { audioBase64, alignment } = await generateTTS(src, voiceId);
+      // Backend returns unified { audioBase64, visemeTimeline } for both Azure and ElevenLabs
+      const { audioBase64, visemeTimeline: ttsTimeline } = await generateTTS(src, voiceId);
 
       // Base64 → Blob → object URL
       const bytes = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
@@ -272,32 +273,8 @@ export default function useAudio() {
       setAudioDuration(0);
       setUrl(URL.createObjectURL(blob));
 
-      // Convert ElevenLabs character alignment → Rhubarb viseme timeline
-      const { characters, character_start_times_seconds, character_end_times_seconds } =
-        alignment || {};
-      if (Array.isArray(characters) && characters.length) {
-        const raw = characters
-          .map((ch, i) => {
-            const start = character_start_times_seconds[i];
-            const end = character_end_times_seconds[i];
-            const value = charToRhubarbCue(ch, characters[i + 1] || '');
-            if (!value || !Number.isFinite(start) || !Number.isFinite(end)) return null;
-            return { start, end, value };
-          })
-          .filter(Boolean);
-
-        // Merge adjacent identical cues
-        const merged = [];
-        raw.forEach((cue) => {
-          const last = merged[merged.length - 1];
-          if (last && last.value === cue.value && Math.abs(last.end - cue.start) < 1e-4) {
-            last.end = cue.end;
-          } else {
-            merged.push({ ...cue });
-          }
-        });
-
-        setVisemeTimeline(merged);
+      if (Array.isArray(ttsTimeline) && ttsTimeline.length) {
+        setVisemeTimeline(ttsTimeline);
         setLipSyncConfig((prev) => ({ ...prev, visemeMode: 'timeline' }));
       }
     } catch (err) {

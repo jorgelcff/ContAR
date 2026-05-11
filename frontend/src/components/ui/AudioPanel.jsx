@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+// Azure Neural voices (used when AZURE_SPEECH_KEY is configured on backend)
 const VOICES = [
-  { id: '21m00Tcm4TlvDq8ikWAM', label: 'Rachel — feminina, multilingual' },
-  { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Sarah — feminina, clara' },
-  { id: 'TX3LPaxmHKxFdv7VOQHJ', label: 'Liam — masculino, suave' },
-  { id: 'pNInz6obpgDQGcFmaJgB', label: 'Adam — masculino, narrador' },
-  { id: '29vD33N1lfTaskpGmDjK', label: 'Drew — masculino, casual' },
+  { id: 'pt-BR-FranciscaNeural', label: 'Francisca — PT-BR feminina' },
+  { id: 'pt-BR-AntonioNeural',   label: 'Antonio — PT-BR masculino' },
+  { id: 'pt-BR-BrendaNeural',    label: 'Brenda — PT-BR feminina' },
+  { id: 'pt-BR-DonatoNeural',    label: 'Donato — PT-BR masculino' },
+  { id: 'en-US-JennyNeural',     label: 'Jenny — EN feminina' },
 ];
 
 const WEB_SPEECH_LANGS = [
@@ -63,7 +64,7 @@ export default function AudioPanel({
       <div className="rounded-xl border border-violet-500/25 bg-violet-950/30 p-3 flex flex-col gap-2.5">
         <div className="flex items-center gap-2">
           <span className="text-base">🎙️</span>
-          <p className="text-xs font-semibold text-violet-200">Gerar fala com ElevenLabs</p>
+          <p className="text-xs font-semibold text-violet-200">Gerar fala com IA <span className="text-violet-400 font-normal">(Azure / ElevenLabs)</span></p>
         </div>
 
         {hasSpeechText ? (

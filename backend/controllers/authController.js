@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 const User = require('../models/User');
 
 function getAuthSecret() {
@@ -31,49 +31,44 @@ function sanitizeUser(user) {
   };
 }
 
+function createTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: false, // STARTTLS
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
+
+function emailFrom() {
+  return process.env.EMAIL_FROM || `ContAR <${process.env.SMTP_USER}>`;
+}
+
 async function sendVerificationEmail(user) {
-  const frontendUrl = (
-    process.env.FRONTEND_URL || "http://localhost:5173"
-  ).replace(/\/$/, "");
+  const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
   const link = `${frontendUrl}/verify-email?token=${user.emailVerificationToken}`;
-  const fromEmail =
-    process.env.RESEND_FROM_EMAIL || "ContAR <onboarding@resend.dev>";
-  const resend = new Resend(process.env.RESEND_API_KEY);
 
-  console.log(
-    `[Email] Iniciando envio de email de verificação para: ${user.email}`,
-  );
-
-  try {
-    const response = await resend.emails.send({
-      from: fromEmail,
-      to: user.email,
-      subject: "Confirme seu email — ContAR",
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#111827;color:#f9fafb;border-radius:16px;">
-          <h2 style="margin:0 0 8px;color:#22d3ee;">Bem-vindo ao ContAR!</h2>
-          <p style="color:#9ca3af;margin:0 0 24px;">Confirme seu email para ativar sua conta e ter acesso completo à plataforma.</p>
-          <a href="${link}"
-             style="background:#0891b2;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;display:inline-block;font-weight:600;margin-bottom:24px;">
-            Confirmar meu email
-          </a>
-          <p style="color:#6b7280;font-size:13px;margin:0;">
-            Se você não criou uma conta no ContAR, ignore este email.
-          </p>
-        </div>
-      `,
-    });
-    console.log(
-      `[Email] Email de verificação enviado com sucesso para ${user.email}. Resposta:`,
-      response,
-    );
-  } catch (err) {
-    console.error(
-      `[Email] Erro grave no Resend ao enviar email de verificação para ${user.email}:`,
-      err,
-    );
-    throw err; // Importante para o catch do register/resendVerification capturar
-  }
+  console.log(`[Email] Enviando verificação para: ${user.email}`);
+  const transporter = createTransporter();
+  await transporter.sendMail({
+    from: emailFrom(),
+    to: user.email,
+    subject: 'Confirme seu email — ContAR',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#111827;color:#f9fafb;border-radius:16px;">
+        <h2 style="margin:0 0 8px;color:#22d3ee;">Bem-vindo ao ContAR!</h2>
+        <p style="color:#9ca3af;margin:0 0 24px;">Confirme seu email para ativar sua conta e ter acesso completo à plataforma.</p>
+        <a href="${link}" style="background:#0891b2;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;display:inline-block;font-weight:600;margin-bottom:24px;">
+          Confirmar meu email
+        </a>
+        <p style="color:#6b7280;font-size:13px;margin:0;">Se você não criou uma conta no ContAR, ignore este email.</p>
+      </div>
+    `,
+  });
+  console.log(`[Email] Verificação enviada para ${user.email}`);
 }
 
 function ensureDatabaseReady(res) {
@@ -192,42 +187,27 @@ async function forgotPassword(req, res) {
       process.env.FRONTEND_URL || "http://localhost:5173"
     ).replace(/\/$/, "");
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
-    const fromEmail =
-      process.env.RESEND_FROM_EMAIL || "ContAR <onboarding@resend.dev>";
-
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    console.log(`[Email] Iniciando redefinição de senha para: ${email}`);
-    try {
-      const response = await resend.emails.send({
-        from: fromEmail,
-        to: email,
-        subject: "Redefinir senha — ContAR",
-        html: `
-          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#111827;color:#f9fafb;border-radius:16px;">
-            <h2 style="margin:0 0 8px;color:#22d3ee;">Redefinir senha</h2>
-            <p style="color:#9ca3af;margin:0 0 24px;">Você solicitou a redefinição de senha da sua conta ContAR.</p>
-            <a href="${resetUrl}"
-               style="background:#0891b2;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;display:inline-block;font-weight:600;margin-bottom:24px;">
-              Redefinir minha senha
-            </a>
-            <p style="color:#6b7280;font-size:13px;margin:0;">
-              Este link expira em <strong>1 hora</strong>.<br>
-              Se você não solicitou a redefinição, ignore este email — sua senha não será alterada.
-            </p>
-          </div>
-        `,
-      });
-      console.log(
-        `[Email] Redefinição de senha enviada com sucesso para ${email}. Resposta:`,
-        response,
-      );
-    } catch (emailErr) {
-      console.error(
-        `[Email] Erro ao enviar email de redefinição para ${email}:`,
-        emailErr,
-      );
-      throw emailErr;
-    }
+    console.log(`[Email] Enviando redefinição de senha para: ${email}`);
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: emailFrom(),
+      to: email,
+      subject: 'Redefinir senha — ContAR',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#111827;color:#f9fafb;border-radius:16px;">
+          <h2 style="margin:0 0 8px;color:#22d3ee;">Redefinir senha</h2>
+          <p style="color:#9ca3af;margin:0 0 24px;">Você solicitou a redefinição de senha da sua conta ContAR.</p>
+          <a href="${resetUrl}" style="background:#0891b2;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;display:inline-block;font-weight:600;margin-bottom:24px;">
+            Redefinir minha senha
+          </a>
+          <p style="color:#6b7280;font-size:13px;margin:0;">
+            Este link expira em <strong>1 hora</strong>.<br>
+            Se você não solicitou a redefinição, ignore este email — sua senha não será alterada.
+          </p>
+        </div>
+      `,
+    });
+    console.log(`[Email] Redefinição enviada para ${email}`);
 
     return res.json({ message: SUCCESS_MSG });
   } catch (err) {

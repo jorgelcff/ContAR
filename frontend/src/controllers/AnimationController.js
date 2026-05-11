@@ -44,20 +44,75 @@ export class AnimationController {
   get mixer() { return this._mixer; }
 
   addClips(clips = []) {
-    for (const clip of clips) {
+    for (let clip of clips) {
       if (!clip?.name) continue;
+      clip = this._retargetClip(clip);
       const action = this._mixer.clipAction(clip);
       action.enabled = true;
       this._actions.set(clip.name.toLowerCase(), action);
     }
   }
 
+  _retargetClip(clip) {
+    if (!this._boneMapper) return clip;
+    
+    // Create a copy of the clip so we don't mutate the original shared GLB data
+    const retargetedClip = clip.clone();
+    
+    // Quick helper to extract bone name from track name (e.g. "mixamorigHips.quaternion" -> "mixamorigHips")
+    const getBoneName = (trackName) => trackName.split('.')[0];
+    const getProperty = (trackName) => trackName.split('.')[1];
+
+    retargetedClip.tracks.forEach((track) => {
+      const oldBoneName = getBoneName(track.name);
+      const property = getProperty(track.name);
+      
+      // Attempt to guess which VRM standard bone this track refers to
+      let standardName = null;
+      const lower = oldBoneName.toLowerCase();
+      
+      // Simple heuristic based on common Mixamo/VRM names
+      if (lower.includes('hips') || lower.includes('pelvis')) standardName = 'hips';
+      else if (lower.includes('spine2') || lower.includes('chest')) standardName = 'chest';
+      else if (lower.includes('spine1') || lower.includes('spine')) standardName = 'spine';
+      else if (lower.includes('neck')) standardName = 'neck';
+      else if (lower.includes('head')) standardName = 'head';
+      else if (lower.includes('leftshoulder')) standardName = 'leftShoulder';
+      else if (lower.includes('leftarm') || lower.includes('left_arm')) standardName = 'leftUpperArm';
+      else if (lower.includes('leftforearm') || lower.includes('left_forearm')) standardName = 'leftLowerArm';
+      else if (lower.includes('lefthand') || lower.includes('left_hand')) standardName = 'leftHand';
+      else if (lower.includes('rightshoulder')) standardName = 'rightShoulder';
+      else if (lower.includes('rightarm') || lower.includes('right_arm')) standardName = 'rightUpperArm';
+      else if (lower.includes('rightforearm') || lower.includes('right_forearm')) standardName = 'rightLowerArm';
+      else if (lower.includes('righthand') || lower.includes('right_hand')) standardName = 'rightHand';
+      else if (lower.includes('leftupleg') || lower.includes('leftthigh') || lower.includes('left_leg')) standardName = 'leftUpperLeg';
+      else if (lower.includes('leftleg') || lower.includes('leftcalf') || lower.includes('left_knee')) standardName = 'leftLowerLeg';
+      else if (lower.includes('leftfoot') || lower.includes('left_foot')) standardName = 'leftFoot';
+      else if (lower.includes('lefttoebase') || lower.includes('lefttoe')) standardName = 'leftToes';
+      else if (lower.includes('rightupleg') || lower.includes('rightthigh') || lower.includes('right_leg')) standardName = 'rightUpperLeg';
+      else if (lower.includes('rightleg') || lower.includes('rightcalf') || lower.includes('right_knee')) standardName = 'rightLowerLeg';
+      else if (lower.includes('rightfoot') || lower.includes('right_foot')) standardName = 'rightFoot';
+      else if (lower.includes('righttoebase') || lower.includes('righttoe')) standardName = 'rightToes';
+
+      if (standardName) {
+        // Find what that bone is called on the CURRENT model
+        const mappedBone = this._boneMapper.get(standardName);
+        if (mappedBone) {
+          track.name = `${mappedBone.name}.${property}`;
+        }
+      }
+    });
+
+    return retargetedClip;
+  }
+
   play(clipOrName, fadeDuration = 0.4) {
     let action;
     if (clipOrName instanceof THREE.AnimationClip) {
-      action = this._mixer.clipAction(clipOrName);
+      const clip = this._retargetClip(clipOrName);
+      action = this._mixer.clipAction(clip);
       action.enabled = true;
-      this._actions.set(clipOrName.name.toLowerCase(), action);
+      this._actions.set(clip.name.toLowerCase(), action);
     } else {
       action = this._findAction(String(clipOrName ?? '').toLowerCase());
     }
@@ -249,8 +304,21 @@ export class AnimationController {
 
     const applyOffset = (entry, x = 0, y = 0, z = 0) => {
       if (!entry?.bone) return;
-      const offset = new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, 'XYZ'));
-      entry.bone.quaternion.copy(entry.baseQuat).multiply(offset);
+      
+      const qMixamo = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(x, y, z, "XYZ"),
+      );
+
+      if (!entry.bone.userData.__restWorldQuat) {
+        entry.bone.userData.__restWorldQuat = new THREE.Quaternion();
+        entry.bone.getWorldQuaternion(entry.bone.userData.__restWorldQuat);
+      }
+
+      const Q_restWorld = entry.bone.userData.__restWorldQuat;
+      const Q_restWorldInv = Q_restWorld.clone().invert();
+      const qLocal = Q_restWorldInv.multiply(qMixamo).multiply(Q_restWorld);
+
+      entry.bone.quaternion.copy(entry.baseQuat).multiply(qLocal);
     };
 
     // Head: nod + turn, asymmetric

@@ -148,19 +148,25 @@ export default function SceneCanvas({
   const activeAvatarLoadIdRef = useRef(0);
   const isVisibleRef = useRef(true);
   const mouthMarkerRef = useRef(null);
-  const mouthMarkerInfoRef = useRef({ source: 'none', name: '' });
+  const mouthMarkerInfoRef = useRef({ source: "none", name: "" });
 
   // Lip-sync: discovered mouth morph targets on the current avatar
   const mouthMorphsRef = useRef([]);
   const faceBlendshapesRef = useRef([]);
-  const visemeMorphGroupsRef = useRef({ aa: [], oh: [], ee: [], fv: [], mbp: [] });
+  const visemeMorphGroupsRef = useRef({
+    aa: [],
+    oh: [],
+    ee: [],
+    fv: [],
+    mbp: [],
+  });
   const jawBonesRef = useRef([]);
   const blendshapeCatalogRef = useRef([]);
   const lipSyncTelemetryRef = useRef({
     mouthOpen: 0,
     rms: 0,
     speechBand: 0,
-    mode: 'idle',
+    mode: "idle",
     analyserReady: false,
     mouthTargetCount: 0,
     jawBoneCount: 0,
@@ -181,7 +187,9 @@ export default function SceneCanvas({
     analyserRefLocal.current = analyserRef;
   }, [analyserRef]);
   useEffect(() => {
-    visemeTimelineRef.current = Array.isArray(visemeTimeline) ? visemeTimeline : [];
+    visemeTimelineRef.current = Array.isArray(visemeTimeline)
+      ? visemeTimeline
+      : [];
   }, [visemeTimeline]);
   useEffect(() => {
     audioCurrentTimeRef.current = Number(audioCurrentTime) || 0;
@@ -190,17 +198,28 @@ export default function SceneCanvas({
   // Expose renderer/camera to SpeechBubble via state once scene is ready
   const [renderCtx, setRenderCtx] = useState(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const [avatarLoadError, setAvatarLoadError] = useState('');
-  const [debugSnapshot, setDebugSnapshot] = useState({ mouthOpen: 0, rms: 0, speechBand: 0, mode: 'idle' });
+  const [avatarLoadError, setAvatarLoadError] = useState("");
+  const [debugSnapshot, setDebugSnapshot] = useState({
+    mouthOpen: 0,
+    rms: 0,
+    speechBand: 0,
+    mode: "idle",
+  });
   const [blendshapeSnapshot, setBlendshapeSnapshot] = useState([]);
   const [boneCatalogSnapshot, setBoneCatalogSnapshot] = useState([]);
   const [meshCatalogSnapshot, setMeshCatalogSnapshot] = useState([]);
-  const [manualJawBoneName, setManualJawBoneName] = useState('');
-  const [blendshapeMeshFilter, setBlendshapeMeshFilter] = useState('all');
-  const [mouthMarkerInfo, setMouthMarkerInfo] = useState({ source: 'none', name: '' });
-  const [rigCopyState, setRigCopyState] = useState('');
+  const [manualJawBoneName, setManualJawBoneName] = useState("");
+  const [blendshapeMeshFilter, setBlendshapeMeshFilter] = useState("all");
+  const [mouthMarkerInfo, setMouthMarkerInfo] = useState({
+    source: "none",
+    name: "",
+  });
+  const [rigCopyState, setRigCopyState] = useState("");
   const [boneOverrides, setBoneOverrides] = useState({});
-  const [boneMapperInfo, setBoneMapperInfo] = useState({ source: 'none', resolvedCount: 0 });
+  const [boneMapperInfo, setBoneMapperInfo] = useState({
+    source: "none",
+    resolvedCount: 0,
+  });
 
   const mergedLipSyncConfig = {
     ...DEFAULT_LIP_SYNC_CONFIG,
@@ -208,10 +227,13 @@ export default function SceneCanvas({
   };
 
   // Dev tools only visible when ?dev is present in the URL
-  const showDevTools = useMemo(
-    () => { try { return new URLSearchParams(window.location.search).has('dev'); } catch { return false; } },
-    []
-  );
+  const showDevTools = useMemo(() => {
+    try {
+      return new URLSearchParams(window.location.search).has("dev");
+    } catch {
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     posePresetRef.current = posePreset;
@@ -219,7 +241,11 @@ export default function SceneCanvas({
 
   useEffect(() => {
     if (!avatarRef.current) return;
-    jawBonesRef.current = resolveJawBones(avatarRef.current, manualJawBoneName, boneMapperRef.current);
+    jawBonesRef.current = resolveJawBones(
+      avatarRef.current,
+      manualJawBoneName,
+      boneMapperRef.current,
+    );
   }, [manualJawBoneName]);
 
   // Bone override: rebuild effective BoneMapper and reapply pose
@@ -252,7 +278,7 @@ export default function SceneCanvas({
       idleClipRef.current,
       avatarClipsRef.current,
       posePresetRef.current,
-      effective
+      effective,
     );
   }, [boneOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -280,7 +306,11 @@ export default function SceneCanvas({
     // Small debug marker used to indicate inferred mouth/jaw location.
     const marker = new THREE.Mesh(
       new THREE.SphereGeometry(0.03, 12, 12),
-      new THREE.MeshStandardMaterial({ color: 0xff9f1c, emissive: 0x442200, roughness: 0.3 })
+      new THREE.MeshStandardMaterial({
+        color: 0xff9f1c,
+        emissive: 0x442200,
+        roughness: 0.3,
+      }),
     );
     marker.visible = false;
     scene.add(marker);
@@ -291,7 +321,7 @@ export default function SceneCanvas({
       45,
       container.clientWidth / container.clientHeight,
       0.1,
-      100
+      100,
     );
     camera.position.set(0, 1.6, 3.5);
     cameraRef.current = camera;
@@ -324,7 +354,7 @@ export default function SceneCanvas({
     // Ground plane
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(20, 20),
-      new THREE.MeshStandardMaterial({ color: 0x2a2a3e, roughness: 0.8 })
+      new THREE.MeshStandardMaterial({ color: 0x2a2a3e, roughness: 0.8 }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -332,28 +362,28 @@ export default function SceneCanvas({
 
     // HDR environment map
     new RGBELoader().load(
-      '/brown_photostudio_01.hdr',
+      "/brown_photostudio_01.hdr",
       (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
       },
       undefined,
-      () => {} // silently ignore if not found
+      () => {}, // silently ignore if not found
     );
 
     // Shared GLTF + DRACO loader
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath(
-      'https://www.gstatic.com/draco/versioned/decoders/1.5.6/'
+      "https://www.gstatic.com/draco/versioned/decoders/1.5.6/",
     );
     const gltfLoader = new GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
-    gltfLoader.setCrossOrigin('anonymous');
+    gltfLoader.setCrossOrigin("anonymous");
     loaderRef.current = createAvatarLoader(dracoLoader);
 
     // Pre-load idle animation clip
     gltfLoader.load(
-      '/animation.glb',
+      "/animation.glb",
       (gltf) => {
         if (gltf.animations?.length) {
           idleClipRef.current = gltf.animations[0];
@@ -366,13 +396,13 @@ export default function SceneCanvas({
               idleClipRef.current,
               avatarClipsRef.current,
               posePresetRef.current,
-              boneMapperRef.current
+              boneMapperRef.current,
             );
           }
         }
       },
       undefined,
-      () => {}
+      () => {},
     );
 
     // Render loop
@@ -397,10 +427,16 @@ export default function SceneCanvas({
         : mergedLipSyncConfig;
       if (analyser && (hasMorphs || jawBones.length > 0)) {
         const binCount = analyser.frequencyBinCount;
-        if (!lipSyncDataRef.current || lipSyncDataRef.current.length !== binCount) {
+        if (
+          !lipSyncDataRef.current ||
+          lipSyncDataRef.current.length !== binCount
+        ) {
           lipSyncDataRef.current = new Uint8Array(binCount);
         }
-        if (!lipSyncFreqDataRef.current || lipSyncFreqDataRef.current.length !== binCount) {
+        if (
+          !lipSyncFreqDataRef.current ||
+          lipSyncFreqDataRef.current.length !== binCount
+        ) {
           lipSyncFreqDataRef.current = new Uint8Array(binCount);
         }
         analyser.getByteTimeDomainData(lipSyncDataRef.current);
@@ -415,16 +451,36 @@ export default function SceneCanvas({
 
         const sampleRate = analyser.context.sampleRate || 48000;
         const hzPerBin = sampleRate / analyser.fftSize;
-        const speechBand = averageRange(lipSyncFreqDataRef.current, hzPerBin, 300, 3000);
-        const lowBand = averageRange(lipSyncFreqDataRef.current, hzPerBin, 200, 700);
-        const midBand = averageRange(lipSyncFreqDataRef.current, hzPerBin, 700, 2400);
-        const highBand = averageRange(lipSyncFreqDataRef.current, hzPerBin, 2400, 5000);
+        const speechBand = averageRange(
+          lipSyncFreqDataRef.current,
+          hzPerBin,
+          300,
+          3000,
+        );
+        const lowBand = averageRange(
+          lipSyncFreqDataRef.current,
+          hzPerBin,
+          200,
+          700,
+        );
+        const midBand = averageRange(
+          lipSyncFreqDataRef.current,
+          hzPerBin,
+          700,
+          2400,
+        );
+        const highBand = averageRange(
+          lipSyncFreqDataRef.current,
+          hzPerBin,
+          2400,
+          5000,
+        );
 
         const fullBandSource = rms;
         const speechBandSource = speechBand;
         const weightedEnergy = effectiveConfig.enableBandEnergy
-          ? (fullBandSource * effectiveConfig.fullBandMix)
-            + (speechBandSource * effectiveConfig.speechBandMix)
+          ? fullBandSource * effectiveConfig.fullBandMix +
+            speechBandSource * effectiveConfig.speechBandMix
           : fullBandSource;
 
         const isLoudFrame = weightedEnergy > adaptiveNoiseFloorRef.current;
@@ -434,45 +490,53 @@ export default function SceneCanvas({
         adaptiveNoiseFloorRef.current = THREE.MathUtils.lerp(
           adaptiveNoiseFloorRef.current,
           weightedEnergy,
-          THREE.MathUtils.clamp(floorTrackingSpeed * delta, 0, 1)
+          THREE.MathUtils.clamp(floorTrackingSpeed * delta, 0, 1),
         );
 
         const adaptiveGate = effectiveConfig.adaptiveNoiseGate
           ? Math.max(
               effectiveConfig.noiseGate,
-              adaptiveNoiseFloorRef.current * effectiveConfig.noiseFloorMultiplier
+              adaptiveNoiseFloorRef.current *
+                effectiveConfig.noiseFloorMultiplier,
             )
           : effectiveConfig.noiseGate;
 
         const amplified = weightedEnergy * effectiveConfig.amplitudeMultiplier;
-        const gated = amplified <= adaptiveGate
-          ? 0
-          : (amplified - adaptiveGate) / Math.max(0.0001, 1 - adaptiveGate);
+        const gated =
+          amplified <= adaptiveGate
+            ? 0
+            : (amplified - adaptiveGate) / Math.max(0.0001, 1 - adaptiveGate);
         const mouthTarget = THREE.MathUtils.clamp(gated, 0, 1);
 
         const prevOpen = jawSmoothedOpenRef.current;
-        const smoothingSpeed = mouthTarget > prevOpen
-          ? effectiveConfig.jawAttackSpeed
-          : effectiveConfig.jawReleaseSpeed;
+        const smoothingSpeed =
+          mouthTarget > prevOpen
+            ? effectiveConfig.jawAttackSpeed
+            : effectiveConfig.jawReleaseSpeed;
         const smoothedOpen = THREE.MathUtils.lerp(
           prevOpen,
           mouthTarget,
-          THREE.MathUtils.clamp(smoothingSpeed * delta, 0, 1)
+          THREE.MathUtils.clamp(smoothingSpeed * delta, 0, 1),
         );
         const maxDelta = effectiveConfig.jawMaxDeltaPerSecond * delta;
         jawSmoothedOpenRef.current = THREE.MathUtils.clamp(
           smoothedOpen,
           prevOpen - maxDelta,
-          prevOpen + maxDelta
+          prevOpen + maxDelta,
         );
-        const mouthOpen = THREE.MathUtils.clamp(jawSmoothedOpenRef.current, 0, 1);
+        const mouthOpen = THREE.MathUtils.clamp(
+          jawSmoothedOpenRef.current,
+          0,
+          1,
+        );
 
-        if (effectiveConfig.visemeMode === 'timeline' && hasMorphs) {
-          const timelineCrossfadeSec = Number(effectiveConfig.timelineCrossfadeSec) || 0.08;
+        if (effectiveConfig.visemeMode === "timeline" && hasMorphs) {
+          const timelineCrossfadeSec =
+            Number(effectiveConfig.timelineCrossfadeSec) || 0.08;
           const timelineBlend = getTimelineBlendState(
             visemeTimelineRef.current,
             audioCurrentTimeRef.current,
-            timelineCrossfadeSec
+            timelineCrossfadeSec,
           );
           if (timelineBlend) {
             lipSyncController.resetGroups();
@@ -480,25 +544,34 @@ export default function SceneCanvas({
             // Audio presence gates silence but doesn't throttle the viseme intensity.
             // TTS audio is often low-volume after compression, so we use a low threshold
             // and let the viseme data be the primary driver of mouth shape.
-            const audioPresence = THREE.MathUtils.clamp(mouthOpen * 2.5 + speechBand * 1.5, 0, 1);
+            const audioPresence = THREE.MathUtils.clamp(
+              mouthOpen * 2.5 + speechBand * 1.5,
+              0,
+              1,
+            );
             const isAudioActive = audioPresence > 0.04;
             // When audio is playing, guarantee at least 40% of the viseme shows.
             const ttsFloor = isAudioActive ? 0.4 : 0;
 
             const VISEME_MAP = {
-              A: { aa: 1.0 },          B: { mbp: 1.0 },
-              C: { ee: 0.95 },         D: { ee: 0.75, aa: 0.35 },
-              E: { aa: 0.9, oh: 0.25 }, F: { oh: 1.0 },
-              G: { fv: 1.0, ee: 0.45 }, H: { ee: 0.5, aa: 0.45 },
+              A: { aa: 1.0 },
+              B: { mbp: 1.0 },
+              C: { ee: 0.95 },
+              D: { ee: 0.75, aa: 0.35 },
+              E: { aa: 0.9, oh: 0.25 },
+              F: { oh: 1.0 },
+              G: { fv: 1.0, ee: 0.45 },
+              H: { ee: 0.5, aa: 0.45 },
               X: { mbp: 0.3 },
             };
 
             timelineBlend.forEach(({ cue, weight }) => {
               const cueIntensity = THREE.MathUtils.clamp(
                 (ttsFloor + audioPresence * 0.6) * weight,
-                0, 1
+                0,
+                1,
               );
-              const blend = VISEME_MAP[String(cue?.value || '').toUpperCase()];
+              const blend = VISEME_MAP[String(cue?.value || "").toUpperCase()];
               if (blend) {
                 Object.entries(blend).forEach(([grp, w]) => {
                   lipSyncController.setGroupValue(grp, cueIntensity * w);
@@ -508,33 +581,47 @@ export default function SceneCanvas({
           } else {
             lipSyncController.resetGroups();
           }
-        } else if (effectiveConfig.visemeMode === 'heuristic' && hasMorphs) {
+        } else if (effectiveConfig.visemeMode === "heuristic" && hasMorphs) {
           const sumBands = Math.max(0.0001, lowBand + midBand + highBand);
-          const vowelOpen = THREE.MathUtils.clamp((lowBand + midBand) / sumBands, 0, 1);
+          const vowelOpen = THREE.MathUtils.clamp(
+            (lowBand + midBand) / sumBands,
+            0,
+            1,
+          );
           const bright = THREE.MathUtils.clamp(highBand / sumBands, 0, 1);
 
-          lipSyncController.setGroupValue('aa', mouthOpen * vowelOpen);
-          lipSyncController.setGroupValue('oh', mouthOpen * THREE.MathUtils.clamp(lowBand / sumBands, 0, 1));
-          lipSyncController.setGroupValue('ee', mouthOpen * bright);
-          lipSyncController.setGroupValue('fv', mouthOpen * bright * 0.65);
-          lipSyncController.setGroupValue('mbp', (1 - mouthOpen) * 0.2);
+          lipSyncController.setGroupValue("aa", mouthOpen * vowelOpen);
+          lipSyncController.setGroupValue(
+            "oh",
+            mouthOpen * THREE.MathUtils.clamp(lowBand / sumBands, 0, 1),
+          );
+          lipSyncController.setGroupValue("ee", mouthOpen * bright);
+          lipSyncController.setGroupValue("fv", mouthOpen * bright * 0.65);
+          lipSyncController.setGroupValue("mbp", (1 - mouthOpen) * 0.2);
         }
 
         // Visible baseline: raised from 0.22 to 0.45 so the jaw always opens
         // noticeably when audio is playing, regardless of blendshape mapping.
         if (hasMorphs) {
-          lipSyncController.setGroupValue('mouthOpen', mouthOpen * 0.45);
+          lipSyncController.setGroupValue("mouthOpen", mouthOpen * 0.45);
         }
 
-        if (effectiveConfig.enableJawFallback && !hasMorphs && jawBones.length > 0) {
-          jawJitterPhaseRef.current += delta * effectiveConfig.jawMicroJitterSpeed * Math.PI * 2;
+        if (
+          effectiveConfig.enableJawFallback &&
+          !hasMorphs &&
+          jawBones.length > 0
+        ) {
+          jawJitterPhaseRef.current +=
+            delta * effectiveConfig.jawMicroJitterSpeed * Math.PI * 2;
           const jawJitter = effectiveConfig.enableJawMicroJitter
-            ? Math.sin(jawJitterPhaseRef.current) * effectiveConfig.jawMicroJitterAmount * mouthOpen
+            ? Math.sin(jawJitterPhaseRef.current) *
+              effectiveConfig.jawMicroJitterAmount *
+              mouthOpen
             : 0;
           const jawOpen = THREE.MathUtils.clamp(mouthOpen + jawJitter, 0, 1);
           const jawAngleDeg = pseudoJawRig ? 6.5 : 18;
           const jawOpenAngle = THREE.MathUtils.degToRad(
-            jawAngleDeg * effectiveConfig.jawFallbackStrength * jawOpen
+            jawAngleDeg * effectiveConfig.jawFallbackStrength * jawOpen,
           );
           jawBones.forEach((bone, index) => {
             if (!bone?.userData?.__jawRestQuat) return;
@@ -550,8 +637,10 @@ export default function SceneCanvas({
           speechBand,
           mode: `${effectiveConfig.visemeMode}${
             !hasMorphs && jawBones.length > 0
-              ? pseudoJawRig ? ' (pseudo-safe)' : ' (jaw)'
-              : ''
+              ? pseudoJawRig
+                ? " (pseudo-safe)"
+                : " (jaw)"
+              : ""
           }`,
           analyserReady: true,
           hasMorphs,
@@ -562,9 +651,9 @@ export default function SceneCanvas({
         jawSmoothedOpenRef.current = THREE.MathUtils.lerp(
           jawSmoothedOpenRef.current,
           0,
-          THREE.MathUtils.clamp(effectiveConfig.jawReleaseSpeed * delta, 0, 1)
+          THREE.MathUtils.clamp(effectiveConfig.jawReleaseSpeed * delta, 0, 1),
         );
-        
+
         lipSyncController?.resetAll();
 
         jawBones.forEach((bone) => {
@@ -579,7 +668,11 @@ export default function SceneCanvas({
           mouthOpen: 0,
           rms: 0,
           speechBand: 0,
-          mode: !hasAnalyser ? 'no-analyser' : !hasRigTargets ? 'no-rig' : 'idle',
+          mode: !hasAnalyser
+            ? "no-analyser"
+            : !hasRigTargets
+              ? "no-rig"
+              : "idle",
           analyserReady: hasAnalyser,
           hasMorphs,
           jawBoneCount: jawBones.length,
@@ -594,7 +687,7 @@ export default function SceneCanvas({
           jawBones,
           lipSyncController?._morphTargets || [],
           mouthMarkerInfoRef,
-          pseudoJawRig
+          pseudoJawRig,
         );
         setDebugSnapshot(lipSyncTelemetryRef.current);
         if (lipSyncController) {
@@ -628,7 +721,7 @@ export default function SceneCanvas({
           animate();
         }
       },
-      { threshold: 0.01 }
+      { threshold: 0.01 },
     );
     intersectionObserver.observe(container);
 
@@ -663,7 +756,7 @@ export default function SceneCanvas({
 
     if (!modelUrl) {
       Promise.resolve().then(() => {
-        setAvatarLoadError('Avatar URL is empty or invalid.');
+        setAvatarLoadError("Avatar URL is empty or invalid.");
       });
       return;
     }
@@ -684,8 +777,8 @@ export default function SceneCanvas({
         sceneRef.current.remove(skeletonHelperRef.current);
         skeletonHelperRef.current = null;
       }
-      mouthMarkerInfoRef.current = { source: 'none', name: '' };
-      setMouthMarkerInfo({ source: 'none', name: '' });
+      mouthMarkerInfoRef.current = { source: "none", name: "" };
+      setMouthMarkerInfo({ source: "none", name: "" });
       if (mouthMarkerRef.current) {
         mouthMarkerRef.current.visible = false;
       }
@@ -694,7 +787,7 @@ export default function SceneCanvas({
     setAvatarLoading(true);
     const avatarLoader = loaderRef.current;
     if (!avatarLoader) {
-      setAvatarLoadError('Avatar loader is not ready yet.');
+      setAvatarLoadError("Avatar loader is not ready yet.");
       setAvatarLoading(false);
       return;
     }
@@ -708,7 +801,7 @@ export default function SceneCanvas({
         }
 
         const model = gltf.scene;
-        setAvatarLoadError('');
+        setAvatarLoadError("");
         setAvatarLoading(false);
 
         // Enable shadows on every mesh
@@ -740,17 +833,20 @@ export default function SceneCanvas({
         const meshNames = [];
         model.traverse((node) => {
           if (node?.isBone) {
-            const name = String(node.name || '').trim();
+            const name = String(node.name || "").trim();
             if (name) boneNames.push(name);
           }
           if (node?.isMesh) {
-            const name = String(node.name || '').trim();
+            const name = String(node.name || "").trim();
             if (name) meshNames.push(name);
           }
         });
         setBoneCatalogSnapshot(boneNames);
         setMeshCatalogSnapshot(meshNames);
-        setBoneMapperInfo({ source: boneMapper.source, resolvedCount: boneMapper.resolvedCount });
+        setBoneMapperInfo({
+          source: boneMapper.source,
+          resolvedCount: boneMapper.resolvedCount,
+        });
         baseBoneMapperRef.current = boneMapper;
 
         // Skeleton wireframe in dev mode
@@ -766,11 +862,17 @@ export default function SceneCanvas({
         jawBonesRef.current = jawBones;
 
         // Set up animation controller (crossfade + procedural micro-animation).
-        avatarClipsRef.current = Array.isArray(gltf.animations) ? gltf.animations : [];
+        avatarClipsRef.current = Array.isArray(gltf.animations)
+          ? gltf.animations
+          : [];
         if (!idleClipRef.current && gltf.animations?.length) {
           idleClipRef.current = gltf.animations[0];
         }
-        const animController = new AnimationController(model, avatarClipsRef.current, boneMapper);
+        const animController = new AnimationController(
+          model,
+          avatarClipsRef.current,
+          boneMapper,
+        );
         if (idleClipRef.current) {
           animController.addClips([idleClipRef.current]);
         }
@@ -782,7 +884,7 @@ export default function SceneCanvas({
           idleClipRef.current,
           avatarClipsRef.current,
           posePreset,
-          boneMapper
+          boneMapper,
         );
       },
       undefined,
@@ -790,17 +892,18 @@ export default function SceneCanvas({
         if (cancelled || loadId !== activeAvatarLoadIdRef.current) {
           return;
         }
-        console.error('Avatar loader error:', err);
-        const details = err?.message || err?.target?.statusText || 'Unknown load error';
+        console.error("Avatar loader error:", err);
+        const details =
+          err?.message || err?.target?.statusText || "Unknown load error";
         setAvatarLoadError(`Failed to load avatar model from URL: ${details}`);
         setAvatarLoading(false);
-      }
+      },
     );
 
     return () => {
       cancelled = true;
     };
-  }, [avatarUrl, posePreset]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [avatarUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Transform updates (live sliders) ────────────────────────────── */
   useEffect(() => {
@@ -816,7 +919,7 @@ export default function SceneCanvas({
       idleClipRef.current,
       avatarClipsRef.current,
       posePreset,
-      boneMapperRef.current
+      boneMapperRef.current,
     );
   }, [posePreset]);
 
@@ -831,25 +934,35 @@ export default function SceneCanvas({
     });
     try {
       await navigator.clipboard.writeText(report);
-      setRigCopyState('Rig report copied');
-      window.setTimeout(() => setRigCopyState(''), 1500);
+      setRigCopyState("Rig report copied");
+      window.setTimeout(() => setRigCopyState(""), 1500);
     } catch {
-      setRigCopyState('Failed to copy');
-      window.setTimeout(() => setRigCopyState(''), 1500);
+      setRigCopyState("Failed to copy");
+      window.setTimeout(() => setRigCopyState(""), 1500);
     }
   };
 
   return (
-    <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden" style={{ touchAction: 'none' }}>
+    <div
+      ref={containerRef}
+      className="relative flex-1 w-full h-full overflow-hidden"
+      style={{ touchAction: "none" }}
+    >
       {avatarLoading && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/75 pointer-events-none">
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <div className="h-16 w-16 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-              <span className="absolute inset-0 flex items-center justify-center text-2xl select-none">👤</span>
+              <span className="absolute inset-0 flex items-center justify-center text-2xl select-none">
+                👤
+              </span>
             </div>
-            <p className="text-sm text-cyan-200 font-medium">Carregando seu personagem...</p>
-            <p className="text-xs text-gray-400">Isso pode levar alguns segundos</p>
+            <p className="text-sm text-cyan-200 font-medium">
+              Carregando seu personagem...
+            </p>
+            <p className="text-xs text-gray-400">
+              Isso pode levar alguns segundos
+            </p>
           </div>
         </div>
       )}
@@ -871,119 +984,174 @@ export default function SceneCanvas({
         />
       )}
       {showDevTools && (
-      <div className="absolute right-3 top-3 z-20 rounded-md border border-cyan-700/70 bg-cyan-950/75 px-3 py-2 text-xs text-cyan-100">
-        <p className="font-semibold uppercase tracking-wide text-cyan-200">Lip Sync</p>
-        <p>Open: {debugSnapshot.mouthOpen.toFixed(2)}</p>
-        <p>RMS: {debugSnapshot.rms.toFixed(3)}</p>
-        <p>Voice Band: {debugSnapshot.speechBand.toFixed(3)}</p>
-        <p>Mode: {debugSnapshot.mode}</p>
-        <p>Analyser: {debugSnapshot.analyserReady ? 'ready' : 'missing'}</p>
-        <p>Mouth Targets: {debugSnapshot.mouthTargetCount || 0}</p>
-        <p>Jaw Bones: {debugSnapshot.jawBoneCount || 0}</p>
-        <p>Mouth Marker: {mouthMarkerInfo.source}{mouthMarkerInfo.name ? ` (${mouthMarkerInfo.name})` : ''}</p>
-      </div>
+        <div className="absolute right-3 top-3 z-20 rounded-md border border-cyan-700/70 bg-cyan-950/75 px-3 py-2 text-xs text-cyan-100">
+          <p className="font-semibold uppercase tracking-wide text-cyan-200">
+            Lip Sync
+          </p>
+          <p>Open: {debugSnapshot.mouthOpen.toFixed(2)}</p>
+          <p>RMS: {debugSnapshot.rms.toFixed(3)}</p>
+          <p>Voice Band: {debugSnapshot.speechBand.toFixed(3)}</p>
+          <p>Mode: {debugSnapshot.mode}</p>
+          <p>Analyser: {debugSnapshot.analyserReady ? "ready" : "missing"}</p>
+          <p>Mouth Targets: {debugSnapshot.mouthTargetCount || 0}</p>
+          <p>Jaw Bones: {debugSnapshot.jawBoneCount || 0}</p>
+          <p>
+            Mouth Marker: {mouthMarkerInfo.source}
+            {mouthMarkerInfo.name ? ` (${mouthMarkerInfo.name})` : ""}
+          </p>
+        </div>
       )}
       {showDevTools && (
-      <div className="absolute left-3 bottom-3 z-20 w-96 max-h-[80vh] overflow-y-auto rounded-md border border-amber-700/70 bg-amber-950/90 px-3 py-2 text-xs text-amber-100">
-        <p className="font-semibold uppercase tracking-wide text-amber-200">Rig Debug</p>
-        <p>
-          Esqueleto detectado:{' '}
-          <span className="font-bold text-amber-300">{boneMapperInfo.source}</span>
-          {' '}({boneMapperInfo.resolvedCount} padrões mapeados)
-        </p>
-        <p>Ossos totais: {boneCatalogSnapshot.length} · Meshes: {meshCatalogSnapshot.length}</p>
-        <button
-          onClick={handleCopyRigReport}
-          className="mt-2 w-full rounded border border-amber-700 bg-amber-900/60 px-2 py-1 text-xs text-amber-100 hover:bg-amber-800/70"
-        >
-          Copy rig report
-        </button>
-        {rigCopyState && <p className="mt-1 text-[11px] text-amber-300">{rigCopyState}</p>}
-
-        <p className="mt-3 font-semibold text-amber-200">Calibrar mapeamento de ossos</p>
-        <p className="text-[11px] text-amber-400 mb-1">
-          Selecione qual osso do avatar corresponde a cada parte do corpo.
-          "Auto" usa a detecção automática.
-        </p>
-        {STANDARD_BONES.map((standard) => (
-          <div key={standard} className="flex items-center gap-1 mt-1">
-            <span className="w-28 shrink-0 text-amber-300">{BONE_LABELS[standard] ?? standard}</span>
-            <select
-              value={boneOverrides[standard] ?? ''}
-              onChange={(e) => setBoneOverrides((prev) => ({ ...prev, [standard]: e.target.value }))}
-              className="flex-1 rounded border border-amber-700 bg-amber-950 px-1 py-0.5 text-xs text-amber-100"
-            >
-              <option value="">Auto</option>
-              {boneCatalogSnapshot.map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-          </div>
-        ))}
-        {Object.values(boneOverrides).some(Boolean) && (
+        <div className="absolute left-3 bottom-3 z-20 w-96 max-h-[80vh] overflow-y-auto rounded-md border border-amber-700/70 bg-amber-950/90 px-3 py-2 text-xs text-amber-100">
+          <p className="font-semibold uppercase tracking-wide text-amber-200">
+            Rig Debug
+          </p>
+          <p>
+            Esqueleto detectado:{" "}
+            <span className="font-bold text-amber-300">
+              {boneMapperInfo.source}
+            </span>{" "}
+            ({boneMapperInfo.resolvedCount} padrões mapeados)
+          </p>
+          <p>
+            Ossos totais: {boneCatalogSnapshot.length} · Meshes:{" "}
+            {meshCatalogSnapshot.length}
+          </p>
           <button
-            onClick={() => setBoneOverrides({})}
-            className="mt-2 w-full rounded border border-red-700 bg-red-950/60 px-2 py-1 text-xs text-red-200 hover:bg-red-900/60"
+            onClick={handleCopyRigReport}
+            className="mt-2 w-full rounded border border-amber-700 bg-amber-900/60 px-2 py-1 text-xs text-amber-100 hover:bg-amber-800/70"
           >
-            Limpar overrides (voltar ao automático)
+            Copy rig report
           </button>
-        )}
+          {rigCopyState && (
+            <p className="mt-1 text-[11px] text-amber-300">{rigCopyState}</p>
+          )}
 
-        <label className="mt-3 block text-amber-300">Override mandíbula</label>
-        <select
-          value={manualJawBoneName}
-          onChange={(e) => setManualJawBoneName(e.target.value)}
-          className="mt-1 w-full rounded border border-amber-700 bg-amber-950 px-2 py-1 text-xs text-amber-100"
-        >
-          <option value="">Auto detect jaw bone</option>
-          {boneCatalogSnapshot.map((name) => (
-            <option key={name} value={name}>{name}</option>
+          <p className="mt-3 font-semibold text-amber-200">
+            Calibrar mapeamento de ossos
+          </p>
+          <p className="text-[11px] text-amber-400 mb-1">
+            Selecione qual osso do avatar corresponde a cada parte do corpo.
+            "Auto" usa a detecção automática.
+          </p>
+          {STANDARD_BONES.map((standard) => (
+            <div key={standard} className="flex items-center gap-1 mt-1">
+              <span className="w-28 shrink-0 text-amber-300">
+                {BONE_LABELS[standard] ?? standard}
+              </span>
+              <select
+                value={boneOverrides[standard] ?? ""}
+                onChange={(e) =>
+                  setBoneOverrides((prev) => ({
+                    ...prev,
+                    [standard]: e.target.value,
+                  }))
+                }
+                className="flex-1 rounded border border-amber-700 bg-amber-950 px-1 py-0.5 text-xs text-amber-100"
+              >
+                <option value="">Auto</option>
+                {boneCatalogSnapshot.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
           ))}
-        </select>
-        <p className="mt-2 text-[11px] text-amber-300">Todos os ossos detectados</p>
-        <ul className="max-h-20 overflow-y-auto rounded border border-amber-900/70 bg-amber-950/60 p-1">
-          {boneCatalogSnapshot.slice(0, 40).map((name) => (
-            <li key={name} className="truncate" title={name}>{name}</li>
-          ))}
-        </ul>
-        <p className="mt-2 text-[11px] text-amber-300">Detected meshes</p>
-        <ul className="max-h-20 overflow-y-auto rounded border border-amber-900/70 bg-amber-950/60 p-1">
-          {meshCatalogSnapshot.slice(0, 20).map((name) => (
-            <li key={name} className="truncate" title={name}>{name}</li>
-          ))}
-        </ul>
-      </div>
+          {Object.values(boneOverrides).some(Boolean) && (
+            <button
+              onClick={() => setBoneOverrides({})}
+              className="mt-2 w-full rounded border border-red-700 bg-red-950/60 px-2 py-1 text-xs text-red-200 hover:bg-red-900/60"
+            >
+              Limpar overrides (voltar ao automático)
+            </button>
+          )}
+
+          <label className="mt-3 block text-amber-300">
+            Override mandíbula
+          </label>
+          <select
+            value={manualJawBoneName}
+            onChange={(e) => setManualJawBoneName(e.target.value)}
+            className="mt-1 w-full rounded border border-amber-700 bg-amber-950 px-2 py-1 text-xs text-amber-100"
+          >
+            <option value="">Auto detect jaw bone</option>
+            {boneCatalogSnapshot.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-[11px] text-amber-300">
+            Todos os ossos detectados
+          </p>
+          <ul className="max-h-20 overflow-y-auto rounded border border-amber-900/70 bg-amber-950/60 p-1">
+            {boneCatalogSnapshot.slice(0, 40).map((name) => (
+              <li key={name} className="truncate" title={name}>
+                {name}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-amber-300">Detected meshes</p>
+          <ul className="max-h-20 overflow-y-auto rounded border border-amber-900/70 bg-amber-950/60 p-1">
+            {meshCatalogSnapshot.slice(0, 20).map((name) => (
+              <li key={name} className="truncate" title={name}>
+                {name}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {mergedLipSyncConfig.showBlendshapeDebug && (
         <div className="absolute right-3 bottom-3 z-20 w-80 max-h-72 overflow-y-auto rounded-md border border-slate-600 bg-slate-950/90 px-3 py-2 text-xs text-slate-100">
           <p className="mb-2 font-semibold uppercase tracking-wide text-slate-300">
             Blendshapes ({blendshapeSnapshot.length})
           </p>
-          <label className="mb-2 block text-[11px] text-slate-400">Mesh filter</label>
+          <label className="mb-2 block text-[11px] text-slate-400">
+            Mesh filter
+          </label>
           <select
             value={blendshapeMeshFilter}
             onChange={(e) => setBlendshapeMeshFilter(e.target.value)}
             className="mb-2 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
           >
             <option value="all">All meshes</option>
-            {Array.from(new Set(blendshapeSnapshot.map((entry) => entry.meshName))).map((meshName) => (
-              <option key={meshName} value={meshName}>{meshName}</option>
+            {Array.from(
+              new Set(blendshapeSnapshot.map((entry) => entry.meshName)),
+            ).map((meshName) => (
+              <option key={meshName} value={meshName}>
+                {meshName}
+              </option>
             ))}
           </select>
           {blendshapeSnapshot.length === 0 ? (
-            <p className="text-slate-400">No morph targets found on this avatar.</p>
+            <p className="text-slate-400">
+              No morph targets found on this avatar.
+            </p>
           ) : (
             <ul className="space-y-1">
               {blendshapeSnapshot
-                .filter((entry) => blendshapeMeshFilter === 'all' || entry.meshName === blendshapeMeshFilter)
+                .filter(
+                  (entry) =>
+                    blendshapeMeshFilter === "all" ||
+                    entry.meshName === blendshapeMeshFilter,
+                )
                 .map((entry) => (
-                <li key={entry.key} className="flex items-center justify-between gap-2">
-                  <span className="truncate text-slate-300" title={`${entry.meshName} :: ${entry.name}`}>
-                    {entry.name}
-                  </span>
-                  <span className="text-slate-400">{entry.value.toFixed(2)}</span>
-                </li>
-              ))}
+                  <li
+                    key={entry.key}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span
+                      className="truncate text-slate-300"
+                      title={`${entry.meshName} :: ${entry.name}`}
+                    >
+                      {entry.name}
+                    </span>
+                    <span className="text-slate-400">
+                      {entry.value.toFixed(2)}
+                    </span>
+                  </li>
+                ))}
             </ul>
           )}
         </div>
@@ -995,18 +1163,18 @@ export default function SceneCanvas({
 function createAvatarLoader(dracoLoader) {
   const loader = new GLTFLoader();
   loader.setDRACOLoader(dracoLoader);
-  loader.setCrossOrigin('anonymous');
+  loader.setCrossOrigin("anonymous");
   loader.register((parser) => new VRMLoaderPlugin(parser));
   return loader;
 }
-
-
 
 function getTimelineBlendState(cues, timeSec, crossfadeSec = 0.07) {
   if (!Array.isArray(cues) || !cues.length) return null;
   const time = Number(timeSec) || 0;
 
-  const activeIndex = cues.findIndex((cue) => time >= cue.start && time <= cue.end);
+  const activeIndex = cues.findIndex(
+    (cue) => time >= cue.start && time <= cue.end,
+  );
   if (activeIndex === -1) return null;
 
   const activeCue = cues[activeIndex];
@@ -1018,7 +1186,11 @@ function getTimelineBlendState(cues, timeSec, crossfadeSec = 0.07) {
   if (prevCue) {
     const fromStart = time - activeCue.start;
     if (fromStart >= 0 && fromStart < crossfadeSec) {
-      const t = THREE.MathUtils.clamp(fromStart / Math.max(0.0001, crossfadeSec), 0, 1);
+      const t = THREE.MathUtils.clamp(
+        fromStart / Math.max(0.0001, crossfadeSec),
+        0,
+        1,
+      );
       blendItems[0].weight = t;
       blendItems.push({ cue: prevCue, weight: 1 - t });
     }
@@ -1027,7 +1199,11 @@ function getTimelineBlendState(cues, timeSec, crossfadeSec = 0.07) {
   if (nextCue) {
     const toEnd = activeCue.end - time;
     if (toEnd >= 0 && toEnd < crossfadeSec) {
-      const t = THREE.MathUtils.clamp(toEnd / Math.max(0.0001, crossfadeSec), 0, 1);
+      const t = THREE.MathUtils.clamp(
+        toEnd / Math.max(0.0001, crossfadeSec),
+        0,
+        1,
+      );
       blendItems[0].weight = Math.min(blendItems[0].weight, t);
       blendItems.push({ cue: nextCue, weight: 1 - t });
     }
@@ -1040,10 +1216,11 @@ function getTimelineBlendState(cues, timeSec, crossfadeSec = 0.07) {
   });
 
   if (total <= 0) return [{ cue: activeCue, weight: 1 }];
-  return blendItems.map((item) => ({ cue: item.cue, weight: item.weight / total }));
+  return blendItems.map((item) => ({
+    cue: item.cue,
+    weight: item.weight / total,
+  }));
 }
-
-
 
 function averageRange(freqData, hzPerBin, minHz, maxHz) {
   if (!freqData?.length || !hzPerBin) return 0;
@@ -1061,11 +1238,13 @@ function averageRange(freqData, hzPerBin, minHz, maxHz) {
 function resolveJawBones(model, manualJawBoneName, boneMapper = null) {
   if (!model) return [];
 
-  const selected = String(manualJawBoneName || '').trim().toLowerCase();
+  const selected = String(manualJawBoneName || "")
+    .trim()
+    .toLowerCase();
 
   // BoneMapper provides an exact jaw bone — use it unless the user overrides manually
-  if (!selected && boneMapper?.has('jaw')) {
-    const jaw = boneMapper.get('jaw');
+  if (!selected && boneMapper?.has("jaw")) {
+    const jaw = boneMapper.get("jaw");
     jaw.userData.__jawRestQuat = jaw.quaternion.clone();
     return [jaw];
   }
@@ -1073,12 +1252,14 @@ function resolveJawBones(model, manualJawBoneName, boneMapper = null) {
   const jawBones = [];
   model.traverse((node) => {
     if (!node?.isBone) return;
-    const boneName = String(node.name || '').trim();
+    const boneName = String(node.name || "").trim();
     if (!boneName) return;
 
     const normalized = boneName.toLowerCase();
     const matchesManual = selected && normalized === selected;
-    const matchesAuto = JAW_BONE_PATTERNS.some((pattern) => pattern.test(boneName));
+    const matchesAuto = JAW_BONE_PATTERNS.some((pattern) =>
+      pattern.test(boneName),
+    );
     if (!matchesManual && (!matchesAuto || selected)) {
       return;
     }
@@ -1091,8 +1272,10 @@ function resolveJawBones(model, manualJawBoneName, boneMapper = null) {
     const pseudo = [];
     model.traverse((node) => {
       if (!node?.isBone) return;
-      const name = String(node.name || '').trim().toLowerCase();
-      if (name === 'head' || name === 'neck') {
+      const name = String(node.name || "")
+        .trim()
+        .toLowerCase();
+      if (name === "head" || name === "neck") {
         node.userData.__jawRestQuat = node.quaternion.clone();
         pseudo.push(node);
       }
@@ -1100,10 +1283,10 @@ function resolveJawBones(model, manualJawBoneName, boneMapper = null) {
 
     // Keep Head first so the primary marker and motion anchor stay consistent.
     pseudo.sort((a, b) => {
-      const an = String(a.name || '').toLowerCase();
-      const bn = String(b.name || '').toLowerCase();
-      if (an === 'head') return -1;
-      if (bn === 'head') return 1;
+      const an = String(a.name || "").toLowerCase();
+      const bn = String(b.name || "").toLowerCase();
+      if (an === "head") return -1;
+      if (bn === "head") return 1;
       return an.localeCompare(bn);
     });
 
@@ -1116,20 +1299,26 @@ function resolveJawBones(model, manualJawBoneName, boneMapper = null) {
 function isPseudoJawRig(jawBones) {
   if (!Array.isArray(jawBones) || !jawBones.length) return false;
   return jawBones.every((bone) => {
-    const name = String(bone?.name || '').toLowerCase();
-    return name === 'head' || name === 'neck';
+    const name = String(bone?.name || "").toLowerCase();
+    return name === "head" || name === "neck";
   });
 }
 
-function updateMouthDebugMarker(marker, jawBones, morphs, markerInfoRef, pseudoJawRig) {
+function updateMouthDebugMarker(
+  marker,
+  jawBones,
+  morphs,
+  markerInfoRef,
+  pseudoJawRig,
+) {
   if (!marker) return;
 
   if (jawBones.length > 0) {
     jawBones[0].getWorldPosition(marker.position);
     marker.visible = true;
     markerInfoRef.current = {
-      source: pseudoJawRig ? 'pseudo-jaw' : 'jaw-bone',
-      name: String(jawBones[0].name || ''),
+      source: pseudoJawRig ? "pseudo-jaw" : "jaw-bone",
+      name: String(jawBones[0].name || ""),
     };
     return;
   }
@@ -1138,12 +1327,15 @@ function updateMouthDebugMarker(marker, jawBones, morphs, markerInfoRef, pseudoJ
     morphs[0].mesh.getWorldPosition(marker.position);
     marker.position.y -= 0.03;
     marker.visible = true;
-    markerInfoRef.current = { source: 'mouth-morph-mesh', name: String(morphs[0].mesh?.name || '') };
+    markerInfoRef.current = {
+      source: "mouth-morph-mesh",
+      name: String(morphs[0].mesh?.name || ""),
+    };
     return;
   }
 
   marker.visible = false;
-  markerInfoRef.current = { source: 'none', name: '' };
+  markerInfoRef.current = { source: "none", name: "" };
 }
 
 function buildRigReport({
@@ -1155,23 +1347,27 @@ function buildRigReport({
   mouthMarkerInfo,
 }) {
   const lines = [];
-  lines.push('=== AVATURN RIG REPORT ===');
+  lines.push("=== AVATURN RIG REPORT ===");
   lines.push(`mode=${debugSnapshot.mode}`);
   lines.push(`analyserReady=${debugSnapshot.analyserReady}`);
   lines.push(`mouthTargets=${debugSnapshot.mouthTargetCount}`);
   lines.push(`jawBones=${debugSnapshot.jawBoneCount}`);
-  lines.push(`manualJawBone=${manualJawBoneName || '(auto)'}`);
-  lines.push(`mouthMarker=${mouthMarkerInfo.source}${mouthMarkerInfo.name ? `:${mouthMarkerInfo.name}` : ''}`);
+  lines.push(`manualJawBone=${manualJawBoneName || "(auto)"}`);
+  lines.push(
+    `mouthMarker=${mouthMarkerInfo.source}${mouthMarkerInfo.name ? `:${mouthMarkerInfo.name}` : ""}`,
+  );
   lines.push(`bonesCount=${boneCatalogSnapshot.length}`);
   lines.push(`meshesCount=${meshCatalogSnapshot.length}`);
   lines.push(`blendshapeCount=${blendshapeSnapshot.length}`);
-  lines.push('--- bones ---');
+  lines.push("--- bones ---");
   boneCatalogSnapshot.forEach((name) => lines.push(name));
-  lines.push('--- meshes ---');
+  lines.push("--- meshes ---");
   meshCatalogSnapshot.forEach((name) => lines.push(name));
-  lines.push('--- blendshapes ---');
-  blendshapeSnapshot.forEach((item) => lines.push(`${item.meshName}::${item.name}`));
-  return lines.join('\n');
+  lines.push("--- blendshapes ---");
+  blendshapeSnapshot.forEach((item) =>
+    lines.push(`${item.meshName}::${item.name}`),
+  );
+  return lines.join("\n");
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
@@ -1199,18 +1395,27 @@ function disposeObject3D(object) {
   });
 }
 
-function applyPosePreset(model, animationController, idleClip, avatarClips, posePreset, boneMapper = null) {
-  const normalized = String(posePreset || 'idle').toLowerCase();
+function applyPosePreset(
+  model,
+  animationController,
+  idleClip,
+  avatarClips,
+  posePreset,
+  boneMapper = null,
+) {
+  const normalized = String(posePreset || "idle").toLowerCase();
 
   if (animationController) {
-    animationController.setProceduralMode(normalized === 'speaker' ? 'speaker' : 'default');
+    animationController.setProceduralMode(
+      normalized === "speaker" ? "speaker" : "default",
+    );
     animationController.stopAll();
   }
 
   ensureRestPoseSnapshot(model);
   resetToRestPose(model);
 
-  const animatedPresets = ['idle', 'walk', 'run', 'dance', 'speaker'];
+  const animatedPresets = ["idle", "walk", "run", "dance", "speaker"];
   if (animatedPresets.includes(normalized)) {
     if (animationController) {
       const clip = pickAnimationClip(normalized, idleClip, avatarClips);
@@ -1221,23 +1426,23 @@ function applyPosePreset(model, animationController, idleClip, avatarClips, pose
       }
     }
 
-    if (normalized !== 'speaker') {
+    if (normalized !== "speaker") {
       model.updateMatrixWorld(true);
       return;
     }
   }
 
-  if (normalized === 'speaker') {
+  if (normalized === "speaker") {
     applySpeakerPose(model, boneMapper);
-  } else if (normalized === 'wave') {
+  } else if (normalized === "wave") {
     applyWavePose(model, boneMapper);
-  } else if (normalized === 'hands_on_hips') {
+  } else if (normalized === "hands_on_hips") {
     applyHandsOnHipsPose(model, boneMapper);
-  } else if (normalized === 'salute') {
+  } else if (normalized === "salute") {
     applySalutePose(model, boneMapper);
-  } else if (normalized === 'arms_crossed') {
+  } else if (normalized === "arms_crossed") {
     applyArmsCrossedPose(model, boneMapper);
-  } else if (normalized === 't_pose') {
+  } else if (normalized === "t_pose") {
     applyTPose(model, boneMapper);
   }
 
@@ -1257,20 +1462,23 @@ function pickAnimationClip(preset, idleClip, avatarClips = []) {
   const clips = Array.isArray(avatarClips) ? avatarClips : [];
 
   const fromAvatar = clips.find((clip) => {
-    const name = String(clip?.name || '').toLowerCase();
+    const name = String(clip?.name || "").toLowerCase();
     return patterns.some((re) => re.test(name));
   });
   if (fromAvatar) return fromAvatar;
 
-  if ((preset === 'idle' || preset === 'speaker') && idleClip) return idleClip;
+  if ((preset === "idle" || preset === "speaker") && idleClip) return idleClip;
   return null;
 }
 
 function ensureRestPoseSnapshot(model) {
+  model.updateMatrixWorld(true);
   model.traverse((node) => {
     if (!node?.isBone) return;
     if (!node.userData.__restQuat) {
       node.userData.__restQuat = node.quaternion.clone();
+      node.userData.__restWorldQuat = new THREE.Quaternion();
+      node.getWorldQuaternion(node.userData.__restWorldQuat);
     }
   });
 }
@@ -1287,7 +1495,7 @@ function findBone(model, patterns) {
 
   model.traverse((node) => {
     if (result || !node?.isBone) return;
-    const name = String(node.name || '').toLowerCase();
+    const name = String(node.name || "").toLowerCase();
     if (patterns.some((re) => re.test(name))) {
       result = node;
     }
@@ -1302,9 +1510,31 @@ function getBone(model, boneMapper, standardName, patterns) {
 
 function rotateBoneDeg(bone, x = 0, y = 0, z = 0) {
   if (!bone) return;
-  bone.rotateX((x * Math.PI) / 180);
-  bone.rotateY((y * Math.PI) / 180);
-  bone.rotateZ((z * Math.PI) / 180);
+  // A abstração definitiva: converter offsets do Mixamo (World Aligned em T-pose)
+  // para o sistema de coordenadas local real do osso exportado (Avaturn, CC3, etc)
+  const qMixamo = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(
+      (x * Math.PI) / 180,
+      (y * Math.PI) / 180,
+      (z * Math.PI) / 180,
+      "XYZ",
+    ),
+  );
+
+  // Cache safeguard (garantido no ensureRestPoseSnapshot, mas checkamos)
+  if (!bone.userData.__restWorldQuat) {
+    bone.userData.__restWorldQuat = new THREE.Quaternion();
+    bone.getWorldQuaternion(bone.userData.__restWorldQuat);
+  }
+
+  const Q_restWorld = bone.userData.__restWorldQuat;
+  const Q_restWorldInv = Q_restWorld.clone().invert();
+
+  // Conjuga a rotação Mixamo pelas coordenadas mundiais do osso
+  const qLocal = Q_restWorldInv.multiply(qMixamo).multiply(Q_restWorld);
+
+  // Aplica cumulativamente (nossas poses estáticas chamam isso na restPose resetada)
+  bone.quaternion.multiply(qLocal);
 }
 
 function applyWavePose(model, boneMapper = null) {

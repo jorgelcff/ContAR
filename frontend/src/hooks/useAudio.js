@@ -62,6 +62,8 @@ export default function useAudio() {
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isTTSLoading, setIsTTSLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const webSpeechTimerRef = useRef(null);
 
   // Web Audio refs
   const audioCtxRef = useRef(null);
@@ -305,6 +307,73 @@ export default function useAudio() {
     }
   }
 
+  function speakWithWebSpeech(text, lang = 'pt-BR') {
+    if (!window.speechSynthesis) {
+      setError('Web Speech API não suportada neste navegador. Use Chrome ou Edge.');
+      return;
+    }
+    const src = String(text || '').trim();
+    if (!src) { setError('Escreva um texto antes de falar.'); return; }
+
+    // Stop any current audio/speech
+    window.speechSynthesis.cancel();
+    if (webSpeechTimerRef.current) clearInterval(webSpeechTimerRef.current);
+    setError('');
+    setIsSpeaking(false);
+    setAudioCurrentTime(0);
+
+    // Generate text-based viseme timeline as lip sync approximation
+    const timeline = normalizeVisemeTimelineToDuration(
+      textToVisemeTimeline(src),
+      null // keep natural timing
+    );
+    setVisemeTimeline(timeline);
+    setLipSyncConfig((prev) => ({ ...prev, visemeMode: 'timeline' }));
+
+    const utterance = new SpeechSynthesisUtterance(src);
+    utterance.lang = lang;
+    utterance.rate = 0.88;
+    utterance.pitch = 1;
+
+    // Pick a voice for the selected language
+    const voices = window.speechSynthesis.getVoices();
+    const match = voices.find((v) => v.lang === lang)
+      || voices.find((v) => v.lang.startsWith(lang.split('-')[0]))
+      || null;
+    if (match) utterance.voice = match;
+
+    let startMs = null;
+    utterance.onstart = () => {
+      startMs = Date.now();
+      setIsSpeaking(true);
+      // Advance audioCurrentTime in real-time so the viseme timeline plays along
+      webSpeechTimerRef.current = setInterval(() => {
+        setAudioCurrentTime((Date.now() - startMs) / 1000);
+      }, 40);
+    };
+
+    utterance.onend = () => {
+      if (webSpeechTimerRef.current) clearInterval(webSpeechTimerRef.current);
+      setIsSpeaking(false);
+      setAudioCurrentTime(0);
+    };
+
+    utterance.onerror = (e) => {
+      if (webSpeechTimerRef.current) clearInterval(webSpeechTimerRef.current);
+      setIsSpeaking(false);
+      if (e.error !== 'interrupted') setError(`Erro ao falar: ${e.error}`);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopWebSpeech() {
+    window.speechSynthesis?.cancel();
+    if (webSpeechTimerRef.current) clearInterval(webSpeechTimerRef.current);
+    setIsSpeaking(false);
+    setAudioCurrentTime(0);
+  }
+
   function generateVisemeTimelineFromText(text) {
     const source = String(text || '').trim();
     if (!source) {
@@ -481,6 +550,7 @@ export default function useAudio() {
     isPlaying,
     isRecording,
     isTTSLoading,
+    isSpeaking,
     error,
     audioMetrics,
     audioProcessing,
@@ -494,6 +564,8 @@ export default function useAudio() {
     clearVisemeTimeline,
     generateVisemeTimelineFromText,
     generateWithElevenLabs,
+    speakWithWebSpeech,
+    stopWebSpeech,
     play,
     pause,
     stop,

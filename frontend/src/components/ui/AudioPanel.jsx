@@ -9,18 +9,28 @@ const VOICES = [
   { id: '29vD33N1lfTaskpGmDjK', label: 'Drew — masculino, casual' },
 ];
 
+const WEB_SPEECH_LANGS = [
+  { code: 'pt-BR', label: 'Português (BR)' },
+  { code: 'pt-PT', label: 'Português (PT)' },
+  { code: 'en-US', label: 'English (US)' },
+  { code: 'es-ES', label: 'Español' },
+];
+
 export default function AudioPanel({
   speechText,
   audioUrl,
   isPlaying,
   isRecording,
   isTTSLoading,
+  isSpeaking,
   error,
   audioMetrics,
   audioProcessing,
   lipSyncConfig,
   visemeTimeline,
   onGenerateTTS,
+  onSpeakWebSpeech,
+  onStopWebSpeech,
   onLoadFile,
   onLoadVisemeFile,
   onClearVisemeTimeline,
@@ -37,6 +47,7 @@ export default function AudioPanel({
   const fileInputRef = useRef(null);
   const visemeInputRef = useRef(null);
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0].id);
+  const [selectedLang, setSelectedLang] = useState('pt-BR');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [visemeTextInput, setVisemeTextInput] = useState('');
 
@@ -96,6 +107,51 @@ export default function AudioPanel({
             {visemeTimeline.length} visemes sincronizados com o áudio
           </p>
         )}
+      </div>
+
+      {/* ── Web Speech API (gratuito, sem API key) ────────────────── */}
+      <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-3 flex flex-col gap-2.5">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🔊</span>
+          <p className="text-xs font-semibold text-emerald-200">Voz do Navegador <span className="text-emerald-500 font-normal">(gratuito)</span></p>
+        </div>
+
+        {hasSpeechText ? (
+          <p className="text-xs text-gray-400 bg-black/30 rounded-lg px-3 py-2 line-clamp-2 italic">
+            "{speechText}"
+          </p>
+        ) : (
+          <p className="text-xs text-amber-400/80">Escreva um texto no campo "Fala do narrador".</p>
+        )}
+
+        <select
+          value={selectedLang}
+          onChange={(e) => setSelectedLang(e.target.value)}
+          className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+        >
+          {WEB_SPEECH_LANGS.map((l) => (
+            <option key={l.code} value={l.code}>{l.label}</option>
+          ))}
+        </select>
+
+        {isSpeaking ? (
+          <button
+            onClick={onStopWebSpeech}
+            className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+          >
+            ⏹ Parar fala
+          </button>
+        ) : (
+          <button
+            onClick={() => onSpeakWebSpeech(speechText, selectedLang)}
+            disabled={!hasSpeechText}
+            className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
+          >
+            🔊 Falar agora
+          </button>
+        )}
+
+        <p className="text-xs text-gray-500">Usa a voz do browser — sem internet extra. Lip sync aproximado pelo texto.</p>
       </div>
 
       {/* ── Playback controls ─────────────────────────────────────── */}

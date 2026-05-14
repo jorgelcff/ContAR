@@ -192,7 +192,7 @@ export default function StoryViewerPage() {
   }, [sceneData]);
 
   const scaleLabel = `${Math.round(scale * 100)}%`;
-  const arHref = `/ar?storyId=${id}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}`;
+  const arHref = `/ar?mode=surface&storyId=${id}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}`;
 
   // First scene avatar for splash background hint
   const firstAvatarUrl = storyScenes[0] ? null : null; // reserved for future thumbnail

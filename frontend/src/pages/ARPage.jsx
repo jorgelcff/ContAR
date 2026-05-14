@@ -29,17 +29,23 @@ function normalizeAvatarUrl(url) {
   if (typeof url !== 'string') return '';
   const value = url.trim();
   if (!value) return '';
-  if (/^https?:\/\//i.test(value) || /^data:/i.test(value) || /^blob:/i.test(value)) {
-    return value;
-  }
   return value;
 }
 
-function isArUsableAvatarUrl(url) {
-  if (typeof url !== 'string') return false;
+/**
+ * Returns a URL safe to use in AR route transitions.
+ * Blob URLs are excluded because they can be invalidated when leaving the source page.
+ * Accepts HTTP(S), data URLs and relative paths like /uploads/models/x.glb.
+ * @param {string} url
+ * @returns {string}
+ */
+function getArUsableAvatarUrl(url) {
+  if (typeof url !== 'string') return '';
   const value = url.trim();
-  if (!value) return false;
-  return !/^blob:/i.test(value);
+  if (!value || /^blob:/i.test(value)) return '';
+  if (/^https?:\/\//i.test(value) || /^data:/i.test(value)) return value;
+  if (/^(\/|\.\/|\.\.\/)/.test(value)) return value;
+  return '';
 }
 
 function disposeObject3D(object) {
@@ -659,8 +665,10 @@ export default function ARPage() {
 
   // Resolve effective URL: query param → stored avatar (non-blob) → default
   const resolveUrl = (param, stored) => {
-    if (isArUsableAvatarUrl(param)) return param.trim();
-    if (isArUsableAvatarUrl(stored)) return stored.trim();
+    const paramUrl = getArUsableAvatarUrl(param);
+    if (paramUrl) return paramUrl;
+    const storedUrl = getArUsableAvatarUrl(stored);
+    if (storedUrl) return storedUrl;
     return '/default_model.glb';
   };
 
@@ -684,7 +692,7 @@ export default function ARPage() {
   };
 
   const isUsingStoredAvatar =
-    isArUsableAvatarUrl(storedAvatarUrl) &&
+    Boolean(getArUsableAvatarUrl(storedAvatarUrl)) &&
     !searchParams.get('modelUrl');
 
   const isBlobOnly =

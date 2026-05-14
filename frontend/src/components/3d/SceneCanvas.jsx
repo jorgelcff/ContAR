@@ -1538,7 +1538,10 @@ function pickAnimationClip(preset, idleClip, avatarClips = []) {
   });
   if (fromAvatar) return fromAvatar;
 
-  if ((preset === "idle" || preset === "speaker") && idleClip) return idleClip;
+  // Fall back to the idle clip for any animated preset that lacks a dedicated clip
+  // so the avatar stays alive instead of freezing in rest pose.
+  const animatedPresets = ["idle", "walk", "run", "dance", "speaker"];
+  if (animatedPresets.includes(preset) && idleClip) return idleClip;
   return null;
 }
 

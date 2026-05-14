@@ -73,8 +73,10 @@ export class AnimationController {
       
       // Simple heuristic based on common Mixamo/VRM names
       if (lower.includes('hips') || lower.includes('pelvis')) standardName = 'hips';
-      else if (lower.includes('spine2') || lower.includes('chest')) standardName = 'chest';
-      else if (lower.includes('spine1') || lower.includes('spine')) standardName = 'spine';
+      // Check more-specific spine names first: spine2 = upperChest, spine1 = chest, spine = spine
+      else if (lower.includes('spine2')) standardName = 'upperChest';
+      else if (lower.includes('spine1') || lower.includes('chest')) standardName = 'chest';
+      else if (lower.includes('spine')) standardName = 'spine';
       else if (lower.includes('neck')) standardName = 'neck';
       else if (lower.includes('head')) standardName = 'head';
       else if (lower.includes('leftshoulder')) standardName = 'leftShoulder';

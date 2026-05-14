@@ -77,8 +77,11 @@ export default function LeftPanel({
   useEffect(() => { setUrlInput(avatarUrl || ''); }, [avatarUrl]);
 
   useEffect(() => () => {
-    if (localBlobUrlRef.current) {
-      URL.revokeObjectURL(localBlobUrlRef.current);
+    if (!localBlobUrlRef.current) return;
+    const activeBlobUrl = localBlobUrlRef.current;
+    const currentAvatarUrl = useSceneStore.getState().avatarUrl;
+    if (currentAvatarUrl !== activeBlobUrl) {
+      URL.revokeObjectURL(activeBlobUrl);
       localBlobUrlRef.current = '';
     }
   }, []);

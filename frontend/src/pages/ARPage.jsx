@@ -35,6 +35,13 @@ function normalizeAvatarUrl(url) {
   return value;
 }
 
+function isArUsableAvatarUrl(url) {
+  if (typeof url !== 'string') return false;
+  const value = url.trim();
+  if (!value) return false;
+  return !/^blob:/i.test(value);
+}
+
 function disposeObject3D(object) {
   if (!object) return;
   object.traverse((node) => {
@@ -650,10 +657,10 @@ export default function ARPage() {
   const mode = searchParams.get('mode') || '';
   const storedAvatarUrl = useSceneStore((s) => s.avatarUrl);
 
-  // Resolve effective URL: query param → stored avatar (HTTP only) → default
+  // Resolve effective URL: query param → stored avatar (non-blob) → default
   const resolveUrl = (param, stored) => {
-    if (param) return param;
-    if (stored && !stored.startsWith('blob:') && /^https?:\/\//i.test(stored)) return stored;
+    if (isArUsableAvatarUrl(param)) return param.trim();
+    if (isArUsableAvatarUrl(stored)) return stored.trim();
     return '/default_model.glb';
   };
 
@@ -677,9 +684,7 @@ export default function ARPage() {
   };
 
   const isUsingStoredAvatar =
-    storedAvatarUrl &&
-    !storedAvatarUrl.startsWith('blob:') &&
-    /^https?:\/\//i.test(storedAvatarUrl) &&
+    isArUsableAvatarUrl(storedAvatarUrl) &&
     !searchParams.get('modelUrl');
 
   const isBlobOnly =

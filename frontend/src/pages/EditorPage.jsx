@@ -62,6 +62,7 @@ export default function EditorPage() {
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
   const [showTour, setShowTour] = useState(shouldShowTour);
   const [mobilePanelTab, setMobilePanelTab] = useState(null);
+  const [vrmaUrl, setVrmaUrl] = useState('');
 
   useEffect(() => {
     if (hadLocalAvatarOnInit()) {
@@ -305,6 +306,8 @@ export default function EditorPage() {
           isSaving={isSaving}
           audio={audio}
           tts={tts}
+          vrmaUrl={vrmaUrl}
+          onLoadVrma={setVrmaUrl}
           mobilePanelTab={mobilePanelTab}
           onMobilePanelClose={() => setMobilePanelTab(null)}
         />
@@ -340,6 +343,7 @@ export default function EditorPage() {
                 lipSyncConfig={audio.lipSyncConfig}
                 visemeTimeline={audio.visemeTimeline}
                 audioCurrentTime={audio.audioCurrentTime}
+                vrmaUrl={vrmaUrl}
               />
             </Suspense>
           </div>

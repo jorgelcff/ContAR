@@ -31,6 +31,8 @@ export default function LeftPanel({
   isSaving,
   audio,
   tts,
+  vrmaUrl,
+  onLoadVrma,
   mobilePanelTab,
   onMobilePanelClose,
 }) {
@@ -70,6 +72,8 @@ export default function LeftPanel({
   const [isUploadingGlb, setIsUploadingGlb] = useState(false);
   const localGlbInputRef = useRef(null);
   const localBlobUrlRef = useRef('');
+  const vrmaInputRef = useRef(null);
+  const vrmaBlobUrlRef = useRef('');
 
   // Fala tab state
   const [speechInput, setSpeechInput] = useState(speechText);
@@ -84,6 +88,10 @@ export default function LeftPanel({
     if (localBlobUrlRef.current) {
       URL.revokeObjectURL(localBlobUrlRef.current);
       localBlobUrlRef.current = '';
+    }
+    if (vrmaBlobUrlRef.current) {
+      URL.revokeObjectURL(vrmaBlobUrlRef.current);
+      vrmaBlobUrlRef.current = '';
     }
   }, []);
 
@@ -170,6 +178,24 @@ export default function LeftPanel({
     } finally {
       setIsUploadingGlb(false);
     }
+  };
+
+  const handleVrmaChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (vrmaBlobUrlRef.current) URL.revokeObjectURL(vrmaBlobUrlRef.current);
+    const blobUrl = URL.createObjectURL(file);
+    vrmaBlobUrlRef.current = blobUrl;
+    onLoadVrma?.(blobUrl);
+  };
+
+  const handleClearVrma = () => {
+    if (vrmaBlobUrlRef.current) {
+      URL.revokeObjectURL(vrmaBlobUrlRef.current);
+      vrmaBlobUrlRef.current = '';
+    }
+    onLoadVrma?.('');
   };
 
   // ── Speech handlers ─────────────────────────────────────────
@@ -328,6 +354,51 @@ export default function LeftPanel({
                 {t('loadAvatar')}
               </button>
             </div>
+
+            {/* VRM Animation (.vrma) */}
+            {onLoadVrma && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-1">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Animação VRM</p>
+                  <TooltipIcon text="Carregue um arquivo .vrma do VRoid Hub para animar avatares VRM (VRoid, CharacterStudio). Não compatível com avatares Avaturn." />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => vrmaInputRef.current?.click()}
+                    className="flex-1 py-2 rounded-xl bg-violet-700 hover:bg-violet-600 text-white text-xs font-medium transition-colors"
+                  >
+                    📦 Carregar .vrma
+                  </button>
+                  {vrmaUrl && (
+                    <button
+                      onClick={handleClearVrma}
+                      className="px-3 py-2 rounded-xl bg-gray-600 hover:bg-gray-500 text-white text-xs transition-colors"
+                      title="Remover animação VRM"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={vrmaInputRef}
+                  type="file"
+                  accept=".vrma"
+                  onChange={handleVrmaChange}
+                  className="hidden"
+                />
+                {vrmaUrl ? (
+                  <p className="text-xs text-violet-300 flex items-center gap-1">
+                    <span>✓</span> Animação VRM aplicada
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-gray-600">
+                    Baixe .vrma em{' '}
+                    <a href="https://hub.vroid.com" target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">hub.vroid.com</a>
+                    {' '}→ Animations
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Pose */}
             <div data-tour="pose-selector" className="flex flex-col gap-2">

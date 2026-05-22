@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
+import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import SpeechBubble from './SpeechBubble';
 import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
@@ -124,6 +125,7 @@ export default function SceneCanvas({
   lipSyncConfig,
   visemeTimeline,
   audioCurrentTime,
+  vrmaUrl,
 }) {
   // Enable Three.js resource cache so reloading the same GLB/HDR skips a round-trip.
   THREE.Cache.enabled = true;
@@ -142,6 +144,9 @@ export default function SceneCanvas({
   const avatarClipsRef = useRef([]);
   const posePresetRef = useRef(posePreset);
   const loaderRef = useRef(null);
+  const vrmaLoaderRef = useRef(null);
+  const vrmRef = useRef(null);
+  const vrmaUrlRef = useRef(vrmaUrl || null);
   const boneMapperRef = useRef(null);
   const baseBoneMapperRef = useRef(null);
   const skeletonHelperRef = useRef(null);
@@ -194,6 +199,14 @@ export default function SceneCanvas({
   useEffect(() => {
     audioCurrentTimeRef.current = Number(audioCurrentTime) || 0;
   }, [audioCurrentTime]);
+
+  // Apply a .vrma animation whenever the URL changes (or after VRM loads)
+  useEffect(() => {
+    vrmaUrlRef.current = vrmaUrl || null;
+    if (vrmaUrl && vrmRef.current && animControllerRef.current && vrmaLoaderRef.current) {
+      loadVRMAAnimation(vrmaUrl, vrmRef.current, animControllerRef.current, vrmaLoaderRef.current);
+    }
+  }, [vrmaUrl]);
 
   // Expose renderer/camera to SpeechBubble via state once scene is ready
   const [renderCtx, setRenderCtx] = useState(null);
@@ -380,6 +393,7 @@ export default function SceneCanvas({
     gltfLoader.setDRACOLoader(dracoLoader);
     gltfLoader.setCrossOrigin("anonymous");
     loaderRef.current = createAvatarLoader(dracoLoader);
+    vrmaLoaderRef.current = createVRMALoader();
 
     // Pre-load idle animation clip
     gltfLoader.load(
@@ -769,6 +783,7 @@ export default function SceneCanvas({
       lipSyncControllerRef.current?.dispose();
       lipSyncControllerRef.current = null;
       avatarRef.current = null;
+      vrmRef.current = null;
       avatarClipsRef.current = [];
       jawBonesRef.current = [];
       boneMapperRef.current = null;
@@ -878,6 +893,9 @@ export default function SceneCanvas({
         }
         animControllerRef.current = animController;
 
+        // Store VRM instance (null for non-VRM GLB models like Avaturn)
+        vrmRef.current = gltf.userData.vrm || null;
+
         applyPosePreset(
           model,
           animController,
@@ -886,6 +904,16 @@ export default function SceneCanvas({
           posePreset,
           boneMapper,
         );
+
+        // Apply any .vrma animation that was set before this avatar finished loading
+        if (vrmRef.current && vrmaUrlRef.current && vrmaLoaderRef.current) {
+          loadVRMAAnimation(
+            vrmaUrlRef.current,
+            vrmRef.current,
+            animController,
+            vrmaLoaderRef.current,
+          );
+        }
       },
       undefined,
       (err) => {
@@ -1166,6 +1194,31 @@ function createAvatarLoader(dracoLoader) {
   loader.setCrossOrigin("anonymous");
   loader.register((parser) => new VRMLoaderPlugin(parser));
   return loader;
+}
+
+function createVRMALoader() {
+  const loader = new GLTFLoader();
+  loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
+  return loader;
+}
+
+function loadVRMAAnimation(url, vrm, animController, vrmaLoader) {
+  if (!url || !vrm || !animController || !vrmaLoader) return;
+  vrmaLoader.load(
+    url,
+    (vrmaGltf) => {
+      const vrmAnimations = vrmaGltf.userData.vrmAnimations;
+      if (!Array.isArray(vrmAnimations) || !vrmAnimations.length) {
+        console.warn('VRMA: nenhuma animação encontrada no arquivo');
+        return;
+      }
+      const clip = createVRMAnimationClip(vrmAnimations[0], vrm);
+      clip.name = '__vrma__';
+      animController.play(clip, 0.4);
+    },
+    undefined,
+    (err) => console.error('VRMA load error:', err),
+  );
 }
 
 function getTimelineBlendState(cues, timeSec, crossfadeSec = 0.07) {

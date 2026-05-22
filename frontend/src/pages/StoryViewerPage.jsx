@@ -366,26 +366,36 @@ export default function StoryViewerPage() {
             <div className="h-full w-full origin-center transition-transform duration-300"
               style={{ transform: `scale(${scale})` }}>
               {sceneData ? (
-                <Suspense fallback={
-                  <div className="flex h-full items-center justify-center bg-gray-900">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-                      <p className="text-sm text-cyan-200 font-medium">{t('viewerPreparing')}</p>
-                      <p className="text-xs text-gray-500">{t('viewerWait')}</p>
+                sceneData?.content?.avatar?.modelUrl ? (
+                  <Suspense fallback={
+                    <div className="flex h-full items-center justify-center bg-gray-900">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+                        <p className="text-sm text-cyan-200 font-medium">{t('viewerPreparing')}</p>
+                        <p className="text-xs text-gray-500">{t('viewerWait')}</p>
+                      </div>
                     </div>
+                  }>
+                    <SceneCanvas
+                      avatarUrl={sceneData.content.avatar.modelUrl}
+                      transform={transform}
+                      posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
+                      speechText={sceneData?.content?.narrative?.text || ''}
+                      analyserRef={audio.analyserRef}
+                      lipSyncConfig={audio.lipSyncConfig}
+                      visemeTimeline={audio.visemeTimeline}
+                      audioCurrentTime={audio.audioCurrentTime}
+                    />
+                  </Suspense>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center bg-gray-900 gap-4 px-6 text-center">
+                    <span className="text-5xl">👤</span>
+                    <p className="text-gray-300 font-medium">Nenhum avatar configurado nesta cena</p>
+                    <p className="text-xs text-gray-500 max-w-xs">
+                      Abra esta cena no editor, selecione um avatar e salve novamente.
+                    </p>
                   </div>
-                }>
-                  <SceneCanvas
-                    avatarUrl={sceneData?.content?.avatar?.modelUrl}
-                    transform={transform}
-                    posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
-                    speechText={sceneData?.content?.narrative?.text || ''}
-                    analyserRef={audio.analyserRef}
-                    lipSyncConfig={audio.lipSyncConfig}
-                    visemeTimeline={audio.visemeTimeline}
-                    audioCurrentTime={audio.audioCurrentTime}
-                  />
-                </Suspense>
+                )
               ) : (
                 <div className="h-full flex items-center justify-center text-gray-400">
                   {t('viewerSceneNotFound')}

@@ -38,6 +38,7 @@ export default function EditorPage() {
     currentSceneId, setCurrentSceneId,
     currentStoryId, setCurrentStoryId,
     publishedStoryId, setPublishedStoryId,
+    narrativeAudioUrl,
     buildScenePayload,
     timelineBlocks,
   } = useSceneStore();
@@ -95,7 +96,7 @@ export default function EditorPage() {
     }, 3000);
     return () => clearTimeout(autosaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId]);
+  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl]);
 
   const isStoryLinked = Boolean(currentStoryId);
   const arHref = avatarUrl ? `/ar?mode=surface&modelUrl=${encodeURIComponent(avatarUrl)}` : '/ar';

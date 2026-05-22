@@ -149,7 +149,12 @@ export default function LeftPanel({
       localBlobUrlRef.current = '';
       setUrlInput(serverUrl);
       setAvatarUrl(serverUrl);
-      addToast('Avatar salvo no servidor — não será perdido ao recarregar.', 'success');
+      // Warn if the returned URL is localhost (backend BACKEND_URL env var not configured)
+      if (/localhost|127\.0\.0\.1/.test(serverUrl)) {
+        addToast('Avatar salvo, mas a URL aponta para localhost — configure BACKEND_URL no servidor para persistência em produção.', 'warning', 8000);
+      } else {
+        addToast('Avatar salvo no servidor — não será perdido ao recarregar.', 'success');
+      }
     } catch {
       addToast('Avatar carregado localmente. Será perdido ao recarregar a página.', 'warning', 6000);
     } finally {

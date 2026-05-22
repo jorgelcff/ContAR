@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AvaturnEmbed from './AvaturnEmbed';
+import AvatarGallery from './AvatarGallery';
+import CharacterStudioEmbed from './CharacterStudioEmbed';
 import TransformControls from './TransformControls';
 import AudioPanel from './AudioPanel';
 import SceneProgressBar from './SceneProgressBar';
@@ -58,7 +60,9 @@ export default function LeftPanel({
 
   // Avatar tab state
   const [urlInput, setUrlInput] = useState(avatarUrl);
-  const [showAvaturn, setShowAvaturn] = useState(false);
+  const [showAvaturn, setShowAvaturn]             = useState(false);
+  const [showGallery, setShowGallery]             = useState(false);
+  const [showCharacterStudio, setShowCharacterStudio] = useState(false);
   const [savedAvatars, setSavedAvatars] = useState([]);
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(false);
   const [avatarListError, setAvatarListError] = useState('');
@@ -86,10 +90,16 @@ export default function LeftPanel({
   // ── Avatar handlers ────────────────────────────────────────
   const handleLoad = () => { if (urlInput.trim()) setAvatarUrl(urlInput.trim()); };
 
+  const closeAllAvatarPanels = () => {
+    setShowAvaturn(false);
+    setShowGallery(false);
+    setShowCharacterStudio(false);
+  };
+
   const handleAvaturnExport = (url) => {
     setUrlInput(url);
     setAvatarUrl(url);
-    setShowAvaturn(false);
+    closeAllAvatarPanels();
   };
 
   const handleLoadSavedAvatars = async () => {
@@ -216,14 +226,34 @@ export default function LeftPanel({
         {/* ══ AVATAR TAB ══════════════════════════════════════ */}
         {activeTab === 'avatar' && (
           <>
+            {/* Primary creator — Avaturn */}
             <button
               data-tour="avatar-upload"
-              onClick={() => setShowAvaturn((v) => !v)}
+              onClick={() => { closeAllAvatarPanels(); setShowAvaturn((v) => !v); }}
               className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
             >
               {t('openAvaturn')}
             </button>
 
+            {/* Secondary creators row */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { closeAllAvatarPanels(); setShowCharacterStudio((v) => !v); }}
+                className="flex-1 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium transition-colors"
+                title="CharacterStudio — editor VRM open-source"
+              >
+                🎨 CharacterStudio
+              </button>
+              <button
+                onClick={() => { closeAllAvatarPanels(); setShowGallery((v) => !v); }}
+                className="flex-1 py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors"
+                title="Galeria de avatares gratuitos (CC0)"
+              >
+                🖼 Galeria CC0
+              </button>
+            </div>
+
+            {/* File upload + my avatars row */}
             <div className="flex gap-2">
               <button
                 onClick={handleLoadSavedAvatars}
@@ -259,7 +289,20 @@ export default function LeftPanel({
             )}
             {avatarListError && <p className="text-xs text-red-400">{avatarListError}</p>}
 
+            {/* Embeds — only one shown at a time */}
             {showAvaturn && <AvaturnEmbed onExport={handleAvaturnExport} onClose={() => setShowAvaturn(false)} />}
+            {showCharacterStudio && (
+              <CharacterStudioEmbed
+                onExport={(url) => { setUrlInput(url); setAvatarUrl(url); closeAllAvatarPanels(); }}
+                onClose={() => setShowCharacterStudio(false)}
+              />
+            )}
+            {showGallery && (
+              <AvatarGallery
+                onSelect={(url) => { setUrlInput(url); setAvatarUrl(url); setShowGallery(false); }}
+                onClose={() => setShowGallery(false)}
+              />
+            )}
 
             <div className="flex gap-2">
               <input type="text" value={urlInput}

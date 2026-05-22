@@ -73,8 +73,10 @@ export class AnimationController {
       
       // Simple heuristic based on common Mixamo/VRM names
       if (lower.includes('hips') || lower.includes('pelvis')) standardName = 'hips';
-      else if (lower.includes('spine2') || lower.includes('chest')) standardName = 'chest';
-      else if (lower.includes('spine1') || lower.includes('spine')) standardName = 'spine';
+      // Check more-specific spine names first: spine2 = upperChest, spine1 = chest, spine = spine
+      else if (lower.includes('spine2')) standardName = 'upperChest';
+      else if (lower.includes('spine1') || lower.includes('chest')) standardName = 'chest';
+      else if (lower.includes('spine')) standardName = 'spine';
       else if (lower.includes('neck')) standardName = 'neck';
       else if (lower.includes('head')) standardName = 'head';
       else if (lower.includes('leftshoulder')) standardName = 'leftShoulder';
@@ -349,9 +351,9 @@ export class AnimationController {
       0.24 + organic(0.85, 0.060, 0.035, 0.015, 0.3)
     );
     applyOffset(bones.leftForeArm,
-      -0.30 + organic(1.4, 0.050, 0.030, 0.010, 0.6),
+      -0.22 + organic(1.4, 0.040, 0.025, 0.008, 0.6),
       organic(0.7, 0.015, 0.010, 0.005, 0.2),
-      -0.06
+      -0.05
     );
 
     // Right arm — slightly different rhythm (offset phase)
@@ -361,9 +363,9 @@ export class AnimationController {
       -0.24 + organic(0.85, 0.060, 0.035, 0.015, 1.7)
     );
     applyOffset(bones.rightForeArm,
-      -0.28 + organic(1.4, 0.050, 0.030, 0.010, 2.0),
+      -0.20 + organic(1.4, 0.040, 0.025, 0.008, 2.0),
       organic(0.7, 0.015, 0.010, 0.005, 1.8),
-      0.06
+      0.05
     );
 
     // Wrist micro-rotation (expressiveness detail)
@@ -395,7 +397,16 @@ export class AnimationController {
     const resolve = (standardName, patterns) =>
       this._boneMapper?.get(standardName) ?? findBone(patterns);
 
-    const capture = (bone) => (bone ? { bone, baseQuat: bone.quaternion.clone() } : null);
+    const capture = (bone) => {
+      if (!bone) return null;
+      // Prefer the rest-pose local quaternion captured by ensureRestPoseSnapshot so
+      // procedural gestures always start from the bind pose regardless of which
+      // animation frame happened to be active when speaker mode first ran.
+      const baseQuat = bone.userData.__restQuat
+        ? bone.userData.__restQuat.clone()
+        : bone.quaternion.clone();
+      return { bone, baseQuat };
+    };
 
     const bones = {
       head:          capture(resolve('head',          [/\bhead\b/, /mixamorighead/])),

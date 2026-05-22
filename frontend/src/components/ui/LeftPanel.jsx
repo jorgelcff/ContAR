@@ -236,22 +236,35 @@ export default function LeftPanel({
             </button>
 
             {/* Secondary creators row */}
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => { closeAllAvatarPanels(); setShowCharacterStudio((v) => !v); }}
-                className="flex-1 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium transition-colors"
+                className="py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium transition-colors"
                 title="CharacterStudio — editor VRM open-source"
               >
-                🎨 CharacterStudio
+                🎨 Studio
               </button>
               <button
                 onClick={() => { closeAllAvatarPanels(); setShowGallery((v) => !v); }}
-                className="flex-1 py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors"
+                className="py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors"
                 title="Galeria de avatares gratuitos (CC0)"
               >
-                🖼 Galeria CC0
+                🖼 Galeria
               </button>
+              <a
+                href="https://hub.vroid.com/en/models"
+                target="_blank"
+                rel="noreferrer"
+                title="VRoid Hub — avatares anime VRM gratuitos"
+                className="py-2 rounded-xl bg-pink-700 hover:bg-pink-600 text-white text-xs font-medium transition-colors flex items-center justify-center"
+              >
+                🌸 VRoid
+              </a>
             </div>
+            {/* VRoid instructions shown when user returns */}
+            <p className="text-[10px] text-gray-500 -mt-2 text-center">
+              VRoid: baixe o .vrm no hub → carregue com "GLB / VRM"
+            </p>
 
             {/* File upload + my avatars row */}
             <div className="flex gap-2">
@@ -324,17 +337,26 @@ export default function LeftPanel({
               </div>
               <select value={posePreset} onChange={(e) => setPosePreset(e.target.value)}
                 className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-blue-500">
-                <option value="idle">{t('poseIdle')}</option>
-                <option value="walk">{t('poseWalk')}</option>
-                <option value="run">{t('poseRun')}</option>
-                <option value="dance">{t('poseDance')}</option>
-                <option value="speaker">{t('poseSpeaker')}</option>
-                <option value="neutral">{t('poseNeutral')}</option>
-                <option value="wave">{t('poseWave')}</option>
-                <option value="hands_on_hips">{t('poseHandsOnHips')}</option>
-                <option value="salute">{t('poseSalute')}</option>
-                <option value="arms_crossed">{t('poseArmsCrossed')}</option>
-                <option value="t_pose">{t('poseTPose')}</option>
+                <optgroup label="Animadas">
+                  <option value="idle">{t('poseIdle')}</option>
+                  <option value="walk">{t('poseWalk')}</option>
+                  <option value="run">{t('poseRun')}</option>
+                  <option value="dance">{t('poseDance')}</option>
+                  <option value="speaker">{t('poseSpeaker')}</option>
+                </optgroup>
+                <optgroup label="Estáticas">
+                  <option value="neutral">{t('poseNeutral')}</option>
+                  <option value="wave">{t('poseWave')}</option>
+                  <option value="hands_on_hips">{t('poseHandsOnHips')}</option>
+                  <option value="salute">{t('poseSalute')}</option>
+                  <option value="arms_crossed">{t('poseArmsCrossed')}</option>
+                  <option value="think">{t('poseThink')}</option>
+                  <option value="point">{t('posePoint')}</option>
+                  <option value="bow">{t('poseBow')}</option>
+                  <option value="pray">{t('posePray')}</option>
+                  <option value="shrug">{t('poseShrug')}</option>
+                  <option value="t_pose">{t('poseTPose')}</option>
+                </optgroup>
               </select>
             </div>
 

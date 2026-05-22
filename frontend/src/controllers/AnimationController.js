@@ -71,27 +71,42 @@ export class AnimationController {
       let standardName = null;
       const lower = oldBoneName.toLowerCase();
       
-      // Simple heuristic based on common Mixamo/VRM names
-      if (lower.includes('hips') || lower.includes('pelvis')) standardName = 'hips';
+      // VRM standard: J_Bip_C_Hips, J_Bip_L_UpperArm, J_Bip_R_LowerLeg, etc.
+      const VRM_MAP = {
+        'j_bip_c_hips': 'hips',       'j_bip_c_spine': 'spine',
+        'j_bip_c_chest': 'chest',      'j_bip_c_upperchest': 'chest',
+        'j_bip_c_neck': 'neck',        'j_bip_c_head': 'head',
+        'j_bip_l_shoulder': 'leftShoulder',  'j_bip_r_shoulder': 'rightShoulder',
+        'j_bip_l_upperarm': 'leftUpperArm',  'j_bip_r_upperarm': 'rightUpperArm',
+        'j_bip_l_lowerarm': 'leftLowerArm',  'j_bip_r_lowerarm': 'rightLowerArm',
+        'j_bip_l_hand': 'leftHand',          'j_bip_r_hand': 'rightHand',
+        'j_bip_l_upperleg': 'leftUpperLeg',  'j_bip_r_upperleg': 'rightUpperLeg',
+        'j_bip_l_lowerleg': 'leftLowerLeg',  'j_bip_r_lowerleg': 'rightLowerLeg',
+        'j_bip_l_foot': 'leftFoot',          'j_bip_r_foot': 'rightFoot',
+        'j_bip_l_toebase': 'leftToes',       'j_bip_r_toebase': 'rightToes',
+      };
+      if (VRM_MAP[lower]) {
+        standardName = VRM_MAP[lower];
+      } else if (lower.includes('hips') || lower.includes('pelvis')) standardName = 'hips';
       else if (lower.includes('spine2') || lower.includes('chest')) standardName = 'chest';
       else if (lower.includes('spine1') || lower.includes('spine')) standardName = 'spine';
       else if (lower.includes('neck')) standardName = 'neck';
       else if (lower.includes('head')) standardName = 'head';
-      else if (lower.includes('leftshoulder')) standardName = 'leftShoulder';
-      else if (lower.includes('leftarm') || lower.includes('left_arm')) standardName = 'leftUpperArm';
-      else if (lower.includes('leftforearm') || lower.includes('left_forearm')) standardName = 'leftLowerArm';
-      else if (lower.includes('lefthand') || lower.includes('left_hand')) standardName = 'leftHand';
-      else if (lower.includes('rightshoulder')) standardName = 'rightShoulder';
-      else if (lower.includes('rightarm') || lower.includes('right_arm')) standardName = 'rightUpperArm';
-      else if (lower.includes('rightforearm') || lower.includes('right_forearm')) standardName = 'rightLowerArm';
-      else if (lower.includes('righthand') || lower.includes('right_hand')) standardName = 'rightHand';
-      else if (lower.includes('leftupleg') || lower.includes('leftthigh') || lower.includes('left_leg')) standardName = 'leftUpperLeg';
-      else if (lower.includes('leftleg') || lower.includes('leftcalf') || lower.includes('left_knee')) standardName = 'leftLowerLeg';
-      else if (lower.includes('leftfoot') || lower.includes('left_foot')) standardName = 'leftFoot';
+      else if (lower.includes('leftshoulder') || lower.includes('l_shoulder')) standardName = 'leftShoulder';
+      else if (lower.includes('leftarm') || lower.includes('left_arm') || lower.includes('l_upperarm')) standardName = 'leftUpperArm';
+      else if (lower.includes('leftforearm') || lower.includes('left_forearm') || lower.includes('l_lowerarm')) standardName = 'leftLowerArm';
+      else if (lower.includes('lefthand') || lower.includes('left_hand') || lower.includes('l_hand')) standardName = 'leftHand';
+      else if (lower.includes('rightshoulder') || lower.includes('r_shoulder')) standardName = 'rightShoulder';
+      else if (lower.includes('rightarm') || lower.includes('right_arm') || lower.includes('r_upperarm')) standardName = 'rightUpperArm';
+      else if (lower.includes('rightforearm') || lower.includes('right_forearm') || lower.includes('r_lowerarm')) standardName = 'rightLowerArm';
+      else if (lower.includes('righthand') || lower.includes('right_hand') || lower.includes('r_hand')) standardName = 'rightHand';
+      else if (lower.includes('leftupleg') || lower.includes('leftthigh') || lower.includes('l_upperleg')) standardName = 'leftUpperLeg';
+      else if (lower.includes('leftleg') || lower.includes('leftcalf') || lower.includes('l_lowerleg')) standardName = 'leftLowerLeg';
+      else if (lower.includes('leftfoot') || lower.includes('l_foot')) standardName = 'leftFoot';
       else if (lower.includes('lefttoebase') || lower.includes('lefttoe')) standardName = 'leftToes';
-      else if (lower.includes('rightupleg') || lower.includes('rightthigh') || lower.includes('right_leg')) standardName = 'rightUpperLeg';
-      else if (lower.includes('rightleg') || lower.includes('rightcalf') || lower.includes('right_knee')) standardName = 'rightLowerLeg';
-      else if (lower.includes('rightfoot') || lower.includes('right_foot')) standardName = 'rightFoot';
+      else if (lower.includes('rightupleg') || lower.includes('rightthigh') || lower.includes('r_upperleg')) standardName = 'rightUpperLeg';
+      else if (lower.includes('rightleg') || lower.includes('rightcalf') || lower.includes('r_lowerleg')) standardName = 'rightLowerLeg';
+      else if (lower.includes('rightfoot') || lower.includes('r_foot')) standardName = 'rightFoot';
       else if (lower.includes('righttoebase') || lower.includes('righttoe')) standardName = 'rightToes';
 
       if (standardName) {

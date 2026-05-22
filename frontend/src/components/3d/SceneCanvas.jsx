@@ -111,7 +111,7 @@ function normalizeAvatarUrl(url) {
  * Props:
  *   avatarUrl   – GLB model URL to load (changes trigger a reload)
  *   transform   – { positionX, positionY, positionZ, rotationY (deg), scale }
- *   posePreset  – idle | walk | run | dance | speaker | neutral | wave | hands_on_hips | salute | arms_crossed | t_pose
+ *   posePreset  – idle | walk | run | dance | speaker | neutral | wave | hands_on_hips | salute | arms_crossed | t_pose | think | point | bow | pray | shrug
  *   speechText  – text to display in the speech bubble above the avatar's head
  *   analyserRef – ref to a Web Audio API AnalyserNode used for real-time lip sync
  */
@@ -1444,6 +1444,16 @@ function applyPosePreset(
     applyArmsCrossedPose(model, boneMapper);
   } else if (normalized === "t_pose") {
     applyTPose(model, boneMapper);
+  } else if (normalized === "think") {
+    applyThinkPose(model, boneMapper);
+  } else if (normalized === "point") {
+    applyPointPose(model, boneMapper);
+  } else if (normalized === "bow") {
+    applyBowPose(model, boneMapper);
+  } else if (normalized === "pray") {
+    applyPrayPose(model, boneMapper);
+  } else if (normalized === "shrug") {
+    applyShrugPose(model, boneMapper);
   }
 
   model.updateMatrixWorld(true);
@@ -1467,7 +1477,7 @@ function pickAnimationClip(preset, idleClip, avatarClips = []) {
   });
   if (fromAvatar) return fromAvatar;
 
-  if ((preset === "idle" || preset === "speaker") && idleClip) return idleClip;
+  if (idleClip) return idleClip;
   return null;
 }
 
@@ -1602,4 +1612,78 @@ function applyTPose(model, boneMapper = null) {
   const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   rotateBoneDeg(leftUpperArm, 0, 0, 90);
   rotateBoneDeg(rightUpperArm, 0, 0, -90);
+}
+
+function applyThinkPose(model, boneMapper = null) {
+  const neck          = getBone(model, boneMapper, 'neck',          [/neck/, /mixamorigneck/]);
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
+  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+
+  rotateBoneDeg(neck, 0, 8, 6);
+  rotateBoneDeg(rightUpperArm, -30, 0, -28);
+  rotateBoneDeg(rightForeArm, -65, 0, 12);
+  rotateBoneDeg(rightHand, 5, 0, 8);
+  rotateBoneDeg(leftUpperArm, -12, 0, 22);
+  rotateBoneDeg(leftForeArm, -55, 0, -8);
+}
+
+function applyPointPose(model, boneMapper = null) {
+  const spine         = getBone(model, boneMapper, 'spine',         [/spine(?:0?1)?/, /chest/, /mixamorigspine/]);
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
+  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+
+  rotateBoneDeg(spine, -5, 12, 0);
+  rotateBoneDeg(rightUpperArm, -35, 0, -45);
+  rotateBoneDeg(rightForeArm, -55, 0, 18);
+  rotateBoneDeg(rightHand, -10, 0, 0);
+  rotateBoneDeg(leftUpperArm, -8, 0, 22);
+  rotateBoneDeg(leftForeArm, -25, 0, -8);
+}
+
+function applyBowPose(model, boneMapper = null) {
+  const hips  = getBone(model, boneMapper, 'hips',  [/hips?/, /pelvis/, /mixamorigHips/i]);
+  const spine = getBone(model, boneMapper, 'spine',  [/spine(?:0?1)?/, /mixamorigspine/]);
+  const chest = getBone(model, boneMapper, 'chest',  [/chest/, /spine_?2/, /mixamorigspine1/]);
+  const neck  = getBone(model, boneMapper, 'neck',   [/neck/, /mixamorigneck/]);
+
+  rotateBoneDeg(hips, 25, 0, 0);
+  rotateBoneDeg(spine, 20, 0, 0);
+  rotateBoneDeg(chest, 15, 0, 0);
+  rotateBoneDeg(neck, -15, 0, 0);
+}
+
+function applyPrayPose(model, boneMapper = null) {
+  const spine         = getBone(model, boneMapper, 'spine',         [/spine(?:0?1)?/, /chest/, /mixamorigspine/]);
+  const neck          = getBone(model, boneMapper, 'neck',          [/neck/, /mixamorigneck/]);
+  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+
+  rotateBoneDeg(spine, -8, 0, 0);
+  rotateBoneDeg(neck, 10, 0, 0);
+  rotateBoneDeg(leftUpperArm, -55, 0, -12);
+  rotateBoneDeg(rightUpperArm, -55, 0, 12);
+  rotateBoneDeg(leftForeArm, -60, 0, 18);
+  rotateBoneDeg(rightForeArm, -60, 0, -18);
+}
+
+function applyShrugPose(model, boneMapper = null) {
+  const neck          = getBone(model, boneMapper, 'neck',          [/neck/, /mixamorigneck/]);
+  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
+  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
+  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
+  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+
+  rotateBoneDeg(neck, 5, 0, 0);
+  rotateBoneDeg(leftUpperArm, -20, 0, 62);
+  rotateBoneDeg(rightUpperArm, -20, 0, -62);
+  rotateBoneDeg(leftForeArm, -40, 0, -22);
+  rotateBoneDeg(rightForeArm, -40, 0, 22);
 }

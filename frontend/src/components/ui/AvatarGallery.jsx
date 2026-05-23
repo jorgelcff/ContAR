@@ -14,7 +14,7 @@ function resolveAvatarFields(item) {
   return { thumbnail, modelUrl, name };
 }
 
-export default function AvatarGallery({ onSelect, onClose }) {
+export default function AvatarGallery({ onSelect, onClose, fullHeight = false }) {
   const [avatars, setAvatars]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
@@ -77,15 +77,17 @@ export default function AvatarGallery({ onSelect, onClose }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold text-gray-200">Galeria de avatares</p>
-          <p className="text-[10px] text-gray-500">Open Source Avatars · licença CC0</p>
+    <div className={`flex flex-col gap-3 ${fullHeight ? 'h-full p-4 overflow-y-auto' : ''}`}>
+      {/* Header — hidden in fullHeight mode */}
+      {!fullHeight && (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-200">Galeria de avatares</p>
+            <p className="text-[10px] text-gray-500">Open Source Avatars · licença CC0</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
         </div>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
-      </div>
+      )}
 
       {/* Collection selector */}
       {collections.length > 1 && (
@@ -120,7 +122,7 @@ export default function AvatarGallery({ onSelect, onClose }) {
       )}
 
       {!loading && avatars.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">
+        <div className={`grid gap-2 pr-1 ${fullHeight ? 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6' : 'grid-cols-3 max-h-72 overflow-y-auto'}`}>
           {avatars.map((avatar, i) => (
             <button
               key={i}

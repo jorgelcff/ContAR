@@ -162,11 +162,12 @@ export class BoneMapper {
     const h = vrm.humanoid;
 
     for (const name of STANDARD_BONES) {
-      // getNormalizedBoneNode gives the T-pose-normalised node (preferred),
-      // getRawBoneNode falls back to the raw skeleton node.
-      const node =
-        (h.getNormalizedBoneNode?.(name)) ??
-        (h.getRawBoneNode?.(name));
+      // Use raw bone nodes — they are the actual Three.js Bone objects in the
+      // scene graph and respond correctly to quaternion manipulation from
+      // applyPosePreset / rotateBoneDeg. Normalized nodes are VRM-internal
+      // virtual objects not reached by model.traverse(), so rest-pose snapshots
+      // (ensureRestPoseSnapshot) would never capture them.
+      const node = (h.getRawBoneNode?.(name)) ?? (h.getNormalizedBoneNode?.(name));
       if (node) this._bones[name] = node;
     }
   }
@@ -180,9 +181,16 @@ export class BoneMapper {
     const hasMixamo = names.some((n) => n.startsWith('mixamorig'));
     const hasCC3    = names.some((n) => n.startsWith('cc_base'));
 
-    if (hasMixamo)      this._fromMixamo(bones);
-    else if (hasCC3)    this._fromCC3(bones);
-    else                this._fromGeneric(bones);
+    // Avaturn and some other exporters use standard Mixamo bone names without
+    // the "mixamorig" prefix (e.g. "Hips", "LeftArm", "LeftForeArm").
+    // Detect this by checking for a characteristic subset of those names.
+    const AVATURN_SIGNATURES = ['hips', 'leftarm', 'rightarm', 'leftforearm', 'rightforearm'];
+    const hasAvaturnStyle = !hasMixamo && !hasCC3 &&
+      AVATURN_SIGNATURES.every((sig) => names.some((n) => n === sig));
+
+    if (hasMixamo || hasAvaturnStyle) this._fromMixamo(bones);
+    else if (hasCC3)                  this._fromCC3(bones);
+    else                              this._fromGeneric(bones);
   }
 
   _fromMixamo(bones) {

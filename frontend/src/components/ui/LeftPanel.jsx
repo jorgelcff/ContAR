@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import AvaturnEmbed from './AvaturnEmbed';
 import AvatarGallery from './AvatarGallery';
 import CharacterStudioEmbed from './CharacterStudioEmbed';
+import AvatarCreatorModal from './AvatarCreatorModal';
 import TransformControls from './TransformControls';
 import AudioPanel from './AudioPanel';
 import SceneProgressBar from './SceneProgressBar';
@@ -50,6 +51,9 @@ export default function LeftPanel({
     currentSceneId,
     currentStoryId: linkedStoryId,
     publishedStoryId,
+    animSpeed, setAnimSpeed,
+    animLoopOnce, setAnimLoopOnce,
+    vrmExpression, setVrmExpression,
   } = useSceneStore();
 
   const [activeTab, setActiveTab] = useState('avatar');
@@ -63,8 +67,8 @@ export default function LeftPanel({
   // Avatar tab state
   const [urlInput, setUrlInput] = useState(avatarUrl);
   const [showAvaturn, setShowAvaturn]             = useState(false);
-  const [showGallery, setShowGallery]             = useState(false);
-  const [showCharacterStudio, setShowCharacterStudio] = useState(false);
+  // null | 'avaturn' | 'characterstudio' | 'gallery'
+  const [modalCreator, setModalCreator] = useState(null);
   const [savedAvatars, setSavedAvatars] = useState([]);
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(false);
   const [avatarListError, setAvatarListError] = useState('');
@@ -100,8 +104,7 @@ export default function LeftPanel({
 
   const closeAllAvatarPanels = () => {
     setShowAvaturn(false);
-    setShowGallery(false);
-    setShowCharacterStudio(false);
+    setModalCreator(null);
   };
 
   const handleAvaturnExport = (url) => {
@@ -264,14 +267,14 @@ export default function LeftPanel({
             {/* Secondary creators row */}
             <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={() => { closeAllAvatarPanels(); setShowCharacterStudio((v) => !v); }}
+                onClick={() => { closeAllAvatarPanels(); setModalCreator('characterstudio'); }}
                 className="py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium transition-colors"
                 title="CharacterStudio — editor VRM open-source"
               >
                 🎨 Studio
               </button>
               <button
-                onClick={() => { closeAllAvatarPanels(); setShowGallery((v) => !v); }}
+                onClick={() => { closeAllAvatarPanels(); setModalCreator('gallery'); }}
                 className="py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors"
                 title="Galeria de avatares gratuitos (CC0)"
               >
@@ -287,7 +290,6 @@ export default function LeftPanel({
                 🌸 VRoid
               </a>
             </div>
-            {/* VRoid instructions shown when user returns */}
             <p className="text-[10px] text-gray-500 -mt-2 text-center">
               VRoid: baixe o .vrm no hub → carregue com "GLB / VRM"
             </p>
@@ -328,18 +330,15 @@ export default function LeftPanel({
             )}
             {avatarListError && <p className="text-xs text-red-400">{avatarListError}</p>}
 
-            {/* Embeds — only one shown at a time */}
+            {/* Avaturn inline embed (SDK needs specific container) */}
             {showAvaturn && <AvaturnEmbed onExport={handleAvaturnExport} onClose={() => setShowAvaturn(false)} />}
-            {showCharacterStudio && (
-              <CharacterStudioEmbed
-                onExport={(url) => { setUrlInput(url); setAvatarUrl(url); closeAllAvatarPanels(); }}
-                onClose={() => setShowCharacterStudio(false)}
-              />
-            )}
-            {showGallery && (
-              <AvatarGallery
-                onSelect={(url) => { setUrlInput(url); setAvatarUrl(url); setShowGallery(false); }}
-                onClose={() => setShowGallery(false)}
+
+            {/* Full-screen modal for CharacterStudio and Gallery */}
+            {modalCreator && (
+              <AvatarCreatorModal
+                creator={modalCreator}
+                onExport={(url) => { setUrlInput(url); setAvatarUrl(url); }}
+                onClose={() => setModalCreator(null)}
               />
             )}
 
@@ -429,6 +428,61 @@ export default function LeftPanel({
                   <option value="t_pose">{t('poseTPose')}</option>
                 </optgroup>
               </select>
+            </div>
+
+            {/* Animation speed + loop */}
+            {['idle','walk','run','dance','speaker'].includes(posePreset) && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Animação</p>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-gray-400 w-16 shrink-0">Velocidade</label>
+                  <input
+                    type="range"
+                    min="0.1" max="3" step="0.05"
+                    value={animSpeed ?? 1}
+                    onChange={(e) => setAnimSpeed(parseFloat(e.target.value))}
+                    className="flex-1 accent-cyan-400"
+                  />
+                  <span className="text-xs text-cyan-300 w-10 text-right">{(animSpeed ?? 1).toFixed(2)}×</span>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={animLoopOnce ?? false}
+                    onChange={(e) => setAnimLoopOnce(e.target.checked)}
+                    className="accent-cyan-400"
+                  />
+                  <span className="text-xs text-gray-300">Tocar uma vez (sem loop)</span>
+                </label>
+              </div>
+            )}
+
+            {/* VRM Expressions */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Expressão (VRM)</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { value: '',          label: '😐 Neutro' },
+                  { value: 'happy',     label: '😄 Feliz' },
+                  { value: 'sad',       label: '😢 Triste' },
+                  { value: 'angry',     label: '😠 Raiva' },
+                  { value: 'surprised', label: '😮 Surpreso' },
+                  { value: 'relaxed',   label: '😌 Relaxado' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setVrmExpression(value)}
+                    className={`py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      (vrmExpression ?? '') === value
+                        ? 'bg-cyan-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-500">Só funciona com modelos VRM (VRoid, CharacterStudio).</p>
             </div>
 
             {/* Advanced controls toggle */}

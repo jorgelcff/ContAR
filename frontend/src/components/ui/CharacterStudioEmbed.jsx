@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const STUDIO_URL = 'https://studio.m3org.com/';
 
-export default function CharacterStudioEmbed({ onExport, onClose }) {
+export default function CharacterStudioEmbed({ onExport, onClose, fullHeight = false }) {
   const iframeRef  = useRef(null);
   const fileRef    = useRef(null);
   const [exported, setExported] = useState(false);
@@ -41,18 +41,20 @@ export default function CharacterStudioEmbed({ onExport, onClose }) {
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold text-gray-200">CharacterStudio</p>
-          <p className="text-[10px] text-gray-500">M3-org · open-source · VRM/GLB</p>
+    <div className={`flex flex-col gap-2 ${fullHeight ? 'h-full p-3' : ''}`}>
+      {/* Header — hidden in fullHeight mode (modal already has a header) */}
+      {!fullHeight && (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-200">CharacterStudio</p>
+            <p className="text-[10px] text-gray-500">M3-org · open-source · VRM/GLB</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
         </div>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
-      </div>
+      )}
 
       {/* Tab toggle */}
-      <div className="flex gap-1 rounded-xl bg-gray-800 p-1">
+      <div className="flex gap-1 rounded-xl bg-gray-800 p-1 shrink-0">
         {[
           { id: 'studio', label: '🎨 Editor' },
           { id: 'upload', label: '📁 Importar arquivo' },
@@ -70,43 +72,46 @@ export default function CharacterStudioEmbed({ onExport, onClose }) {
       </div>
 
       {tab === 'studio' && (
-        <>
-          {/* iframe */}
-          <div className="rounded-xl overflow-hidden border border-white/10 bg-black" style={{ height: 420 }}>
+        <div className={`flex flex-col gap-2 ${fullHeight ? 'flex-1 min-h-0' : ''}`}>
+          {/* iframe — fills remaining height in fullHeight mode */}
+          <div
+            className="rounded-xl overflow-hidden border border-white/10 bg-black"
+            style={fullHeight ? { flex: 1, minHeight: 0 } : { height: 420 }}
+          >
             <iframe
               ref={iframeRef}
               src={STUDIO_URL}
               title="CharacterStudio"
               className="w-full h-full border-0"
-              allow="camera; microphone"
+              allow="camera; microphone; fullscreen"
             />
           </div>
 
           {exported ? (
-            <p className="text-xs text-emerald-400 text-center">
+            <p className="text-xs text-emerald-400 text-center shrink-0">
               ✓ Avatar exportado e carregado no editor!
             </p>
           ) : (
-            <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-200">
+            <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-200 shrink-0">
               <p className="font-semibold mb-1">Como exportar:</p>
               <ol className="space-y-0.5 text-amber-200/80">
                 <li>1. Personalize seu avatar no editor acima</li>
-                <li>2. Clique em <strong>Export</strong> ou <strong>Save</strong> no CharacterStudio</li>
+                <li>2. Clique em <strong>Export</strong> no CharacterStudio</li>
                 <li>3. Se o arquivo baixar, use a aba <strong>"Importar arquivo"</strong> ao lado</li>
               </ol>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {tab === 'upload' && (
         <div className="flex flex-col gap-3 py-2">
           <p className="text-xs text-gray-400">
-            Exporte seu avatar do CharacterStudio (botão Export) e carregue o arquivo VRM ou GLB aqui:
+            Exporte seu avatar do CharacterStudio e carregue o arquivo VRM ou GLB aqui:
           </p>
           <button
             onClick={() => fileRef.current?.click()}
-            className="w-full py-3 rounded-xl border-2 border-dashed border-gray-600 hover:border-cyan-500 text-gray-400 hover:text-cyan-300 text-sm transition-colors"
+            className="w-full py-6 rounded-xl border-2 border-dashed border-gray-600 hover:border-cyan-500 text-gray-400 hover:text-cyan-300 text-sm transition-colors"
           >
             📂 Clique para selecionar VRM / GLB
           </button>

@@ -126,6 +126,9 @@ export default function SceneCanvas({
   visemeTimeline,
   audioCurrentTime,
   vrmaUrl,
+  animSpeed,
+  animLoopOnce,
+  vrmExpression,
 }) {
   // Enable Three.js resource cache so reloading the same GLB/HDR skips a round-trip.
   THREE.Cache.enabled = true;
@@ -146,11 +149,14 @@ export default function SceneCanvas({
   const loaderRef = useRef(null);
   const vrmaLoaderRef = useRef(null);
   const vrmRef = useRef(null);
+  // Clips loaded from /animations/manifest.json, keyed by preset name
+  const externalClipsRef = useRef({});
   const vrmaUrlRef = useRef(vrmaUrl || null);
   const boneMapperRef = useRef(null);
   const baseBoneMapperRef = useRef(null);
   const skeletonHelperRef = useRef(null);
   const activeAvatarLoadIdRef = useRef(0);
+  const extraClipsRef = useRef([]);
   const isVisibleRef = useRef(true);
   const mouthMarkerRef = useRef(null);
   const mouthMarkerInfoRef = useRef({ source: "none", name: "" });
@@ -292,6 +298,7 @@ export default function SceneCanvas({
       avatarClipsRef.current,
       posePresetRef.current,
       effective,
+      externalClipsRef.current,
     );
   }, [boneOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -395,13 +402,12 @@ export default function SceneCanvas({
     loaderRef.current = createAvatarLoader(dracoLoader);
     vrmaLoaderRef.current = createVRMALoader();
 
-    // Pre-load idle animation clip
+    // Pre-load legacy idle clip (kept for backwards compatibility)
     gltfLoader.load(
       "/animation.glb",
       (gltf) => {
         if (gltf.animations?.length) {
           idleClipRef.current = gltf.animations[0];
-          // Apply to already-loaded avatar if it arrived first
           if (avatarRef.current && animControllerRef.current) {
             animControllerRef.current.addClips([idleClipRef.current]);
             applyPosePreset(
@@ -411,6 +417,7 @@ export default function SceneCanvas({
               avatarClipsRef.current,
               posePresetRef.current,
               boneMapperRef.current,
+              externalClipsRef.current,
             );
           }
         }
@@ -418,6 +425,80 @@ export default function SceneCanvas({
       undefined,
       () => {},
     );
+
+    // Load animation clips from /animations/manifest.json
+    fetch('/animations/manifest.json')
+      .then((r) => r.json())
+      .then((manifest) => {
+        const list = Array.isArray(manifest.animations) ? manifest.animations : [];
+        list.forEach((anim) => {
+          if (!anim.file) return;
+          gltfLoader.load(
+            `/animations/${anim.file}`,
+            (gltf) => {
+              const clip = gltf.animations?.[0];
+              if (!clip) return;
+              const preset = anim.preset || anim.name || '';
+              clip.name = preset;
+              // Register by explicit preset first
+              if (preset && !externalClipsRef.current[preset]) {
+                externalClipsRef.current[preset] = clip;
+              }
+              // Also scan tags for any matching preset keyword
+              const tags = Array.isArray(anim.tags) ? anim.tags : [];
+              const PRESETS = ['idle', 'walk', 'run', 'dance', 'speaker'];
+              for (const p of PRESETS) {
+                if (!externalClipsRef.current[p] && tags.some((t) => String(t).toLowerCase().includes(p))) {
+                  externalClipsRef.current[p] = clip;
+                }
+              }
+              // Add to controller and reapply pose if avatar is already loaded
+              if (avatarRef.current && animControllerRef.current) {
+                animControllerRef.current.addClips([clip]);
+                applyPosePreset(
+                  avatarRef.current,
+                  animControllerRef.current,
+                  idleClipRef.current,
+                  avatarClipsRef.current,
+                  posePresetRef.current,
+                  boneMapperRef.current,
+                  externalClipsRef.current,
+                );
+              }
+            },
+            undefined,
+            () => {}, // silently skip missing files (not all presets have a file yet)
+          );
+        });
+      })
+      .catch(() => {}); // manifest is optional
+
+    // Pre-load extra animations from manifest (walk, run, dance, etc.)
+    fetch('/animations/manifest.json')
+      .then((r) => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then((manifest) => {
+        if (!Array.isArray(manifest?.animations)) return;
+        manifest.animations.forEach(({ name, file }) => {
+          if (!name || !file) return;
+          gltfLoader.load(
+            `/animations/${file}`,
+            (gltf) => {
+              const clips = gltf.animations || [];
+              if (!clips.length) return;
+              // Tag clip with declared name so pickAnimationClip can find it
+              clips.forEach((clip) => { if (!clip.name || clip.name === 'Armature') clip.name = name; });
+              extraClipsRef.current = [...extraClipsRef.current, ...clips];
+              if (animControllerRef.current) {
+                animControllerRef.current.addClips(clips);
+              }
+              avatarClipsRef.current = [...avatarClipsRef.current, ...clips];
+            },
+            undefined,
+            () => {}, // silently skip missing files
+          );
+        });
+      });
 
     // Render loop
     const animate = () => {
@@ -883,9 +964,18 @@ export default function SceneCanvas({
         if (!idleClipRef.current && gltf.animations?.length) {
           idleClipRef.current = gltf.animations[0];
         }
+        // Merge extra pre-loaded clips (walk, run, dance) into avatarClipsRef
+        const mergedClips = [
+          ...avatarClipsRef.current,
+          ...extraClipsRef.current.filter(
+            (ec) => !avatarClipsRef.current.some((ac) => ac.name === ec.name),
+          ),
+        ];
+        avatarClipsRef.current = mergedClips;
+
         const animController = new AnimationController(
           model,
-          avatarClipsRef.current,
+          mergedClips,
           boneMapper,
         );
         if (idleClipRef.current) {
@@ -903,6 +993,7 @@ export default function SceneCanvas({
           avatarClipsRef.current,
           posePreset,
           boneMapper,
+          externalClipsRef.current,
         );
 
         // Apply any .vrma animation that was set before this avatar finished loading
@@ -948,8 +1039,33 @@ export default function SceneCanvas({
       avatarClipsRef.current,
       posePreset,
       boneMapperRef.current,
+      externalClipsRef.current,
     );
   }, [posePreset]);
+
+  // ── Animation speed ─────────────────────────────────────────
+  useEffect(() => {
+    animControllerRef.current?.setTimeScale(animSpeed ?? 1);
+  }, [animSpeed]);
+
+  // ── Animation loop mode ──────────────────────────────────────
+  useEffect(() => {
+    animControllerRef.current?.setLoopOnce(animLoopOnce ?? false);
+  }, [animLoopOnce]);
+
+  // ── VRM expression ───────────────────────────────────────────
+  useEffect(() => {
+    const vrm = vrmRef.current;
+    if (!vrm?.expressionManager) return;
+    const mgr = vrm.expressionManager;
+    // Reset all known expressions first
+    ['happy', 'sad', 'angry', 'surprised', 'relaxed', 'neutral'].forEach((name) => {
+      try { mgr.setValue(name, 0); } catch { /* ignore unsupported */ }
+    });
+    if (vrmExpression && vrmExpression !== 'neutral') {
+      try { mgr.setValue(vrmExpression, 1); } catch { /* ignore */ }
+    }
+  }, [vrmExpression]);
 
   const handleCopyRigReport = async () => {
     const report = buildRigReport({
@@ -1455,6 +1571,7 @@ function applyPosePreset(
   avatarClips,
   posePreset,
   boneMapper = null,
+  externalClips = {},
 ) {
   const normalized = String(posePreset || "idle").toLowerCase();
 
@@ -1471,7 +1588,7 @@ function applyPosePreset(
   const animatedPresets = ["idle", "walk", "run", "dance", "speaker"];
   if (animatedPresets.includes(normalized)) {
     if (animationController) {
-      const clip = pickAnimationClip(normalized, idleClip, avatarClips);
+      const clip = pickAnimationClip(normalized, idleClip, avatarClips, externalClips);
       if (clip) {
         animationController.play(clip, 0.35);
         model.updateMatrixWorld(true);
@@ -1512,25 +1629,38 @@ function applyPosePreset(
   model.updateMatrixWorld(true);
 }
 
-function pickAnimationClip(preset, idleClip, avatarClips = []) {
+function pickAnimationClip(preset, idleClip, avatarClips = [], externalClips = {}) {
   const keywordsByPreset = {
-    idle: [/idle/, /stand/],
-    walk: [/walk/],
-    run: [/run/, /jog/],
-    dance: [/dance/],
+    idle:    [/idle/, /stand/],
+    walk:    [/walk/],
+    run:     [/run/, /jog/],
+    dance:   [/dance/],
     speaker: [/speak/, /talk/, /narrat/, /present/, /explain/, /lecture/],
   };
 
   const patterns = keywordsByPreset[preset] || [];
   const clips = Array.isArray(avatarClips) ? avatarClips : [];
 
+  // 1. Avatar's own embedded clips (highest priority — rig-matched)
   const fromAvatar = clips.find((clip) => {
     const name = String(clip?.name || "").toLowerCase();
     return patterns.some((re) => re.test(name));
   });
   if (fromAvatar) return fromAvatar;
 
-  if (idleClip) return idleClip;
+  // 2. External manifest clip for this exact preset
+  if (externalClips[preset]) return externalClips[preset];
+
+  // 3. Any external clip whose name matches the preset keywords
+  for (const [, clip] of Object.entries(externalClips)) {
+    const name = String(clip?.name || "").toLowerCase();
+    if (patterns.some((re) => re.test(name))) return clip;
+  }
+
+  // 4. Fallback: use idle (external or legacy) so we never show a T-pose
+  const fallbackIdle = externalClips.idle || idleClip;
+  if (fallbackIdle) return fallbackIdle;
+
   return null;
 }
 
@@ -1600,6 +1730,141 @@ function rotateBoneDeg(bone, x = 0, y = 0, z = 0) {
   bone.quaternion.multiply(qLocal);
 }
 
+/**
+ * applyFingerPose — rotate finger phalanges on the given hand.
+ *
+ * side:  'left' | 'right'
+ * shape: 'point'  — index extended, others curled
+ *        'spread' — all fingers extended & fanned out (wave)
+ *        'flat'   — all fingers straight together (salute)
+ *        'pray'   — all fingers straight, slightly adducted inward
+ *        'fist'   — all fingers curled (default curl)
+ *
+ * Supports VRM (J_Bip_[L/R]_Index1 …), Mixamo (LeftHandIndex1 …),
+ * and CC3/generic (CC_Base_L_Index1 …) naming conventions.
+ */
+function applyFingerPose(model, side, shape) {
+  const S = side === 'left' ? 'L' : 'R';
+  const sLong = side === 'left' ? 'Left' : 'Right';
+  const sign = side === 'left' ? 1 : -1; // abduction sign flips per side
+
+  // Finger names in order: [index, middle, ring, pinky, thumb]
+  const FINGER_DEFS = [
+    {
+      key: 'index',
+      vrm:    [`J_Bip_${S}_Index1`,   `J_Bip_${S}_Index2`,   `J_Bip_${S}_Index3`],
+      mixamo: [`${sLong}HandIndex1`,  `${sLong}HandIndex2`,  `${sLong}HandIndex3`],
+      cc3:    [`CC_Base_${S}_Index1`, `CC_Base_${S}_Index2`, `CC_Base_${S}_Index3`],
+    },
+    {
+      key: 'middle',
+      vrm:    [`J_Bip_${S}_Middle1`,   `J_Bip_${S}_Middle2`,   `J_Bip_${S}_Middle3`],
+      mixamo: [`${sLong}HandMiddle1`,  `${sLong}HandMiddle2`,  `${sLong}HandMiddle3`],
+      cc3:    [`CC_Base_${S}_Mid1`,    `CC_Base_${S}_Mid2`,    `CC_Base_${S}_Mid3`],
+    },
+    {
+      key: 'ring',
+      vrm:    [`J_Bip_${S}_Ring1`,   `J_Bip_${S}_Ring2`,   `J_Bip_${S}_Ring3`],
+      mixamo: [`${sLong}HandRing1`,  `${sLong}HandRing2`,  `${sLong}HandRing3`],
+      cc3:    [`CC_Base_${S}_Ring1`, `CC_Base_${S}_Ring2`, `CC_Base_${S}_Ring3`],
+    },
+    {
+      key: 'pinky',
+      vrm:    [`J_Bip_${S}_Little1`,   `J_Bip_${S}_Little2`,   `J_Bip_${S}_Little3`],
+      mixamo: [`${sLong}HandPinky1`,   `${sLong}HandPinky2`,   `${sLong}HandPinky3`],
+      cc3:    [`CC_Base_${S}_Pinky1`,  `CC_Base_${S}_Pinky2`,  `CC_Base_${S}_Pinky3`],
+    },
+    {
+      key: 'thumb',
+      vrm:    [`J_Bip_${S}_Thumb1`,   `J_Bip_${S}_Thumb2`,   `J_Bip_${S}_Thumb3`],
+      mixamo: [`${sLong}HandThumb1`,  `${sLong}HandThumb2`,  `${sLong}HandThumb3`],
+      cc3:    [`CC_Base_${S}_Thumb1`, `CC_Base_${S}_Thumb2`, `CC_Base_${S}_Thumb3`],
+    },
+  ];
+
+  // Build a lookup map: boneName (lowercase) → THREE.Bone
+  const boneByName = {};
+  model.traverse((node) => {
+    if (node?.isBone && node.name) {
+      boneByName[node.name.toLowerCase()] = node;
+    }
+  });
+
+  const resolvePhalanges = (def) => {
+    // Try each naming convention in order
+    const sets = [def.vrm, def.mixamo, def.cc3];
+    for (const names of sets) {
+      const bones = names.map((n) => boneByName[n.toLowerCase()] || null);
+      if (bones.some(Boolean)) return bones; // use this convention if any phalanx found
+    }
+    return [null, null, null];
+  };
+
+  // Rotation presets: [prox, mid, distal] in degrees (flexion = positive X)
+  const SHAPES = {
+    // index straight, others curled
+    point: {
+      index:  [0,   0,  0],
+      middle: [60,  60, 40],
+      ring:   [65,  65, 45],
+      pinky:  [70,  70, 50],
+      thumb:  [20,  10,  0],
+    },
+    // all fingers extended and slightly spread (abduction on prox)
+    spread: {
+      index:  [0, 0, 0],
+      middle: [0, 0, 0],
+      ring:   [0, 0, 0],
+      pinky:  [0, 0, 0],
+      thumb:  [0, 0, 0],
+      // abduction applied separately below
+      abduct: true,
+    },
+    // all straight, fingers close together
+    flat: {
+      index:  [0, 0, 0],
+      middle: [0, 0, 0],
+      ring:   [0, 0, 0],
+      pinky:  [0, 0, 0],
+      thumb:  [10, 5, 0],
+    },
+    // fingers straight, slightly pressed inward
+    pray: {
+      index:  [5,  0, 0],
+      middle: [5,  0, 0],
+      ring:   [5,  0, 0],
+      pinky:  [10, 0, 0],
+      thumb:  [15, 5, 0],
+    },
+    // full fist
+    fist: {
+      index:  [70, 70, 50],
+      middle: [70, 70, 50],
+      ring:   [70, 70, 50],
+      pinky:  [75, 75, 55],
+      thumb:  [40, 30, 20],
+    },
+  };
+
+  const preset = SHAPES[shape] || SHAPES.fist;
+
+  for (const def of FINGER_DEFS) {
+    const [prox, mid, distal] = resolvePhalanges(def);
+    const [rx1, rx2, rx3] = preset[def.key] || [0, 0, 0];
+
+    if (prox) rotateBoneDeg(prox,   rx1, 0, 0);
+    if (mid)  rotateBoneDeg(mid,    rx2, 0, 0);
+    if (distal) rotateBoneDeg(distal, rx3, 0, 0);
+
+    // For spread: abduct (fan out) the proximal phalanges
+    if (preset.abduct && prox) {
+      const ABDUCT = { index: 12, middle: 4, ring: -4, pinky: -12, thumb: 20 };
+      const abductDeg = (ABDUCT[def.key] || 0) * sign;
+      rotateBoneDeg(prox, 0, 0, abductDeg);
+    }
+  }
+}
+
 function applyWavePose(model, boneMapper = null) {
   const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
@@ -1608,6 +1873,9 @@ function applyWavePose(model, boneMapper = null) {
   rotateBoneDeg(rightUpperArm, -45, 0, -65);
   rotateBoneDeg(rightForeArm, -20, 0, -35);
   rotateBoneDeg(rightHand, 10, 0, -20);
+
+  // Spread fingers for wave
+  applyFingerPose(model, 'right', 'spread');
 }
 
 function applySpeakerPose(model, boneMapper = null) {
@@ -1646,6 +1914,9 @@ function applySalutePose(model, boneMapper = null) {
   rotateBoneDeg(rightUpperArm, -35, 0, -40);
   rotateBoneDeg(rightForeArm, -70, 0, 20);
   rotateBoneDeg(rightHand, -10, 0, 25);
+
+  // Flat hand for salute — fingers extended and together
+  applyFingerPose(model, 'right', 'flat');
 }
 
 function applyArmsCrossedPose(model, boneMapper = null) {
@@ -1697,6 +1968,9 @@ function applyPointPose(model, boneMapper = null) {
   rotateBoneDeg(rightHand, -10, 0, 0);
   rotateBoneDeg(leftUpperArm, -8, 0, 22);
   rotateBoneDeg(leftForeArm, -25, 0, -8);
+
+  // Index extended, other fingers curled
+  applyFingerPose(model, 'right', 'point');
 }
 
 function applyBowPose(model, boneMapper = null) {
@@ -1725,6 +1999,10 @@ function applyPrayPose(model, boneMapper = null) {
   rotateBoneDeg(rightUpperArm, -55, 0, 12);
   rotateBoneDeg(leftForeArm, -60, 0, 18);
   rotateBoneDeg(rightForeArm, -60, 0, -18);
+
+  // Fingers pressed together and extended upward for prayer
+  applyFingerPose(model, 'left', 'pray');
+  applyFingerPose(model, 'right', 'pray');
 }
 
 function applyShrugPose(model, boneMapper = null) {

@@ -21,10 +21,16 @@ const createAvatarSlice = (set) => ({
   avatarUrl: '',
   transform: { positionX: 0, positionY: 0, positionZ: 0, rotationY: 0, scale: 1 },
   posePreset: 'idle',
+  animSpeed: 1,
+  animLoopOnce: false,
+  vrmExpression: '',
   setAvatarUrl: (url) => set({ avatarUrl: url }),
   setTransform: (key, value) =>
     set((state) => ({ transform: { ...state.transform, [key]: value } })),
   setPosePreset: (preset) => set({ posePreset: preset }),
+  setAnimSpeed: (speed) => set({ animSpeed: Math.max(0.1, Math.min(4, Number(speed) || 1)) }),
+  setAnimLoopOnce: (v) => set({ animLoopOnce: Boolean(v) }),
+  setVrmExpression: (expr) => set({ vrmExpression: expr }),
 });
 
 const createSpeechSlice = (set) => ({

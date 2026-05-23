@@ -17,6 +17,8 @@ export class AnimationController {
     this._mixer = new THREE.AnimationMixer(model);
     this._actions = new Map();
     this._currentAction = null;
+    this._timeScale = 1;
+    this._loopOnce = false;
 
     // ── Blink ────────────────────────────────────────────────
     this._blinkTimer = 0;
@@ -135,8 +137,13 @@ export class AnimationController {
     if (action === this._currentAction) return true;
     action.reset();
     action.enabled = true;
-    action.setEffectiveTimeScale(1);
+    action.setEffectiveTimeScale(this._timeScale);
     action.setEffectiveWeight(1);
+    action.setLoop(
+      this._loopOnce ? THREE.LoopOnce : THREE.LoopRepeat,
+      Infinity,
+    );
+    action.clampWhenFinished = this._loopOnce;
     if (this._currentAction) {
       this._currentAction.crossFadeTo(action, fadeDuration, true);
     } else {
@@ -145,6 +152,30 @@ export class AnimationController {
     action.play();
     this._currentAction = action;
     return true;
+  }
+
+  /** Set playback speed for current and future actions (0.1 – 4). */
+  setTimeScale(scale) {
+    this._timeScale = Math.max(0.1, Math.min(4, Number(scale) || 1));
+    if (this._currentAction) {
+      this._currentAction.setEffectiveTimeScale(this._timeScale);
+    }
+  }
+
+  /** Toggle between looping forever (false) and playing once (true). */
+  setLoopOnce(loopOnce) {
+    this._loopOnce = Boolean(loopOnce);
+    if (this._currentAction) {
+      this._currentAction.setLoop(
+        this._loopOnce ? THREE.LoopOnce : THREE.LoopRepeat,
+        Infinity,
+      );
+      this._currentAction.clampWhenFinished = this._loopOnce;
+      if (!this._loopOnce) {
+        // Restart if the one-shot had already finished
+        this._currentAction.reset().play();
+      }
+    }
   }
 
   stopAll() {

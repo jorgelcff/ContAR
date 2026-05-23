@@ -23,7 +23,10 @@ export default function EditorPage() {
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const { addToast } = useToast();
-  const sceneIdLoadedRef = useRef(false);
+  // Tracks which sceneId was last loaded — string (not boolean) so navigating
+  // between two scenes in the same session works correctly.
+  const loadedSceneIdRef = useRef(null);
+  const [sceneLoading, setSceneLoading] = useState(false);
 
   const {
     avatarUrl, setAvatarUrl,
@@ -41,6 +44,9 @@ export default function EditorPage() {
     narrativeAudioUrl,
     buildScenePayload,
     timelineBlocks,
+    animSpeed,
+    animLoopOnce,
+    vrmExpression,
   } = useSceneStore();
 
   const audio = useAudio();
@@ -105,9 +111,22 @@ export default function EditorPage() {
   // ── Load scene from ?sceneId= URL param ─────────────────────
   useEffect(() => {
     const sceneId = searchParams.get('sceneId') || '';
-    if (!sceneId || sceneIdLoadedRef.current) return;
-    sceneIdLoadedRef.current = true;
+    if (!sceneId) return;
+    if (loadedSceneIdRef.current === sceneId) return; // already loaded this scene
+    loadedSceneIdRef.current = sceneId;
 
+    // Clear the store before fetching so autosave doesn't fire stale data from
+    // the previous session while waiting for the network response.
+    useSceneStore.setState({
+      currentSceneId: sceneId,   // set immediately so autosave targets the right scene
+      avatarUrl: '',
+      speechText: '',
+      sceneTitle: '',
+      posePreset: 'idle',
+      narrativeAudioUrl: '',
+    });
+
+    setSceneLoading(true);
     getScene(sceneId)
       .then((data) => {
         if (!data) return;
@@ -132,7 +151,8 @@ export default function EditorPage() {
           narrativeAudioUrl: narrative.audioUrl || '',
         });
       })
-      .catch(() => addToast('Cena não encontrada.', 'error'));
+      .catch(() => addToast('Cena não encontrada ou sem permissão de acesso.', 'error'))
+      .finally(() => setSceneLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -324,7 +344,13 @@ export default function EditorPage() {
               {t('openSurfaceAr')}
             </Link>
           </div>
-          <div className="flex-1 overflow-hidden" data-tour="scene-canvas">
+          <div className="flex-1 overflow-hidden relative" data-tour="scene-canvas">
+            {sceneLoading && (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-900/90 gap-3">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+                <p className="text-sm text-cyan-200 font-medium">Carregando cena…</p>
+              </div>
+            )}
             <Suspense fallback={
               <div className="flex h-full items-center justify-center bg-gray-900">
                 <div className="flex flex-col items-center gap-4">
@@ -344,6 +370,9 @@ export default function EditorPage() {
                 visemeTimeline={audio.visemeTimeline}
                 audioCurrentTime={audio.audioCurrentTime}
                 vrmaUrl={vrmaUrl}
+                animSpeed={animSpeed}
+                animLoopOnce={animLoopOnce}
+                vrmExpression={vrmExpression}
               />
             </Suspense>
           </div>

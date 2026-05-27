@@ -473,37 +473,37 @@ const pt = {
   tourProgress: "{{current}}/{{total}}",
   tourStep0Title: "Bem-vindo ao ContAR! 🎉",
   tourStep0Desc:
-    "Este é seu estúdio para criar narradores virtuais 3D interativos. Vamos fazer um tour rápido — menos de 2 minutos.",
+    "Este é o seu estúdio para criar narradores virtuais 3D interativos. Vamos a um tour rápido — leva menos de 2 minutos.",
   tourStep1Title: "Palco 3D",
   tourStep1Desc:
-    "Aqui seu avatar é exibido em tempo real. Arraste para orbitar a câmera, scroll para dar zoom. O que você configura no painel reflete aqui instantaneamente.",
+    "Aqui o avatar aparece em tempo real. Arraste para orbitar a câmera e use o scroll para aproximar. Tudo o que você ajustar no painel aparece aqui na hora.",
   tourStep2Title: "Painel de Criação",
   tourStep2Desc:
-    "Todo o controle da cena fica aqui. Está dividido em abas: Avatar, Fala, Cena e História.",
+    "Aqui ficam os controles da cena. As abas organizam o fluxo em Avatar, Fala, Cena e História.",
   tourStep3Title: "Abas de Navegação",
   tourStep3Desc:
-    "Alterne entre as seções clicando nas abas. Cada uma trata de uma parte do fluxo de criação.",
+    "Use as abas para trocar de etapa. Cada seção cuida de uma parte da criação.",
   tourStep4Title: "Carregar Avatar",
   tourStep4Desc:
-    "Crie um avatar personalizado com o criador integrado, importe um arquivo GLB/VRM do seu computador, ou cole um link direto.",
+    "Você pode criar um avatar no editor integrado, importar um arquivo GLB/VRM do computador ou colar um link direto.",
   tourStep5Title: "Pose do Narrador",
   tourStep5Desc:
-    'Escolha entre idle, palestrando, acenando, saudando e outras poses. Na pose "Speaker" o avatar faz gestos procedurais enquanto fala.',
+    'Escolha entre idle, palestrando, acenando, saudando e outras poses. Na pose "Speaker", o avatar faz gestos automáticos enquanto fala.',
   tourStep6Title: "Aba Fala",
   tourStep6Desc:
-    "Clique nesta aba para escrever o que o narrador vai dizer e gerar a voz com IA (TTS). Os lábios do avatar sincronizam automaticamente com o áudio.",
+    "Nesta aba, você escreve a fala do narrador e gera a voz com IA (TTS). O lip sync do avatar é aplicado automaticamente no áudio.",
   tourStep7Title: "Aba Cena",
   tourStep7Desc:
-    "Dê um título e salve a configuração atual como uma cena. Uma história é composta por várias cenas em sequência.",
+    "Dê um título e salve a configuração atual como cena. Depois, você combina várias cenas para montar a história.",
   tourStep8Title: "Aba História",
   tourStep8Desc:
-    "Organize suas cenas em uma história, publique e compartilhe o link com alunos ou colegas.",
+    "Organize as cenas na ordem desejada, publique e compartilhe o link com alunos ou colegas.",
   tourStep9Title: "Realidade Aumentada",
   tourStep9Desc:
-    "Coloque seu narrador no mundo real pela câmera do celular — sem precisar instalar nenhum aplicativo.",
+    "Leve o narrador para o mundo real pela câmera do celular, sem instalar aplicativo.",
   tourStep10Title: "Pronto para criar! ✨",
   tourStep10Desc:
-    "Você já conhece a interface. Comece carregando um avatar, escreva uma fala e salve a primeira cena. Clique no ícone ? ao lado de cada seção se tiver dúvidas.",
+    "Agora você já conhece o fluxo. Comece carregando um avatar, escreva uma fala e salve a primeira cena. Se bater dúvida, use o ícone ? de cada seção.",
   landingNavMyStories: "Minhas histórias",
   landingNavEnter: "Entrar",
   landingNavCreate: "Criar conta grátis",
@@ -512,7 +512,7 @@ const pt = {
   landingHeroTitleHighlight: "para suas aulas",
   landingHeroTitleSuffix: "e histórias",
   landingHeroSubtitle:
-    "O ContAR é um estúdio de autoria para montar narradores de aula com avatar 3D, voz, lip sync e link público.",
+    "O ContAR é um estúdio de autoria para criar narradores de aula com avatar 3D, voz, lip sync e compartilhamento por link público.",
   landingHeroPoint1: "Comece com uma cena simples e evolua para uma história completa.",
   landingHeroPoint2: "Pensado para educadores e estudantes, sem exigir conhecimento em 3D.",
   landingHeroPoint3: "Funciona no navegador e pode ser testado em AR no celular.",
@@ -522,23 +522,23 @@ const pt = {
   landingFeaturesTitle: "O que já dá para fazer hoje",
   landingFeature1Title: "Avatares 3D personalizados",
   landingFeature1Desc:
-    "Crie seu personagem com uma selfie ou customize do zero. Importe arquivos GLB/VRM de qualquer fonte.",
+    "Crie seu personagem com selfie ou personalize do zero. Também é possível importar arquivos GLB/VRM de outras fontes.",
   landingFeature2Title: "Narração e lip sync",
   landingFeature2Desc:
-    "Digite o texto, gere a narração e valide o movimento labial no mesmo editor.",
+    "Digite o texto, gere a narração e confira o movimento labial no mesmo editor.",
   landingFeature3Title: "Histórias em sequência",
   landingFeature3Desc:
-    "Monte cenas em ordem, adicione transições e publique uma história completa com link único e público.",
+    "Monte cenas em sequência, adicione transições e publique uma história completa com link único.",
   landingFeature4Title: "Prévia em AR no navegador",
   landingFeature4Desc:
-    "Teste o narrador em AR no celular com modo marcador ou superfície.",
+    "Teste o narrador em AR no celular com modo marcador ou superfície, direto no navegador.",
   landingCaseLabel: "Caso real de uso",
   landingCaseTitle: "Exemplo: história curta para sala de aula",
   landingCaseDescription:
     "Uma professora cria 3 cenas para explicar o ciclo da água e compartilha o link com a turma.",
-  landingCaseStep1: "Cria o avatar narrador, escolhe pose e escreve a primeira explicação.",
-  landingCaseStep2: "Gera o áudio da narração, revisa o lip sync e salva cada cena com título claro.",
-  landingCaseStep3: "Publica a história e abre no viewer/AR com os alunos.",
+  landingCaseStep1: "Crie o avatar narrador, escolha a pose e escreva a primeira explicação.",
+  landingCaseStep2: "Gere o áudio da narração, revise o lip sync e salve cada cena com um título claro.",
+  landingCaseStep3: "Publique a história e abra no visualizador/AR com os alunos.",
   landingCaseResult:
     "Resultado: um link reutilizável para apresentação em aula, tarefa ou revisão rápida.",
   landingCurrentScopeTitle: "Escopo estável hoje",
@@ -556,7 +556,7 @@ const pt = {
     '"ContAR propõe um ecossistema no-code para criação e publicação de narradores virtuais 3D interativos, com foco em aplicações educacionais e de realidade aumentada."',
   landingCtaFinalTitle: "Pronto para criar?",
   landingCtaFinalSubtitle:
-    "Se quiser validar rápido: comece com uma cena simples, confira áudio/lip sync e depois monte a história completa.",
+    "Para validar rápido: comece com uma cena simples, confira áudio e lip sync, e depois monte a história completa.",
   landingAlreadyHaveAccount: "Já tem conta?",
   landingEnterLink: "Entrar",
   landingFooterEnter: "Entrar",

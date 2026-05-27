@@ -1,10 +1,11 @@
 import React from 'react';
+import Icon from './Icon';
 
 const STEPS = [
-  { key: 'avatar',  label: 'Avatar',  icon: '👤' },
-  { key: 'fala',    label: 'Fala',    icon: '💬' },
-  { key: 'audio',   label: 'Áudio',   icon: '🔊' },
-  { key: 'salva',   label: 'Salvo',   icon: '💾' },
+  { key: 'avatar',  label: 'Avatar',  icon: 'avatar' },
+  { key: 'fala',    label: 'Fala',    icon: 'speech' },
+  { key: 'audio',   label: 'Áudio',   icon: 'audio' },
+  { key: 'salva',   label: 'Salvo',   icon: 'save' },
 ];
 
 export default function SceneProgressBar({ avatarUrl, speechText, audioUrl, sceneId, onTabChange }) {
@@ -33,7 +34,7 @@ export default function SceneProgressBar({ avatarUrl, speechText, audioUrl, scen
                   : 'bg-gray-700 text-gray-500 group-hover:bg-gray-600'
               }`}
             >
-              {done[step.key] ? '✓' : step.icon}
+              {done[step.key] ? '✓' : <Icon name={step.icon} className="w-4 h-4" />}
             </span>
             <span className={`text-[10px] font-medium transition-colors ${done[step.key] ? 'text-cyan-400' : 'text-gray-500'}`}>
               {step.label}

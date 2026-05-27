@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
+import Icon from '../components/ui/Icon';
 import { listStories, saveStory, deleteStory } from '../api/sceneApi';
 import { useTranslation } from 'react-i18next';
 
@@ -67,7 +68,7 @@ function StoryCard({ story, onDelete, deleting }) {
         </div>
         {/* Scene count badge */}
         <div className="shrink-0 flex items-center gap-1 rounded-full bg-gray-700/60 px-2.5 py-1 text-[11px] text-gray-300">
-          <span>🎬</span>
+          <Icon name="scene" className="w-3.5 h-3.5" />
           <span>{t('storiesCardScenes', { count: story.sceneCount ?? 0 })}</span>
         </div>
       </div>
@@ -114,7 +115,7 @@ function StoryCard({ story, onDelete, deleting }) {
           title={t('delete')}
           className="px-3 py-2 rounded-xl bg-red-900/40 hover:bg-red-900/70 disabled:opacity-40 text-red-300 text-xs transition-colors"
         >
-          {deleting === story.storyId ? '…' : '🗑'}
+          {deleting === story.storyId ? '…' : <Icon name="trash" className="w-4 h-4" />}
         </button>
       </div>
     </div>
@@ -276,7 +277,7 @@ export default function StoriesPage() {
             </div>
           ) : stories.length === 0 ? (
             <div className="rounded-2xl border border-gray-700 bg-gray-800/50 p-12 flex flex-col items-center gap-5 text-center">
-              <span className="text-6xl">📖</span>
+              <Icon name="story" className="w-14 h-14 text-cyan-400" />
               <div>
                 <p className="font-semibold text-gray-200 text-lg">{t('storiesEmptyTitle')}</p>
                 <p className="text-sm text-gray-500 mt-1.5 max-w-sm">

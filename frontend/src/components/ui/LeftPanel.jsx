@@ -7,6 +7,7 @@ import AvatarCreatorModal from './AvatarCreatorModal';
 import TransformControls from './TransformControls';
 import AudioPanel from './AudioPanel';
 import SceneProgressBar from './SceneProgressBar';
+import Icon from './Icon';
 import { TooltipIcon } from './Tooltip';
 import { useSceneStore } from '../../store/useSceneStore';
 import { listAvaturnAvatars, uploadModel } from '../../api/sceneApi';
@@ -15,10 +16,10 @@ import { useToast } from '../../context/ToastContext';
 const AVATURN_USER_ID_KEY = 'avaturn:userId';
 
 const TABS = [
-  { id: 'avatar',   label: 'Avatar',   icon: '👤' },
-  { id: 'fala',     label: 'Fala',     icon: '💬' },
-  { id: 'cena',     label: 'Cena',     icon: '🎬' },
-  { id: 'historia', label: 'História', icon: '📖' },
+  { id: 'avatar',   label: 'Avatar',   icon: 'avatar' },
+  { id: 'fala',     label: 'Fala',     icon: 'speech' },
+  { id: 'cena',     label: 'Cena',     icon: 'scene' },
+  { id: 'historia', label: 'História', icon: 'story' },
 ];
 
 export default function LeftPanel({
@@ -243,7 +244,7 @@ export default function LeftPanel({
                 : 'text-gray-500 hover:text-gray-300 border-b-2 border-transparent'
             }`}
           >
-            <span className="text-base leading-none">{tab.icon}</span>
+            <Icon name={tab.icon} className="w-4 h-4" />
             {tab.label}
           </button>
         ))}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
+import Icon from '../components/ui/Icon';
 import { listScenes, deleteScene } from '../api/sceneApi';
 import { useTranslation } from 'react-i18next';
 
@@ -92,7 +93,7 @@ export default function ScenesPage() {
           </div>
         ) : scenes.length === 0 ? (
           <div className="rounded-2xl border border-gray-700 bg-gray-800/60 p-10 text-center flex flex-col items-center gap-4">
-            <span className="text-5xl">🎬</span>
+            <Icon name="scene" className="w-12 h-12 text-cyan-400" />
             <p className="text-gray-300 font-medium">{t('scenesEmptyTitle')}</p>
             <p className="text-sm text-gray-500">{t('scenesEmptyDesc')}</p>
             <button
@@ -112,9 +113,9 @@ export default function ScenesPage() {
                 {/* Avatar thumbnail placeholder */}
                 <div className="h-28 rounded-xl bg-gray-900/80 flex items-center justify-center overflow-hidden border border-gray-700/50">
                   {scene.avatarUrl ? (
-                    <span className="text-4xl">👤</span>
+                    <Icon name="avatar" className="w-10 h-10 text-gray-400" />
                   ) : (
-                    <span className="text-3xl opacity-30">🎬</span>
+                    <Icon name="scene" className="w-8 h-8 opacity-30" />
                   )}
                 </div>
 
@@ -150,7 +151,7 @@ export default function ScenesPage() {
                     className="px-3 py-1.5 rounded-lg bg-red-900/70 hover:bg-red-800 disabled:opacity-50 text-red-200 text-xs transition-colors"
                     title={t('delete')}
                   >
-                    {deleting === scene.sceneId ? '…' : '🗑'}
+                    {deleting === scene.sceneId ? '…' : <Icon name="trash" className="w-4 h-4" />}
                   </button>
                 </div>
               </div>

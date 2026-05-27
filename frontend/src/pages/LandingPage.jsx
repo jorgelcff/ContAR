@@ -2,34 +2,35 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
+import Icon from '../components/ui/Icon';
 
 // ── Static data factories ───────────────────────────────────────────────────
 
 function getFeatures(t) {
   return [
     {
-      icon: '🎭',
+      icon: 'theater',
       title: t('landingFeature1Title'),
       color: 'from-cyan-500/20 to-cyan-500/5',
       border: 'border-cyan-500/20',
       desc: t('landingFeature1Desc'),
     },
     {
-      icon: '🎙️',
+      icon: 'audio',
       title: t('landingFeature2Title'),
       color: 'from-purple-500/20 to-purple-500/5',
       border: 'border-purple-500/20',
       desc: t('landingFeature2Desc'),
     },
     {
-      icon: '📖',
+      icon: 'story',
       title: t('landingFeature3Title'),
       color: 'from-blue-500/20 to-blue-500/5',
       border: 'border-blue-500/20',
       desc: t('landingFeature3Desc'),
     },
     {
-      icon: '📱',
+      icon: 'monitor',
       title: t('landingFeature4Title'),
       color: 'from-emerald-500/20 to-emerald-500/5',
       border: 'border-emerald-500/20',
@@ -41,17 +42,17 @@ function getFeatures(t) {
 function getAudiences(t) {
   return [
     {
-      icon: '👩‍🏫',
+      icon: 'graduation',
       title: t('landingAudience1Title'),
       desc: t('landingAudience1Desc'),
     },
     {
-      icon: '🎨',
+      icon: 'palette',
       title: t('landingAudience2Title'),
       desc: t('landingAudience2Desc'),
     },
     {
-      icon: '🔬',
+      icon: 'sparkles',
       title: t('landingAudience3Title'),
       desc: t('landingAudience3Desc'),
     },
@@ -61,17 +62,17 @@ function getAudiences(t) {
 function getSteps(t) {
   return [
     {
-      n: '1', icon: '👤',
+      n: '1', icon: 'avatar',
       title: t('landingStep1Title'),
       desc: t('landingStep1Desc'),
     },
     {
-      n: '2', icon: '💬',
+      n: '2', icon: 'speech',
       title: t('landingStep2Title'),
       desc: t('landingStep2Desc'),
     },
     {
-      n: '3', icon: '🚀',
+      n: '3', icon: 'rocket',
       title: t('landingStep3Title'),
       desc: t('landingStep3Desc'),
     },
@@ -141,7 +142,7 @@ function ProductPreview() {
           <div className="relative z-10 flex flex-col items-center gap-2">
             {/* Head */}
             <div className="w-14 h-14 rounded-full bg-linear-to-b from-cyan-400/40 to-blue-500/30 border border-cyan-400/30 shadow-lg shadow-cyan-900/50 flex items-center justify-center text-3xl">
-              🧑
+              <Icon name="avatar" className="w-8 h-8 text-cyan-300" />
             </div>
             {/* Body */}
             <div className="w-10 h-16 rounded-t-xl bg-linear-to-b from-cyan-600/30 to-blue-700/20 border border-cyan-500/20" />
@@ -165,7 +166,7 @@ function ProductPreview() {
 
           {/* Floating badge — illustrative demo content, kept as-is */}
           <div className="absolute top-3 right-3 rounded-full bg-purple-600/80 px-2 py-0.5 text-[10px] text-white font-semibold backdrop-blur-sm">
-            🎙️ Ao vivo
+            <span className="inline-flex items-center gap-1"><Icon name="audio" className="w-3 h-3" /> Ao vivo</span>
           </div>
         </div>
       </div>
@@ -203,7 +204,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-gray-950/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🎬</span>
+            <Icon name="scene" className="w-5 h-5 text-cyan-400" />
             <span className="text-lg font-bold tracking-tight text-white">ContAR</span>
           </div>
           <div className="flex items-center gap-3">
@@ -297,7 +298,7 @@ export default function LandingPage() {
             {AUDIENCES.map((a) => (
               <div key={a.title}
                 className="rounded-2xl border border-white/5 bg-gray-900/60 p-6 flex flex-col gap-3 hover:border-purple-500/30 transition-colors">
-                <span className="text-4xl">{a.icon}</span>
+                <Icon name={a.icon} className="w-8 h-8 text-cyan-300" />
                 <p className="font-semibold text-white text-lg">{a.title}</p>
                 <p className="text-sm text-gray-400 leading-relaxed">{a.desc}</p>
               </div>
@@ -317,7 +318,7 @@ export default function LandingPage() {
             {FEATURES.map((f) => (
               <div key={f.title}
                 className={`rounded-2xl border ${f.border} bg-linear-to-b ${f.color} p-6 flex flex-col gap-3 hover:scale-[1.02] transition-transform`}>
-                <span className="text-3xl">{f.icon}</span>
+                <Icon name={f.icon} className="w-7 h-7 text-cyan-300" />
                 <p className="font-semibold text-white">{f.title}</p>
                 <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
               </div>
@@ -339,7 +340,7 @@ export default function LandingPage() {
                 {/* Connector line (desktop only) */}
                 <div className="relative">
                   <div className="w-16 h-16 rounded-full bg-linear-to-br from-cyan-600 to-purple-700 flex items-center justify-center text-2xl shadow-lg shadow-purple-900/30">
-                    {s.icon}
+                    <Icon name={s.icon} className="w-8 h-8" />
                   </div>
                   <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-gray-950 border-2 border-cyan-500 text-[10px] font-bold text-cyan-400 flex items-center justify-center">
                     {s.n}
@@ -360,7 +361,7 @@ export default function LandingPage() {
       <section className="py-16 px-5 border-b border-white/5 bg-white/2">
         <div className="max-w-3xl mx-auto text-center flex flex-col items-center gap-6">
           <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-gray-900 px-6 py-4">
-            <span className="text-3xl">🎓</span>
+            <Icon name="graduation" className="w-8 h-8 text-cyan-300" />
             <div className="text-left">
               <p className="text-sm font-semibold text-white">{t('landingSocialBadgeTitle')}</p>
               <p className="text-xs text-gray-400 mt-0.5">
@@ -377,7 +378,7 @@ export default function LandingPage() {
       {/* ── CTA final ───────────────────────────────────────────── */}
       <section className="py-24 px-5 text-center">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-6">
-          <div className="text-5xl">🎬</div>
+          <Icon name="scene" className="w-12 h-12 text-cyan-400" />
           <h2 className="text-3xl font-bold">{t('landingCtaFinalTitle')}</h2>
           <p className="text-gray-400 max-w-md leading-relaxed">
             {t('landingCtaFinalSubtitle')}
@@ -401,7 +402,7 @@ export default function LandingPage() {
       <footer className="border-t border-white/5 py-8 px-5">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
           <div className="flex items-center gap-2">
-            <span>🎬</span>
+            <Icon name="scene" className="w-4 h-4" />
             <span className="font-semibold text-gray-500">ContAR</span>
             <span>· © {new Date().getFullYear()}</span>
           </div>

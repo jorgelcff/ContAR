@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import HelpModal from './HelpModal';
+import Icon from './Icon';
 
 function EmailVerificationBanner({ onResend }) {
   const { t } = useTranslation();
@@ -37,6 +39,7 @@ function EmailVerificationBanner({ onResend }) {
 export default function Header({ autosaveStatus }) {
   const { t, i18n } = useTranslation();
   const { isAuthenticated, emailVerified, logout, resendVerificationEmail } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
 
   const autosaveLabel = autosaveStatus === 'saving'
@@ -89,11 +92,22 @@ export default function Header({ autosaveStatus }) {
           <option value="es">{t('langEs')}</option>
           <option value="fr">{t('langFr')}</option>
         </select>
+        <select
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+          title="Tema"
+          className="text-xs font-medium px-2 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors cursor-pointer border-0 outline-none"
+        >
+          <option value="dark">Escuro</option>
+          <option value="light">Claro</option>
+          <option value="system">Sistema</option>
+        </select>
         <button
           onClick={() => setShowHelp(true)}
           title="Ajuda"
           className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors"
         >
+          <Icon name="sparkles" className="w-3.5 h-3.5 inline-block mr-1 align-middle" />
           {t('headerTour')}
         </button>
         {isAuthenticated && (

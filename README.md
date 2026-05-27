@@ -1,149 +1,188 @@
-# Avaturn 3D Scene Builder
+# ContAR
 
-A full-stack web application for creating, publishing, and viewing educational 3D avatar scenes.
-Users paste a GLB avatar URL (or create one via the embedded Avaturn editor), position it in a 3D scene, add speech bubbles, then publish a shareable link.
+Plataforma web **no-code** para criação, publicação e compartilhamento de narradores virtuais 3D interativos com suporte a fala, lip sync e visualização em realidade aumentada.
 
-![Avaturn Three.js example](https://assets.avaturn.me/docs/three-js-example.jpg)
-r/virtualreality
-## Features
+- **Repositório:** https://github.com/jorgelcff/avaturn-threejs
+- **Produção:** https://avaturn-threejs-1.onrender.com
+- **Contexto acadêmico:** TCC (CIn/UFPE) — *Desenvolvimento de um Ecossistema Integrado No-Code para Autoria e Publicação de Narradores Virtuais*
 
-| Feature | Detail |
-|---|---|
-| **Avatar creation** | Embedded Avaturn iframe or direct GLB URL |
-| **3D scene** | Three.js — OrbitControls, HDR env map, PCF shadows, DRACOLoader, idle animations |
-| **Transform controls** | Simplified sliders: position X/Y/Z, rotation Y, scale |
-| **Speech bubbles** | HTML overlay synced to avatar head via `camera.project()` |
-| **Publish & share** | Saves scene to MongoDB, returns unique URL |
-| **Scene viewer** | Read-only at `/scene/:id` with Web Speech API auto-play |
-| **i18n** | English 🇺🇸 and Portuguese 🇧🇷 — toggle in header |
+## O que você consegue fazer
 
-## Architecture
+- Criar/importar avatares (Avaturn, GLB, VRM)
+- Montar cenas 3D com pose, transformação e fala
+- Gerar narração com TTS (Azure ou ElevenLabs, conforme configuração)
+- Sincronizar fala e movimento labial (lip sync)
+- Agrupar cenas em histórias publicáveis por link
+- Exibir histórias em modo viewer e em AR (WebXR + fallback por marcador)
 
-```
-/frontend     React 18 + Vite + TailwindCSS + Three.js
-/backend      Node.js + Express + MongoDB (Mongoose)
-/public       Original vanilla demo assets (preserved)
-index.html    Original vanilla JS demo
+## Arquitetura
+
+```text
+Frontend (React SPA)  ->  Backend (Node/Express API)  ->  MongoDB
 ```
 
-## Quick Start
+### Stack principal
 
-### Backend
+- **Frontend:** React 19, Vite, TailwindCSS v4, Three.js, Zustand, i18next
+- **Backend:** Node.js, Express 5, Mongoose, JWT, Multer
+- **Banco:** MongoDB
+- **Infra:** Docker Compose (mongo + backend + frontend)
+
+## Estrutura do projeto
+
+```text
+avaturn-threejs/
+├── frontend/                  # App React (editor, viewer, AR, páginas)
+├── backend/                   # API REST + autenticação + uploads + TTS
+├── public/                    # Assets legados de demo
+├── docker-compose.yml         # Stack local completa
+├── CONTAR_CONTEXTO_COMPLETO.md
+├── EXPERIENCE_WALKTHROUGH.md
+├── PROJECT_ROADMAP.md
+└── PROJECT_ROADMAP_v2.md
+```
+
+## Documentos de contexto do ContAR
+
+Para entendimento completo do projeto, use estes arquivos:
+
+- `CONTAR_CONTEXTO_COMPLETO.md` — fonte de verdade técnica e acadêmica
+- `EXPERIENCE_WALKTHROUGH.md` — jornada de uso ponta a ponta
+- `PROJECT_ROADMAP.md` e `PROJECT_ROADMAP_v2.md` — planejamento e roadmap
+- `PLAN_UX_v1.md` — direcionamento de experiência
+- `RELEASE_2_PLANEJAMENTO.md` — plano de release
+
+## Como rodar localmente (sem Docker)
+
+### 1) Instalar dependências
+
+Na raiz do projeto:
 
 ```bash
-cd backend
-npm install
-cp .env.example .env   # edit MONGODB_URI if needed
-node server.js         # → http://localhost:3001
+npm run install:all
 ```
 
-### Frontend
+### 2) Configurar variáveis de ambiente
+
+- Copie `backend/.env.example` para `backend/.env`
+- (Opcional para Docker build) copie `.env.example` para `.env`
+
+### 3) Subir backend e frontend juntos
 
 ```bash
-cd frontend
-npm install
-npm run dev            # → http://localhost:5173/editor
+npm run dev
 ```
 
-Open **http://localhost:5173/editor** to start building scenes.  
-Shared scenes are available at **http://localhost:5173/scene/:id**.
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3001`
 
-## Run With Docker
+## Como rodar com Docker
 
-Prerequisite: Docker Desktop (or Docker Engine + Compose) installed.
-
-1. Copy `.env.example` to `.env` at the project root and fill in the frontend Avaturn values.
-2. Copy `backend/.env.example` to `backend/.env` and fill in the backend values.
-3. From the project root, run:
+1. Copie os arquivos de exemplo de ambiente:
+   - `.env.example` → `.env`
+   - `backend/.env.example` → `backend/.env`
+2. Execute:
 
 ```bash
 docker compose up --build
 ```
 
-On Windows, you can use the helper script instead:
-
-```powershell
-.\deploy.cmd
-```
-
-Common actions:
-
-- `.\deploy.cmd` or `.\deploy.cmd -Action up -Build` to start the stack
-- `.\deploy.cmd -Action down` to stop the stack
-- `.\deploy.cmd -Action down -RemoveVolumes` to stop and remove MongoDB data
-- `.\deploy.cmd -Action status` to inspect running containers
-- `.\deploy.cmd -Action logs` to follow logs
-
-
-On Ubuntu/Linux, use:
-
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
-
-Common actions:
-
-- `./deploy.sh` or `./deploy.sh -Action up -Build` to start the stack
-- `./deploy.sh -Action down` to stop the stack
-- `./deploy.sh -Action down -RemoveVolumes` to stop and remove MongoDB data
-- `./deploy.sh -Action status` to inspect running containers
-- `./deploy.sh -Action logs` to follow logs
-
-Services and URLs:
+Serviços:
 
 - Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:3001`
+- Backend: `http://localhost:3001`
 - MongoDB: `mongodb://localhost:27017/avaturn3d`
 
-Frontend Avaturn options are baked into the build via the root `.env` file:
+## Variáveis de ambiente (backend)
 
-- `VITE_AVATURN_DIRECT_URL`
-- `VITE_AVATURN_SUBDOMAIN`
-- `VITE_AVATURN_DISABLE_BACKEND_FALLBACK`
-- `VITE_AVATURN_USER_ID`
-- `VITE_API_BASE_URL` (optional direct API URL, e.g. `https://avaturn-threejs.onrender.com/api`)
+Baseado em `backend/.env.example`:
 
-Frontend API proxy destination:
+- `PORT`
+- `MONGODB_URI`
+- `AUTH_JWT_SECRET`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `FRONTEND_URL`
+- `CORS_ORIGIN`
+- `TRUST_PROXY`
+- `ELEVENLABS_API_KEY` (opcional)
+- `AVATURN_API_TOKEN` (opcional)
+- `AVATURN_API_BASE_URL` (opcional)
 
-- `API_ORIGIN` (for example `https://avaturn-threejs.onrender.com` on Render)
-- Local Docker default remains `http://backend:3001` via `docker-compose.yml`
+> Observação: o backend também suporta TTS com Azure Speech quando `AZURE_SPEECH_KEY` e `AZURE_SPEECH_REGION` estão configurados.
 
-To stop containers directly with Docker Compose:
+## Rotas principais da API
 
-```bash
-docker compose down
-```
+### Auth (`/api/auth`)
 
-To also remove MongoDB persisted volume:
+- `POST /register`
+- `POST /login`
+- `GET /me`
+- `POST /forgot-password`
+- `POST /reset-password`
+- `POST /verify-email`
+- `POST /resend-verification`
+- `PUT /account`
+- `PUT /change-password`
 
-```bash
-docker compose down -v
-```
+### Cenas (`/api/scene`)
 
+- `POST /`
+- `GET /`
+- `GET /:id`
+- `DELETE /:id`
 
+### Histórias (`/api/story`)
 
-## Environment Variables
+- `POST /`
+- `GET /`
+- `GET /public/:id`
+- `GET /:id`
+- `DELETE /:id`
 
-| Variable | Default | Description |
-|---|---|---|
-| `MONGODB_URI` | `mongodb://localhost:27017/avaturn3d` | MongoDB connection string |
-| `PORT` | `3001` | Backend port |
-| `AVATURN_API_TOKEN` | _required_ | Avaturn API token used by the backend |
-| `AVATURN_API_BASE_URL` | `https://api.avaturn.me/api/v1` | Avaturn API base URL |
-| `API_ORIGIN` | `http://backend:3001` (local) | Frontend Nginx proxy target for `/api` |
-| `VITE_API_BASE_URL` | _optional_ | Frontend direct API base URL (bypasses same-origin `/api` calls) |
-| `VITE_AVATURN_DIRECT_URL` | _optional_ | Frontend direct Avaturn session URL |
-| `VITE_AVATURN_SUBDOMAIN` | _optional_ | Frontend Avaturn subdomain |
-| `VITE_AVATURN_DISABLE_BACKEND_FALLBACK` | `false` | Disable backend fallback in the frontend |
-| `VITE_AVATURN_USER_ID` | _optional_ | Fixed Avaturn user ID used by the frontend |
+### Mídia (`/api/media`)
 
-## API
+- `POST /audio`
+- `POST /model`
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/scene` | Save/update scene → `{ sceneId }` |
-| `GET` | `/api/scene/:id` | Load scene by ID |
-| `POST` | `/api/avatar` | Store avatar URL → `{ avatarId }` |
+### TTS (`/api/tts`)
 
-Read more at [docs.avaturn.me](https://docs.avaturn.me).
+- `POST /generate`
+
+### Avatares (`/api/avatar`)
+
+- `POST /`
+- `POST /session`
+- `GET /list`
+
+## Scripts úteis
+
+### Raiz
+
+- `npm run dev` — sobe backend + frontend em paralelo
+- `npm run dev:backend`
+- `npm run dev:frontend`
+- `npm run install:all`
+
+### Frontend (`frontend/package.json`)
+
+- `npm run dev --prefix frontend`
+- `npm run build --prefix frontend`
+- `npm run lint --prefix frontend`
+
+### Backend (`backend/package.json`)
+
+- `npm run dev --prefix backend`
+- `npm start --prefix backend`
+
+## Estado atual de qualidade
+
+No estado atual do repositório:
+
+- `npm run lint --prefix frontend` apresenta erros preexistentes
+- `npm run build --prefix frontend` executa com sucesso
+- `npm test --prefix backend` é placeholder e falha por padrão
+
+## Licença
+
+Projeto acadêmico do ContAR (TCC/UFPE). Defina a licença formal do repositório conforme necessidade de publicação.

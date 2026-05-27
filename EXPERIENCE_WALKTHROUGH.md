@@ -4,6 +4,14 @@ Guia completo de como usar o ContAR do zero até ter uma história com narrador 
 
 ---
 
+## Antes de começar (expectativa real)
+
+- O fluxo recomendado é: **uma cena simples primeiro**, depois história completa.
+- O editor já está pronto para uso, mas ainda há refinamentos em andamento para onboarding e mobile.
+- Em AR, o resultado varia conforme navegador, câmera e suporte do dispositivo.
+
+---
+
 ## Visão Geral do Fluxo
 
 ```

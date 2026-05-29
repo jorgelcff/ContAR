@@ -1,9 +1,15 @@
 {
   "_comment": "Drop Mixamo GLB files (Without Skin, 30fps, No Reduction) in this folder and list them here.",
-  "_presets": "idle | walk | run | dance | speaker — tags must include at least one of these keywords",
+  "_presets": "idle | walk | walk_circle | slow_run | run | dance | speaker — tags must include at least one of these keywords",
   "animations": [
     {
       "name": "idle",
+      "file": "idle.glb",
+      "preset": "idle",
+      "tags": ["idle", "stand"]
+    },
+    {
+      "name": "idle_alt",
       "file": "standing_Idle_03.glb",
       "preset": "idle",
       "tags": ["idle", "stand"]
@@ -15,16 +21,34 @@
       "tags": ["walk"]
     },
     {
+      "name": "walk_circle",
+      "file": "walk_circle.glb",
+      "preset": "walk_circle",
+      "tags": ["walk_circle"]
+    },
+    {
+      "name": "slow_run",
+      "file": "slow_run.glb",
+      "preset": "slow_run",
+      "tags": ["slow_run", "jog"]
+    },
+    {
       "name": "run",
       "file": "run.glb",
       "preset": "run",
-      "tags": ["run", "jog"]
+      "tags": ["run"]
     },
     {
       "name": "dance",
       "file": "dance.glb",
       "preset": "dance",
       "tags": ["dance"]
+    },
+    {
+      "name": "speaker",
+      "file": "talking.glb",
+      "preset": "speaker",
+      "tags": ["speaker", "talk", "talking"]
     }
   ]
 }

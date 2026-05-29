@@ -69,6 +69,7 @@ export default function EditorPage() {
   const [showTour, setShowTour] = useState(shouldShowTour);
   const [mobilePanelTab, setMobilePanelTab] = useState(null);
   const [vrmaUrl, setVrmaUrl] = useState('');
+  const [textDisplayMode, setTextDisplayMode] = useState('bubble'); // 'bubble' | 'subtitle' | 'none'
 
   useEffect(() => {
     if (hadLocalAvatarOnInit()) {
@@ -144,7 +145,9 @@ export default function EditorPage() {
             positionX: pos[0] ?? 0,
             positionY: pos[1] ?? 0,
             positionZ: pos[2] ?? 0,
+            rotationX: ((rot[0] ?? 0) * 180) / Math.PI,
             rotationY: ((rot[1] ?? 0) * 180) / Math.PI,
+            rotationZ: ((rot[2] ?? 0) * 180) / Math.PI,
             scale: scale[0] ?? 1,
           },
           speechText: narrative.text || '',
@@ -328,6 +331,8 @@ export default function EditorPage() {
           tts={tts}
           vrmaUrl={vrmaUrl}
           onLoadVrma={setVrmaUrl}
+          textDisplayMode={textDisplayMode}
+          onTextDisplayModeChange={setTextDisplayMode}
           mobilePanelTab={mobilePanelTab}
           onMobilePanelClose={() => setMobilePanelTab(null)}
         />
@@ -373,6 +378,7 @@ export default function EditorPage() {
                 animSpeed={animSpeed}
                 animLoopOnce={animLoopOnce}
                 vrmExpression={vrmExpression}
+                textDisplayMode={textDisplayMode}
               />
             </Suspense>
           </div>

@@ -19,7 +19,7 @@ function sanitizeUrl(url) {
 
 const createAvatarSlice = (set) => ({
   avatarUrl: '',
-  transform: { positionX: 0, positionY: 0, positionZ: 0, rotationY: 0, scale: 1 },
+  transform: { positionX: 0, positionY: 0, positionZ: 0, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1 },
   posePreset: 'idle',
   animSpeed: 1,
   animLoopOnce: false,
@@ -27,6 +27,9 @@ const createAvatarSlice = (set) => ({
   setAvatarUrl: (url) => set({ avatarUrl: url }),
   setTransform: (key, value) =>
     set((state) => ({ transform: { ...state.transform, [key]: value } })),
+  setFullTransform: (t) => set({
+    transform: { positionX: 0, positionY: 0, positionZ: 0, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1, ...t },
+  }),
   setPosePreset: (preset) => set({ posePreset: preset }),
   setAnimSpeed: (speed) => set({ animSpeed: Math.max(0.1, Math.min(4, Number(speed) || 1)) }),
   setAnimLoopOnce: (v) => set({ animLoopOnce: Boolean(v) }),
@@ -118,7 +121,11 @@ const createStorySlice = (set, get) => ({
           posePreset,
           transform: {
             position: [transform.positionX, transform.positionY, transform.positionZ],
-            rotation: [0, (transform.rotationY * Math.PI) / 180, 0],
+            rotation: [
+              ((transform.rotationX ?? 0) * Math.PI) / 180,
+              ((transform.rotationY ?? 0) * Math.PI) / 180,
+              ((transform.rotationZ ?? 0) * Math.PI) / 180,
+            ],
             scale: [transform.scale, transform.scale, transform.scale],
           },
         },

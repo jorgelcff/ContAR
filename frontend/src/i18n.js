@@ -264,6 +264,8 @@ const en = {
   pose: 'Pose',
   poseIdle: 'Idle (animated)',
   poseWalk: 'Walk (animated)',
+  poseWalkCircle: 'Walk in circle (animated)',
+  poseSlowRun: 'Slow run (animated)',
   poseRun: 'Run (animated)',
   poseDance: 'Dance (animated)',
   poseSpeaker: 'Speaker (animated)',
@@ -318,7 +320,9 @@ const en = {
   positionX: 'Position X',
   positionY: 'Position Y',
   positionZ: 'Position Z',
+  rotationX: 'Rotation X (°)',
   rotationY: 'Rotation Y (°)',
+  rotationZ: 'Rotation Z (°)',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -586,6 +590,8 @@ const pt = {
   pose: "Pose",
   poseIdle: "Idle (animada)",
   poseWalk: "Caminhando (animada)",
+  poseWalkCircle: "Caminhando em círculo (animada)",
+  poseSlowRun: "Corrida lenta (animada)",
   poseRun: "Correndo (animada)",
   poseDance: "Dança (animada)",
   poseSpeaker: "Narrador (animada)",
@@ -637,7 +643,9 @@ const pt = {
   positionX: "Posição X",
   positionY: "Posição Y",
   positionZ: "Posição Z",
+  rotationX: "Rotação X (°)",
   rotationY: "Rotação Y (°)",
+  rotationZ: "Rotação Z (°)",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -876,6 +884,8 @@ const es = {
   pose: 'Pose',
   poseIdle: 'Idle (animado)',
   poseWalk: 'Caminando (animado)',
+  poseWalkCircle: 'Caminando en círculo (animado)',
+  poseSlowRun: 'Carrera lenta (animado)',
   poseRun: 'Corriendo (animado)',
   poseDance: 'Bailando (animado)',
   poseSpeaker: 'Narrador (animado)',
@@ -925,7 +935,9 @@ const es = {
   positionX: 'Posición X',
   positionY: 'Posición Y',
   positionZ: 'Posición Z',
+  rotationX: 'Rotación X (°)',
   rotationY: 'Rotación Y (°)',
+  rotationZ: 'Rotación Z (°)',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1164,6 +1176,8 @@ const fr = {
   pose: 'Pose',
   poseIdle: 'Idle (animé)',
   poseWalk: 'Marche (animé)',
+  poseWalkCircle: 'Marche en cercle (animé)',
+  poseSlowRun: 'Course lente (animé)',
   poseRun: 'Course (animé)',
   poseDance: 'Danse (animé)',
   poseSpeaker: 'Narrateur (animé)',
@@ -1213,7 +1227,9 @@ const fr = {
   positionX: 'Position X',
   positionY: 'Position Y',
   positionZ: 'Position Z',
+  rotationX: 'Rotation X (°)',
   rotationY: 'Rotation Y (°)',
+  rotationZ: 'Rotation Z (°)',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

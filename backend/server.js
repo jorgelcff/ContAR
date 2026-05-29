@@ -10,6 +10,7 @@ const storyRoutes = require('./routes/storyRoutes');
 const authRoutes = require('./routes/authRoutes');
 const ttsRoutes = require('./routes/ttsRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
+const boneMapRoutes = require('./routes/boneMapRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -48,6 +49,7 @@ app.use('/api/story', storyRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tts', ttsRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/bones', boneMapRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

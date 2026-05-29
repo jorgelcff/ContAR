@@ -1,7 +1,7 @@
 export const SCENE_TEMPLATES = [
   {
     id: 'apresentador',
-    emoji: '📰',
+    icon: 'story',
     name: 'Apresentador',
     description: 'Ideal para notícias, podcasts e anúncios formais.',
     posePreset: 'speaker',
@@ -12,7 +12,7 @@ export const SCENE_TEMPLATES = [
   },
   {
     id: 'tutor',
-    emoji: '📚',
+    icon: 'graduation',
     name: 'Tutor Educacional',
     description: 'Perfeito para aulas, tutoriais e explicações.',
     posePreset: 'neutral',
@@ -23,7 +23,7 @@ export const SCENE_TEMPLATES = [
   },
   {
     id: 'saudacao',
-    emoji: '👋',
+    icon: 'avatar',
     name: 'Saudação Animada',
     description: 'Para boas-vindas, aniversários e mensagens especiais.',
     posePreset: 'wave',
@@ -34,7 +34,7 @@ export const SCENE_TEMPLATES = [
   },
   {
     id: 'palestrante',
-    emoji: '🎤',
+    icon: 'audio',
     name: 'Palestrante',
     description: 'Para pitch de vendas, motivação e discursos.',
     posePreset: 'hands_on_hips',

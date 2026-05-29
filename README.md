@@ -24,6 +24,22 @@ Referências principais:
 - Repositório: https://github.com/jorgelcff/avaturn-threejs
 - Produção: https://avaturn-threejs-1.onrender.com
 
+## Escopo atual (sem marketing)
+
+O ContAR já cobre o fluxo principal de autoria:
+
+- criar/carregar avatar;
+- escrever texto e gerar narração;
+- salvar cenas e montar história;
+- publicar com link público;
+- visualizar em viewer web e modos AR.
+
+Limites atuais importantes:
+
+- a validação principal ainda é no frontend; backend ainda não possui suíte de testes real;
+- parte da experiência mobile e do onboarding segue em ajuste;
+- alguns fluxos de AR dependem de compatibilidade do navegador/dispositivo.
+
 ## Guia rápido para desenvolvedores
 
 ### Pré-requisitos

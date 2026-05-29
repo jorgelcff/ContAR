@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SCENE_TEMPLATES } from '../data/sceneTemplates';
 import { useSceneStore } from '../store/useSceneStore';
+import Icon from '../components/ui/Icon';
 
 const ONBOARDING_KEY = 'avaturn:onboarding:done';
 
@@ -29,7 +30,7 @@ export default function WelcomePage() {
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <div className="flex flex-col items-center justify-center flex-1 px-6 pt-16 pb-8 text-center">
-        <div className="text-6xl mb-6 select-none">🎭</div>
+        <Icon name="theater" className="w-16 h-16 mb-6 text-cyan-400" />
 
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
           Bem-vindo ao{' '}
@@ -49,13 +50,13 @@ export default function WelcomePage() {
             onClick={handleNewScene}
             className="flex-1 py-4 px-6 rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-lg font-semibold shadow-lg shadow-blue-900/40 transition-all duration-200 active:scale-95"
           >
-            ✨ Criar nova cena
+            <span className="inline-flex items-center gap-2"><Icon name="sparkles" className="w-5 h-5" /> Criar nova cena</span>
           </button>
           <button
             onClick={() => setShowTemplates((v) => !v)}
             className="flex-1 py-4 px-6 rounded-2xl border-2 border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white text-lg font-semibold transition-all duration-200 active:scale-95"
           >
-            🗂️ Usar template
+            <span className="inline-flex items-center gap-2"><Icon name="folder" className="w-5 h-5" /> Usar template</span>
           </button>
         </div>
 
@@ -63,12 +64,12 @@ export default function WelcomePage() {
         {!showTemplates && (
           <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl w-full text-left">
             {[
-              { step: '1', icon: '👤', title: 'Escolha um avatar', desc: 'Crie seu personagem 3D gratuitamente com o criador integrado.' },
-              { step: '2', icon: '💬', title: 'Escreva a fala', desc: 'Digite o texto e gere a voz com um clique.' },
-              { step: '3', icon: '▶️', title: 'Pronto!', desc: 'Seu personagem fala com lábios sincronizados automaticamente.' },
+              { step: '1', icon: 'avatar', title: 'Escolha um avatar', desc: 'Crie seu personagem 3D gratuitamente com o criador integrado.' },
+              { step: '2', icon: 'speech', title: 'Escreva a fala', desc: 'Digite o texto e gere a voz com um clique.' },
+              { step: '3', icon: 'play', title: 'Pronto!', desc: 'Seu personagem fala com lábios sincronizados automaticamente.' },
             ].map(({ step, icon, title, desc }) => (
               <div key={step} className="rounded-2xl bg-gray-800/60 border border-gray-700 p-5 flex flex-col gap-2">
-                <span className="text-2xl">{icon}</span>
+                <Icon name={icon} className="w-6 h-6 text-cyan-400" />
                 <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Passo {step}</p>
                 <p className="font-semibold text-white">{title}</p>
                 <p className="text-sm text-gray-400 leading-relaxed">{desc}</p>
@@ -91,7 +92,7 @@ export default function WelcomePage() {
                 onClick={() => handleUseTemplate(tpl)}
                 className={`rounded-2xl bg-linear-to-br ${tpl.color} border border-white/10 p-6 flex flex-col gap-3 text-left hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-100`}
               >
-                <span className="text-4xl">{tpl.emoji}</span>
+                <Icon name={tpl.icon} className="w-9 h-9 text-white" />
                 <div>
                   <p className="font-bold text-white text-lg">{tpl.name}</p>
                   <p className="text-sm text-white/70 mt-1 leading-relaxed">{tpl.description}</p>

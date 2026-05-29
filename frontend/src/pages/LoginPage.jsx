@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { forgotPassword } from '../api/sceneApi';
+import Icon from '../components/ui/Icon';
 
 // ── Map backend/network errors to friendly PT messages ──────────────────────
 function friendlyError(err, t) {
@@ -184,7 +185,7 @@ export default function LoginPage() {
         {/* Brand */}
         <div className="flex flex-col items-center gap-1 pb-2">
           <Link to="/" className="flex items-center gap-2 group">
-            <span className="text-3xl">🎬</span>
+            <Icon name="scene" className="w-7 h-7 text-cyan-400" />
             <span className="text-2xl font-extrabold tracking-tight text-white group-hover:text-cyan-300 transition-colors">
               ContAR
             </span>
@@ -200,7 +201,7 @@ export default function LoginPage() {
         {/* Error banner */}
         {error && (
           <div className="flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-950/60 px-4 py-3 text-sm text-red-200">
-            <span className="text-base shrink-0 mt-px">⚠️</span>
+            <Icon name="warning" className="w-4 h-4 shrink-0 mt-0.5 text-red-300" />
             <span>{error}</span>
           </div>
         )}
@@ -262,7 +263,7 @@ export default function LoginPage() {
         {/* ── Sent confirmation ────────────────────── */}
         {view === 'forgot-sent' && (
           <div className="flex items-start gap-3 rounded-xl border border-emerald-700/40 bg-emerald-950/40 px-4 py-4">
-            <span className="text-2xl shrink-0">✉️</span>
+            <Icon name="mail" className="w-6 h-6 shrink-0 text-emerald-300" />
             <p className="text-sm text-emerald-200 leading-relaxed">{t('loginForgotSentMsg')}</p>
           </div>
         )}

@@ -5,25 +5,25 @@ const ONBOARDING_KEY = 'avaturn:onboarding:done';
 const STEPS = [
   {
     icon: '👤',
-    title: 'Primeiro, escolha um avatar',
+    title: 'Comece pelo avatar',
     description:
-      'Clique em "Criar Avatar" no painel à esquerda. Use o criador integrado para montar seu personagem 3D — inclusive com uma selfie!',
+      'Abra a aba Avatar e clique em "Criar Avatar" ou faça upload de um GLB/VRM. O objetivo aqui é só ter um personagem carregado para testar o fluxo.',
     hint: 'Painel esquerdo → aba Avatar → "Criar Avatar"',
     hintIcon: '👈',
   },
   {
     icon: '💬',
-    title: 'Escreva o que o avatar vai dizer',
+    title: 'Defina a fala da cena',
     description:
-      'No painel à esquerda, clique na aba "Fala" e digite o texto no campo de texto. Em seguida, clique em "Gerar Voz (TTS)" — a voz é criada automaticamente!',
+      'Na aba Fala, escreva um texto curto (1 ou 2 frases) e gere o áudio. Começar com texto pequeno ajuda a validar rápido antes de refinar.',
     hint: 'Painel esquerdo → aba Fala → "Gerar Voz (TTS)"',
     hintIcon: '👈',
   },
   {
     icon: '▶️',
-    title: 'Veja a mágica acontecer!',
+    title: 'Teste, salve e siga',
     description:
-      'Clique no botão Play na seção de Áudio para ouvir seu personagem falar com os lábios sincronizados. Quando estiver pronto, salve e compartilhe sua cena!',
+      'Use o Play para conferir áudio e lip sync. Se estiver bom, salve a cena e depois adicione à história. Você pode ajustar pose e texto em seguida.',
     hint: 'Painel esquerdo → Áudio → botão Play',
     hintIcon: '👈',
   },

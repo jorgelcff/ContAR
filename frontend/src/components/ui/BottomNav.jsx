@@ -1,10 +1,11 @@
 import React from 'react';
+import Icon from './Icon';
 
 const TABS = [
-  { id: 'avatar',   label: 'Avatar',   icon: '👤' },
-  { id: 'fala',     label: 'Fala',     icon: '💬' },
-  { id: 'cena',     label: 'Cena',     icon: '🎬' },
-  { id: 'historia', label: 'História', icon: '📖' },
+  { id: 'avatar',   label: 'Avatar',   icon: 'avatar' },
+  { id: 'fala',     label: 'Fala',     icon: 'speech' },
+  { id: 'cena',     label: 'Cena',     icon: 'scene' },
+  { id: 'historia', label: 'História', icon: 'story' },
 ];
 
 /**
@@ -30,9 +31,10 @@ export default function BottomNav({ activeTab, onTabChange }) {
             {isActive && (
               <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-cyan-400 rounded-full" />
             )}
-            <span className={`text-xl leading-none transition-transform duration-150 ${isActive ? 'scale-110' : ''}`}>
-              {tab.icon}
-            </span>
+            <Icon
+              name={tab.icon}
+              className={`w-5 h-5 transition-transform duration-150 ${isActive ? 'scale-110' : ''}`}
+            />
             <span className="text-[10px] font-medium">{tab.label}</span>
           </button>
         );

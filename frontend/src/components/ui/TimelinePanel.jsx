@@ -15,6 +15,7 @@ export default function TimelinePanel() {
     setTimelineDuration
   } = useSceneStore();
 
+  const [collapsed, setCollapsed] = useState(false);
   const [draggingBlock, setDraggingBlock] = useState(null);
   const [dragStartX, setDragStartX] = useState(0);
   const [initialStartSec, setInitialStartSec] = useState(0);
@@ -81,16 +82,20 @@ export default function TimelinePanel() {
   };
 
   return (
-    <section className="shrink-0 border-t border-gray-700 bg-gray-900 flex flex-col pt-2"
+    <section className="shrink-0 border-t border-gray-700 bg-gray-900 flex flex-col"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
       <div className="flex px-4 justify-between items-center bg-gray-800 py-1">
-        <h3 className="text-xs font-bold text-gray-300 uppercase tracking-widest flex items-center gap-2">
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="flex items-center gap-2 text-xs font-bold text-gray-300 uppercase tracking-widest hover:text-white transition-colors"
+        >
+          <span>{collapsed ? '▶' : '▼'}</span>
           📺 Timeline
-          <span className="text-[10px] text-gray-500 font-normal border border-gray-600 rounded px-1">{timelineDuration}s</span>
-        </h3>
+          {!collapsed && <span className="text-[10px] text-gray-500 font-normal border border-gray-600 rounded px-1">{timelineDuration}s</span>}
+        </button>
         <div className="flex gap-2">
           <button onClick={() => addDummyBlock('action')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-1 rounded">
             + Action Track
@@ -110,7 +115,7 @@ export default function TimelinePanel() {
         </div>
       </div>
 
-      <div className="flex-1 relative overflow-x-hidden select-none py-2" ref={containerRef}>
+      {!collapsed && <div className="flex-1 relative overflow-x-hidden select-none py-2" ref={containerRef}>
         {/* Helper grid & markers */}
         <div className="absolute top-0 bottom-0 left-4 right-4 border-l border-r border-gray-700 pointer-events-none">
           <div className="w-full h-full flex justify-between absolute">
@@ -177,7 +182,7 @@ export default function TimelinePanel() {
           </div>
 
         </div>
-      </div>
+      </div>}
     </section>
   );
 }

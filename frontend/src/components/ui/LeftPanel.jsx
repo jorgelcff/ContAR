@@ -36,13 +36,15 @@ export default function LeftPanel({
   onLoadVrma,
   mobilePanelTab,
   onMobilePanelClose,
+  textDisplayMode = 'bubble',
+  onTextDisplayModeChange,
 }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
 
   const {
     avatarUrl, setAvatarUrl,
-    transform, setTransform,
+    transform, setTransform, setFullTransform,
     posePreset, setPosePreset,
     speechText, setSpeechText,
     sceneTitle, setSceneTitle,
@@ -55,6 +57,22 @@ export default function LeftPanel({
     animLoopOnce, setAnimLoopOnce,
     vrmExpression, setVrmExpression,
   } = useSceneStore();
+
+  const DEFAULT_TRANSFORM = { positionX: 0, positionY: 0, positionZ: 0, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1 };
+  // Per-pose transform memory: keyed by pose name, values are transform objects.
+  // Initialized with the current pose's transform so an existing scene's settings aren't lost.
+  const [transformByPose, setTransformByPose] = useState(() => ({ [posePreset]: { ...transform } }));
+
+  const handlePoseChange = (newPose) => {
+    setTransformByPose((prev) => ({ ...prev, [posePreset]: { ...transform } }));
+    setFullTransform(transformByPose[newPose] ?? DEFAULT_TRANSFORM);
+    setPosePreset(newPose);
+  };
+
+  const handleResetTransform = () => {
+    setTransformByPose((prev) => ({ ...prev, [posePreset]: DEFAULT_TRANSFORM }));
+    setFullTransform(DEFAULT_TRANSFORM);
+  };
 
   const [activeTab, setActiveTab] = useState('avatar');
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -405,11 +423,13 @@ export default function LeftPanel({
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pose</p>
                 <TooltipIcon text="Define a animação base do avatar: idle (parado), wave (acenando), speaker (palestrando) e outros." />
               </div>
-              <select value={posePreset} onChange={(e) => setPosePreset(e.target.value)}
+              <select value={posePreset} onChange={(e) => handlePoseChange(e.target.value)}
                 className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-blue-500">
                 <optgroup label="Animadas">
                   <option value="idle">{t('poseIdle')}</option>
                   <option value="walk">{t('poseWalk')}</option>
+                  <option value="walk_circle">{t('poseWalkCircle')}</option>
+                  <option value="slow_run">{t('poseSlowRun')}</option>
                   <option value="run">{t('poseRun')}</option>
                   <option value="dance">{t('poseDance')}</option>
                   <option value="speaker">{t('poseSpeaker')}</option>
@@ -431,7 +451,7 @@ export default function LeftPanel({
             </div>
 
             {/* Animation speed + loop */}
-            {['idle','walk','run','dance','speaker'].includes(posePreset) && (
+            {['idle','walk','walk_circle','slow_run','run','dance','speaker'].includes(posePreset) && (
               <div className="flex flex-col gap-2">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Animação</p>
                 <div className="flex items-center gap-3">
@@ -495,7 +515,7 @@ export default function LeftPanel({
             </button>
             {showAdvanced && (
               <div className="border border-gray-700 rounded-xl p-3">
-                <TransformControls transform={transform} onUpdate={setTransform} />
+                <TransformControls transform={transform} onUpdate={setTransform} onReset={handleResetTransform} />
               </div>
             )}
           </>
@@ -526,6 +546,30 @@ export default function LeftPanel({
                     {t('clearSpeech')}
                   </button>
                 )}
+              </div>
+
+              {/* Text display mode toggle */}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs font-medium text-gray-400">Exibir texto como</p>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { value: 'bubble',   label: '💬 Balão' },
+                    { value: 'subtitle', label: '📺 Legenda' },
+                    { value: 'none',     label: '🚫 Nenhum' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => onTextDisplayModeChange?.(value)}
+                      className={`py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        textDisplayMode === value
+                          ? 'bg-cyan-600 text-white'
+                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {tts && (

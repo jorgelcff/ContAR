@@ -1,26 +1,47 @@
 @import "tailwindcss";
 
+/* ── Default: dark ────────────────────────────────────────────────── */
 :root {
   color-scheme: dark;
 }
 
+/* ── Light theme ──────────────────────────────────────────────────── *
+ * Tailwind v4 exposes every design token as a CSS custom property.
+ * Overriding them inside a scoped selector is the proper way to
+ * re-theme without !important: selector specificity [0,2,1] beats
+ * any Tailwind utility class [0,1,0], and opacity variants such as
+ * bg-gray-900/60 automatically derive from the overridden variable.
+ * ──────────────────────────────────────────────────────────────────── */
 html[data-theme='light'] {
   color-scheme: light;
+
+  /* Surfaces: remap dark grays → light grays */
+  --color-gray-950: oklch(98.5% 0.002 247.839);  /* near-white page bg  */
+  --color-gray-900: oklch(100%  0     0);          /* white card bg       */
+  --color-gray-800: oklch(96.8% 0.007 247.896);   /* raised surface      */
+  --color-gray-700: oklch(93%   0.013 255.508);   /* border / divider    */
+
+  /* Text: shift mid-range grays darker for legibility on light bg */
+  --color-gray-600: oklch(44.3% 0.017 265.754);
+  --color-gray-500: oklch(37.3% 0.015 265.807);
+  --color-gray-400: oklch(44.3% 0.017 265.754);
+  --color-gray-300: oklch(27.9% 0.017 264.364);
 }
 
-html[data-theme='light'] .bg-gray-950 { background-color: #f8fafc !important; }
-html[data-theme='light'] .bg-gray-900 { background-color: #ffffff !important; }
-html[data-theme='light'] .bg-gray-900\/95 { background-color: rgb(255 255 255 / 0.95) !important; }
-html[data-theme='light'] .bg-gray-900\/80 { background-color: rgb(255 255 255 / 0.8) !important; }
-html[data-theme='light'] .bg-gray-900\/60 { background-color: rgb(248 250 252 / 0.6) !important; }
-html[data-theme='light'] .bg-gray-900\/30 { background-color: rgb(226 232 240 / 0.3) !important; }
-html[data-theme='light'] .bg-gray-800 { background-color: #f1f5f9 !important; }
-html[data-theme='light'] .bg-gray-800\/80 { background-color: rgb(241 245 249 / 0.8) !important; }
-html[data-theme='light'] .bg-gray-800\/60 { background-color: rgb(241 245 249 / 0.6) !important; }
-html[data-theme='light'] .bg-gray-700 { background-color: #e2e8f0 !important; }
-html[data-theme='light'] .border-gray-800 { border-color: #cbd5e1 !important; }
-html[data-theme='light'] .border-gray-700 { border-color: #cbd5e1 !important; }
-html[data-theme='light'] .text-white { color: #0f172a !important; }
-html[data-theme='light'] .text-gray-400,
-html[data-theme='light'] .text-gray-500,
-html[data-theme='light'] .text-gray-600 { color: #475569 !important; }
+/* text-white → near-black in light mode.
+ * --color-white cannot be safely inverted (used for both text and
+ * legitimate white surfaces/buttons), so a targeted rule is needed. */
+html[data-theme='light'] .text-white {
+  color: oklch(20.8% 0.042 266.058);
+}
+
+/* Hairline dividers built with border-white/5 and border-white/10 become
+ * invisible on a white background; flip them to black-tinted equivalents. */
+html[data-theme='light'] .border-white\/5  { border-color: oklch(0% 0 0 / 5%);  }
+html[data-theme='light'] .border-white\/10 { border-color: oklch(0% 0 0 / 10%); }
+html[data-theme='light'] .border-white\/20 { border-color: oklch(0% 0 0 / 20%); }
+
+/* bg-white/* opacity utilities — similarly flip to dark-tinted */
+html[data-theme='light'] .bg-white\/2  { background-color: oklch(0% 0 0 / 2%);  }
+html[data-theme='light'] .bg-white\/5  { background-color: oklch(0% 0 0 / 5%);  }
+html[data-theme='light'] .bg-white\/10 { background-color: oklch(0% 0 0 / 10%); }

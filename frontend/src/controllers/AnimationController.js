@@ -16,9 +16,17 @@ export class AnimationController {
     this._boneMapper = boneMapper;
     this._mixer = new THREE.AnimationMixer(model);
     this._actions = new Map();
+    this._boneNameSet = null; // lazily built, used to drop non-bone animation tracks
+    this._boneByName = null;  // name → Bone, built alongside _boneNameSet
     this._currentAction = null;
+
     this._timeScale = 1;
     this._loopOnce = false;
+
+    // Lazily computed correction for avatars whose hips bone has a non-identity
+    // non-bone parent (e.g. Blender armature with pre-rotation). undefined = not
+    // yet computed; null = no correction needed; Quaternion = correction to apply.
+    this._hipsParentCorrection = undefined;
 
     // ── Blink ────────────────────────────────────────────────
     this._blinkTimer = 0;
@@ -57,22 +65,42 @@ export class AnimationController {
 
   _retargetClip(clip) {
     if (!this._boneMapper) return clip;
-    
+
     // Create a copy of the clip so we don't mutate the original shared GLB data
     const retargetedClip = clip.clone();
-    
-    // Quick helper to extract bone name from track name (e.g. "mixamorigHips.quaternion" -> "mixamorigHips")
+    const _dbg = import.meta.env.DEV;
+
     const getBoneName = (trackName) => trackName.split('.')[0];
     const getProperty = (trackName) => trackName.split('.')[1];
+
+    // Build bone name set eagerly — needed both for remapping and for the filter below.
+    if (!this._boneNameSet) {
+      this._boneNameSet = new Set();
+      this._boneByName = new Map();
+      this._model.traverse((n) => {
+        if (n?.isBone && n.name) {
+          this._boneNameSet.add(n.name);
+          this._boneByName.set(n.name, n);
+        }
+      });
+    }
+    const boneNameSet = this._boneNameSet;
+    const boneByName = this._boneByName;
+
+    // Keep only quaternion tracks — position tracks encode Mixamo's skeleton proportions
+    // (causes the "just a line" collapse bug) and scale tracks fight bind-pose scales.
+    const trackCountBefore = retargetedClip.tracks.length;
+    retargetedClip.tracks = retargetedClip.tracks.filter(
+      (track) => getProperty(track.name) === 'quaternion',
+    );
 
     retargetedClip.tracks.forEach((track) => {
       const oldBoneName = getBoneName(track.name);
       const property = getProperty(track.name);
-      
-      // Attempt to guess which VRM standard bone this track refers to
-      let standardName = null;
       const lower = oldBoneName.toLowerCase();
-      
+
+      let standardName = null;
+
       // VRM standard: J_Bip_C_Hips, J_Bip_L_UpperArm, J_Bip_R_LowerLeg, etc.
       const VRM_MAP = {
         'j_bip_c_hips': 'hips',       'j_bip_c_spine': 'spine',
@@ -87,21 +115,28 @@ export class AnimationController {
         'j_bip_l_foot': 'leftFoot',          'j_bip_r_foot': 'rightFoot',
         'j_bip_l_toebase': 'leftToes',       'j_bip_r_toebase': 'rightToes',
       };
+
       if (VRM_MAP[lower]) {
         standardName = VRM_MAP[lower];
       } else if (lower.includes('hips') || lower.includes('pelvis')) standardName = 'hips';
-      else if (lower.includes('spine2') || lower.includes('chest')) standardName = 'chest';
-      else if (lower.includes('spine1') || lower.includes('spine')) standardName = 'spine';
+      // Mixamo spine hierarchy: Spine=lower, Spine1=chest, Spine2=upperChest.
+      // Check most-specific suffixes first so 'spine1'/'spine2' don't fall into 'spine'.
+      else if (lower.includes('spine2') || lower.includes('upperchest')) standardName = 'upperChest';
+      else if (lower.includes('spine1') || lower.includes('chest')) standardName = 'chest';
+      else if (lower.includes('spine')) standardName = 'spine';
       else if (lower.includes('neck')) standardName = 'neck';
-      else if (lower.includes('head')) standardName = 'head';
+      // Use word boundary so 'HeadTop_End' doesn't match here and falls through to direct matching.
+      else if (/\bhead\b/.test(lower)) standardName = 'head';
       else if (lower.includes('leftshoulder') || lower.includes('l_shoulder')) standardName = 'leftShoulder';
       else if (lower.includes('leftarm') || lower.includes('left_arm') || lower.includes('l_upperarm')) standardName = 'leftUpperArm';
       else if (lower.includes('leftforearm') || lower.includes('left_forearm') || lower.includes('l_lowerarm')) standardName = 'leftLowerArm';
-      else if (lower.includes('lefthand') || lower.includes('left_hand') || lower.includes('l_hand')) standardName = 'leftHand';
+      // Word boundary: 'lefthand' must not match 'lefthandindex1' etc. (finger tracks).
+      // Finger bones without a standard name fall through to direct matching below.
+      else if (/\blefthand\b/.test(lower) || lower.includes('left_hand') || lower.includes('l_hand')) standardName = 'leftHand';
       else if (lower.includes('rightshoulder') || lower.includes('r_shoulder')) standardName = 'rightShoulder';
       else if (lower.includes('rightarm') || lower.includes('right_arm') || lower.includes('r_upperarm')) standardName = 'rightUpperArm';
       else if (lower.includes('rightforearm') || lower.includes('right_forearm') || lower.includes('r_lowerarm')) standardName = 'rightLowerArm';
-      else if (lower.includes('righthand') || lower.includes('right_hand') || lower.includes('r_hand')) standardName = 'rightHand';
+      else if (/\brighthand\b/.test(lower) || lower.includes('right_hand') || lower.includes('r_hand')) standardName = 'rightHand';
       else if (lower.includes('leftupleg') || lower.includes('leftthigh') || lower.includes('l_upperleg')) standardName = 'leftUpperLeg';
       else if (lower.includes('leftleg') || lower.includes('leftcalf') || lower.includes('l_lowerleg')) standardName = 'leftLowerLeg';
       else if (lower.includes('leftfoot') || lower.includes('l_foot')) standardName = 'leftFoot';
@@ -112,13 +147,79 @@ export class AnimationController {
       else if (lower.includes('righttoebase') || lower.includes('righttoe')) standardName = 'rightToes';
 
       if (standardName) {
-        // Find what that bone is called on the CURRENT model
         const mappedBone = this._boneMapper.get(standardName);
         if (mappedBone) {
           track.name = `${mappedBone.name}.${property}`;
         }
+      } else {
+        // No standard-name match — try direct bone-name lookup by stripping the Mixamo prefix.
+        // This correctly routes finger bones (LeftHandIndex1…4), toe ends, and any extras
+        // without collapsing them all onto the nearest parent bone.
+        //
+        // IMPORTANT: only apply when the matched avatar bone has a bone parent.
+        // Root / Armature bones sit at the top of the hierarchy (non-bone parent) and
+        // must NOT be targeted here — doing so routes Root.quaternion tracks to the
+        // avatar's Root bone and rotates the entire character sideways.
+        const stripped = oldBoneName.replace(/^mixamorig:?/i, '');
+        const directName = boneNameSet.has(`mixamorig${stripped}`)
+          ? `mixamorig${stripped}`
+          : boneNameSet.has(stripped) ? stripped : null;
+
+        if (directName && boneByName.get(directName)?.parent?.isBone) {
+          track.name = `${directName}.${property}`;
+        }
+        // Otherwise leave unchanged — the boneNameSet filter below will drop it.
       }
     });
+
+    // Drop tracks targeting non-bone nodes (e.g. 'Armature.quaternion' in some exports).
+    retargetedClip.tracks = retargetedClip.tracks.filter(
+      (track) => boneNameSet.has(getBoneName(track.name)),
+    );
+
+    // ── Hips parent-rotation correction ──────────────────────────────────────
+    // Gallery/Studio avatars (Blender-exported) often have a non-bone Armature
+    // Object3D sitting above mixamorigHips with a non-identity local rotation.
+    // Mixamo animation quaternions assume that parent = identity, so in a rotated
+    // parent space the entire skeleton plays in the wrong coordinate frame —
+    // visible as the torso pitching forward and legs appearing to go upward.
+    //
+    // Fix: for every keyframe Q in the hips quaternion track, apply:
+    //   Q_corrected = R_parent^-1 * Q
+    // so that the resulting world rotation matches the animation's intent.
+    if (this._hipsParentCorrection === undefined) {
+      this._hipsParentCorrection = this._computeHipsParentCorrection();
+    }
+    if (this._hipsParentCorrection) {
+      const hipsBone = this._boneMapper.get('hips');
+      if (hipsBone) {
+        const hipsTrackName = `${hipsBone.name}.quaternion`;
+        const corr = this._hipsParentCorrection;
+        retargetedClip.tracks.forEach((track) => {
+          if (track.name !== hipsTrackName) return;
+          const vals = track.values;
+          const q = new THREE.Quaternion();
+          for (let i = 0; i < vals.length; i += 4) {
+            q.set(vals[i], vals[i + 1], vals[i + 2], vals[i + 3]);
+            q.premultiply(corr); // R_parent^-1 * Q
+            vals[i] = q.x; vals[i + 1] = q.y; vals[i + 2] = q.z; vals[i + 3] = q.w;
+          }
+        });
+      }
+    }
+
+    if (_dbg) {
+      // eslint-disable-next-line no-console
+      console.groupCollapsed(`[AnimCtrl] retarget "${clip.name}" — mapper: ${this._boneMapper.source} (${this._boneMapper.resolvedCount} bones)`);
+      // eslint-disable-next-line no-console
+      console.log(`tracks: ${trackCountBefore} total → ${retargetedClip.tracks.length} surviving`);
+      // eslint-disable-next-line no-console
+      console.log('surviving tracks:', retargetedClip.tracks.map((t) => t.name));
+      // eslint-disable-next-line no-console
+      console.log('avatar bones:', [...boneNameSet].sort().join(', '));
+      // eslint-disable-next-line no-console
+      console.groupEnd();
+    }
 
     return retargetedClip;
   }
@@ -207,6 +308,45 @@ export class AnimationController {
   }
 
   // ── Private ───────────────────────────────────────────────────────────────
+
+  /**
+   * Compute the inverse world quaternion of the first non-bone ancestor of the
+   * hips bone. Gallery/Studio avatars exported from Blender often have an
+   * Armature Object3D above the skeleton with a non-identity rotation. Mixamo
+   * animation tracks assume parent=identity, so without correction the whole
+   * skeleton plays in a rotated frame (torso forward, legs upward).
+   * Returns a THREE.Quaternion correction or null if no correction is needed.
+   */
+  _computeHipsParentCorrection() {
+    const hipsBone = this._boneMapper?.get('hips');
+    if (!hipsBone) return null;
+
+    // Walk up until we find a non-bone ancestor (the armature Object3D or scene root)
+    let node = hipsBone.parent;
+    while (node && node.isBone) node = node.parent;
+    if (!node) return null;
+
+    this._model.updateMatrixWorld(true);
+    const parentWorldQ = new THREE.Quaternion();
+    node.getWorldQuaternion(parentWorldQ);
+
+    const eps = 1e-4;
+    const isIdentity =
+      Math.abs(parentWorldQ.x) < eps &&
+      Math.abs(parentWorldQ.y) < eps &&
+      Math.abs(parentWorldQ.z) < eps; // w ≈ 1 follows automatically
+    if (isIdentity) return null;
+
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[AnimCtrl] hips parent "${node.name}" has non-identity rotation`,
+        parentWorldQ,
+        '→ applying correction',
+      );
+    }
+    return parentWorldQ.invert();
+  }
 
   _findAction(key) {
     if (this._actions.has(key)) return this._actions.get(key);

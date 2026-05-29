@@ -76,29 +76,46 @@ const CC3_PATTERNS = {
   rightFoot:     [/cc_base_r_foot$/i],
 };
 
-// Generic — covers Ready Player Me, Meshy.ai, and most other sources
+// Generic — covers Ready Player Me, Meshy.ai, Unreal Engine and most other sources.
+// NOTE: /^root$/ is intentionally absent from hips — a "Root" bone is an auxiliary
+// scene root in most rigs (Blender, Unreal, CharacterStudio) and must never be
+// treated as the pelvis. Mapping root as hips causes the whole skeleton to be
+// driven by the hip animation track, making the character collapse upward.
 const GENERIC_PATTERNS = {
-  hips:          [/^hips?$/, /^pelvis$/, /^root$/],
-  spine:         [/^spine$/, /^spine0?1$/],
-  chest:         [/^spine0?2$/, /^chest$/, /^upperchest$/],
+  hips:          [/^hips?$/, /^pelvis$/],
+  spine:         [/^spine$/, /^spine_?0?1$/],
+  chest:         [/^spine_?0?2$/, /^chest$/, /^upperchest$/],
+  upperChest:    [/^spine_?0?[34]$/, /^upperchest$/],
   neck:          [/^neck/],
   head:          [/^head$/],
   jaw:           [/^jaw/],
-  leftShoulder:  [/left.*shoulder/, /shoulder.*\bl\b/, /l.*shoulder/],
-  leftUpperArm:  [/^leftarm$/, /leftupperarm/, /upperarm.*\bl\b/, /\bl\b.*upperarm/],
-  leftLowerArm:  [/leftforearm/, /lowerarm.*\bl\b/, /forearm.*\bl\b/],
-  leftHand:      [/^lefthand$/, /hand.*\bl\b/],
-  rightShoulder: [/right.*shoulder/, /shoulder.*\br\b/, /r.*shoulder/],
-  rightUpperArm: [/^rightarm$/, /rightupperarm/, /upperarm.*\br\b/, /\br\b.*upperarm/],
-  rightLowerArm: [/rightforearm/, /lowerarm.*\br\b/, /forearm.*\br\b/],
-  rightHand:     [/^righthand$/, /hand.*\br\b/],
-  leftUpperLeg:  [/leftupleg/, /left.*thigh/, /upperleg.*\bl\b/],
-  leftLowerLeg:  [/^leftleg$/, /lowerleg.*\bl\b/, /shin.*\bl\b/, /calf.*\bl\b/],
-  leftFoot:      [/leftfoot/, /foot.*\bl\b/],
-  rightUpperLeg: [/rightupleg/, /right.*thigh/, /upperleg.*\br\b/],
-  rightLowerLeg: [/^rightleg$/, /lowerleg.*\br\b/, /shin.*\br\b/, /calf.*\br\b/],
-  rightFoot:     [/rightfoot/, /foot.*\br\b/],
+  leftShoulder:  [/left.*shoulder/, /shoulder.*\bl\b/, /l.*shoulder/, /clavicle_l$/i, /l_clavicle$/i],
+  leftUpperArm:  [/^leftarm$/, /leftupperarm/, /upperarm.*\bl\b/, /\bl\b.*upperarm/, /upperarm_l$/i],
+  leftLowerArm:  [/leftforearm/, /lowerarm.*\bl\b/, /forearm.*\bl\b/, /lowerarm_l$/i, /forearm_l$/i],
+  leftHand:      [/^lefthand$/, /hand.*\bl\b/, /hand_l$/i],
+  rightShoulder: [/right.*shoulder/, /shoulder.*\br\b/, /r.*shoulder/, /clavicle_r$/i, /r_clavicle$/i],
+  rightUpperArm: [/^rightarm$/, /rightupperarm/, /upperarm.*\br\b/, /\br\b.*upperarm/, /upperarm_r$/i],
+  rightLowerArm: [/rightforearm/, /lowerarm.*\br\b/, /forearm.*\br\b/, /lowerarm_r$/i, /forearm_r$/i],
+  rightHand:     [/^righthand$/, /hand.*\br\b/, /hand_r$/i],
+  leftUpperLeg:  [/leftupleg/, /left.*thigh/, /upperleg.*\bl\b/, /thigh_l$/i, /l_thigh$/i],
+  leftLowerLeg:  [/^leftleg$/, /lowerleg.*\bl\b/, /shin.*\bl\b/, /calf.*\bl\b/, /calf_l$/i],
+  leftFoot:      [/leftfoot/, /foot.*\bl\b/, /foot_l$/i],
+  rightUpperLeg: [/rightupleg/, /right.*thigh/, /upperleg.*\br\b/, /thigh_r$/i, /r_thigh$/i],
+  rightLowerLeg: [/^rightleg$/, /lowerleg.*\br\b/, /shin.*\br\b/, /calf.*\br\b/, /calf_r$/i],
+  rightFoot:     [/rightfoot/, /foot.*\br\b/, /foot_r$/i],
 };
+
+// ── Session cache for AI-resolved mappings ───────────────────────────────────
+// Keyed by sorted bone-name signature so the same skeleton is never sent twice.
+const _aiCache = new Map();
+
+function _boneSignature(bones) {
+  return bones
+    .map((b) => b.name)
+    .filter(Boolean)
+    .sort()
+    .join('|');
+}
 
 // ── BoneMapper ────────────────────────────────────────────────────────────────
 
@@ -151,6 +168,61 @@ export class BoneMapper {
     } else {
       mapper._fromModel(gltf.scene);
     }
+
+    return mapper;
+  }
+
+  /**
+   * Try to improve an already-built mapper using an AI backend call.
+   * Only fires when source === 'generic' and resolvedCount < threshold (default 14).
+   * Results are cached for the session by bone-name signature.
+   *
+   * @param {BoneMapper} mapper        The mapper to enhance (mutated in-place).
+   * @param {THREE.Bone[]} bones       All bones from the model.
+   * @param {function} mapBonesFn      API function: (string[]) => Promise<Record<string,string>>
+   * @param {number} [threshold=14]    Skip if already resolved >= this many bones.
+   * @returns {Promise<BoneMapper>}    The (possibly enhanced) mapper.
+   */
+  static async enhanceWithAI(mapper, bones, mapBonesFn, threshold = 14) {
+    if (mapper.source !== 'generic' || mapper.resolvedCount >= threshold) {
+      return mapper;
+    }
+
+    const sig = _boneSignature(bones);
+
+    // Return cached result immediately
+    if (_aiCache.has(sig)) {
+      const cached = _aiCache.get(sig);
+      if (cached) {
+        const byName = Object.fromEntries(bones.map((b) => [b.name, b]));
+        for (const [standard, boneName] of Object.entries(cached)) {
+          if (!mapper.has(standard) && byName[boneName]) {
+            mapper.set(standard, byName[boneName]);
+          }
+        }
+        mapper.source = 'ai';
+      }
+      return mapper;
+    }
+
+    const boneNames = bones.map((b) => b.name).filter(Boolean);
+    let aiMapping = null;
+    try {
+      aiMapping = await mapBonesFn(boneNames);
+    } catch {
+      _aiCache.set(sig, null); // cache failure to avoid retry loops
+      return mapper;
+    }
+
+    _aiCache.set(sig, aiMapping);
+
+    const byName = Object.fromEntries(bones.map((b) => [b.name, b]));
+    for (const [standard, boneName] of Object.entries(aiMapping)) {
+      if (!mapper.has(standard) && byName[boneName]) {
+        mapper.set(standard, byName[boneName]);
+      }
+    }
+    mapper.source = 'ai';
 
     return mapper;
   }

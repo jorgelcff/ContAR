@@ -38,9 +38,10 @@ export class LipSyncController {
   }
 
   /**
-   * Returns all discovered morph targets as an array of { name, value } objects.
-   * Multiple meshes may share the same name; the returned list contains unique names.
-   * @returns {{ name: string, value: number }[]}
+   * Returns all discovered morph targets as an array of { name, meshName, value } objects.
+   * Multiple meshes may share the same name; the returned list contains unique names
+   * (first mesh that has the name wins for meshName).
+   * @returns {{ name: string, meshName: string, value: number }[]}
    */
   getAll() {
     const seen = new Set();
@@ -50,7 +51,11 @@ export class LipSyncController {
         seen.add(name);
         return true;
       })
-      .map(({ name }) => ({ name, value: this._currentValues[name] ?? 0 }));
+      .map(({ name, mesh }) => ({
+        name,
+        meshName: mesh?.name || '',
+        value: this._currentValues[name] ?? 0,
+      }));
   }
 
   /**

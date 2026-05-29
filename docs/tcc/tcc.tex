@@ -1,0 +1,1410 @@
+% =============================================================================
+% TCC — ContAR: Plataforma No-Code para Autoria de Narradores Virtuais 3D
+%        em Realidade Aumentada Educacional
+%
+% Autor  : Jorge Luiz Cunha de Freitas
+% Curso  : [Nome do Curso] — Centro de Informática (CIn) / UFPE
+% Ano    : 2026
+% =============================================================================
+
+\documentclass[
+  12pt,
+  openright,
+  twoside,
+  a4paper,
+  english,
+  brazil
+]{abntex2}
+
+% ---------------------------------------------------------------------------
+% Pacotes
+% ---------------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{indentfirst}
+
+% ---------------------------------------------------------------------------
+% Configurações de código-fonte (para trechos de código)
+% ---------------------------------------------------------------------------
+\lstset{
+  basicstyle=\footnotesize\ttfamily,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{red!60!black},
+  backgroundcolor=\color{gray!5},
+}
+
+% ---------------------------------------------------------------------------
+% Informações do documento
+% ---------------------------------------------------------------------------
+\titulo{ContAR: Uma Plataforma No-Code para Autoria de Narradores Virtuais 3D
+        em Realidade Aumentada Educacional}
+\autor{Jorge Luiz Cunha de Freitas}
+\local{Recife}
+\data{2026}
+\orientador{Prof. Dr. [Nome do Orientador]}
+% \coorientador{Prof. Dr. [Nome do Coorientador]}  % descomente se houver
+\instituicao{
+  Universidade Federal de Pernambuco \\
+  Centro de Informática (CIn)
+}
+\tipotrabalho{Trabalho de Conclusão de Curso}
+\preambulo{
+  Trabalho de Conclusão de Curso apresentado ao Centro de Informática
+  da Universidade Federal de Pernambuco como requisito parcial para
+  obtenção do grau de [Bacharel em Ciência da Computação].
+}
+
+% ---------------------------------------------------------------------------
+% Hyperref
+% ---------------------------------------------------------------------------
+\hypersetup{
+  pdftitle={\imprimirtitulo},
+  pdfauthor={\imprimirautor},
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue
+}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+\frenchspacing
+
+% ---------------------------------------------------------------------------
+% Elementos pré-textuais
+% ---------------------------------------------------------------------------
+\pretextual
+
+% Capa
+\imprimircapa
+
+% Folha de rosto
+\imprimirfolhaderosto*
+
+% Ficha catalográfica — gerada eletronicamente pela UFPE
+% (substituir pelo PDF gerado no portal da biblioteca)
+\begin{fichacatalografica}
+  \vspace*{\fill}
+  \begin{center}
+    \fbox{
+      \begin{minipage}[c][8cm]{13cm}
+        \small
+        Freitas, Jorge Luiz Cunha de.\\
+        \hspace*{0.5cm}
+        ContAR: Uma Plataforma No-Code para Autoria de Narradores Virtuais 3D
+        em Realidade Aumentada Educacional /
+        Jorge Luiz Cunha de Freitas. --- Recife, 2026.\\
+        \hspace*{0.5cm}
+        [Total de páginas] p.\\[0.5em]
+        \hspace*{0.5cm}
+        Orientador: [Nome do Orientador].\\
+        Trabalho de Conclusão de Curso (Graduação) ---
+        Universidade Federal de Pernambuco,
+        Centro de Informática, [Curso], 2026.\\[0.5em]
+        \hspace*{0.5cm}
+        1.~Realidade Aumentada.
+        2.~WebAR.
+        3.~Avatares 3D.
+        4.~Síntese de Voz.
+        5.~No-Code.
+        6.~Educação.
+        I.~[Nome do Orientador], orient.
+        II.~Título.
+      \end{minipage}
+    }
+  \end{center}
+\end{fichacatalografica}
+
+% Folha de aprovação
+\begin{folhadeaprovacao}
+  \begin{center}
+    {\ABNTEXchapterfont\large\imprimirautor}
+    \vspace*{\fill}\vspace*{\fill}
+    \begin{center}
+      \ABNTEXchapterfont\bfseries\Large\imprimirtitulo
+    \end{center}
+    \vspace*{\fill}
+    \hspace{.45\textwidth}
+    \begin{minipage}{.5\textwidth}
+      \imprimirpreambulo
+    \end{minipage}%
+    \vspace*{\fill}
+  \end{center}
+
+  Aprovado em: \underline{\hspace{3cm}} de \underline{\hspace{3cm}} de 2026.
+
+  \vspace{1cm}
+  \noindent\textbf{Banca Examinadora:}
+
+  \assinatura{\textbf{\imprimirorientador} \\ Orientador}
+  \assinatura{\textbf{[Membro da Banca 2]} \\ [Instituição]}
+  \assinatura{\textbf{[Membro da Banca 3]} \\ [Instituição]}
+\end{folhadeaprovacao}
+
+% Dedicatória (opcional)
+\begin{dedicatoria}
+  \vspace*{\fill}
+  \centering
+  \noindent
+  \textit{A todos os professores e educadores que acreditam\\
+  que a tecnologia deve servir às pessoas,\\
+  e não o contrário.}
+  \vspace*{\fill}
+\end{dedicatoria}
+
+% Agradecimentos (opcional)
+\begin{agradecimentos}
+  Agradeço ao meu orientador, Prof. Dr. [Nome], pelo acompanhamento, pelas
+  discussões que moldaram as decisões arquiteturais desta pesquisa e pela
+  sugestão de explorar a fronteira entre Inteligência Artificial e narrativas
+  educacionais imersivas.
+
+  Aos professores e especialistas que participaram do Expert Walkthrough,
+  cujas percepções foram fundamentais para a avaliação crítica da plataforma.
+
+  À comunidade open-source — especialmente os mantenedores do Three.js,
+  \texttt{@pixiv/three-vrm} e AR.js — cujas contribuições tornaram este
+  trabalho tecnicamente viável.
+
+  À UFPE e ao CIn, pelo ambiente de pesquisa e pela infraestrutura que
+  possibilitaram o desenvolvimento deste projeto.
+
+  E à minha família, pelo apoio incondicional durante toda a graduação.
+\end{agradecimentos}
+
+% Epígrafe (opcional)
+\begin{epigrafe}
+  \vspace*{\fill}
+  \begin{flushright}
+    \textit{``Any sufficiently advanced technology\\
+    is indistinguishable from magic.''}\\
+    --- Arthur C. Clarke
+  \end{flushright}
+\end{epigrafe}
+
+% Resumo em português
+\begin{resumo}
+  A Realidade Aumentada (RA) tem sido amplamente investigada como recurso
+  pedagógico capaz de promover experiências de aprendizagem interativas e
+  multimodais. No entanto, a criação de conteúdo personalizado em RA ainda
+  impõe barreiras técnicas significativas a educadores sem formação em
+  desenvolvimento de software ou modelagem tridimensional. Um estudo
+  exploratório anterior, realizado como parte desta pesquisa, identificou
+  que ferramentas disponíveis no mercado operam de forma fragmentada,
+  exigindo que o usuário domine múltiplas plataformas independentes para
+  concluir um fluxo completo de autoria em RA.
+
+  Diante dessa lacuna, este trabalho apresenta o \textbf{ContAR}, uma
+  plataforma web no-code para autoria de narradores virtuais 3D em Realidade
+  Aumentada educacional. A plataforma integra, em uma única interface, a
+  criação e customização de avatares 3D, a geração de voz sintética com
+  sincronização labial precisa via visemas, a composição de cenas e histórias
+  sequenciais, e a publicação em RA acessível diretamente pelo navegador
+  (WebXR Surface AR e AR.js Marker AR).
+
+  A arquitetura adota um modelo SPA (\textit{Single-Page Application}) com
+  React e Three.js no frontend, e uma API REST com Node.js e MongoDB no
+  backend. Contribuições técnicas incluem um mapeador universal de esqueletos
+  (\texttt{BoneMapper}), compatível com rigs Mixamo, VRM e CC3; um controlador
+  de sincronização labial (\texttt{LipSyncController}) baseado em visemas
+  gerados pelo Azure Cognitive Services; e suporte ao padrão VRM Animation
+  (\texttt{.vrma}) via \texttt{@pixiv/three-vrm-animation}.
+
+  A avaliação da plataforma foi conduzida por meio do método
+  \textit{Expert Walkthrough}, com [N] especialistas nas áreas de IHC,
+  Realidade Aumentada e Educação. Os resultados indicam [síntese dos
+  resultados — a preencher após coleta]. A plataforma demonstra viabilidade
+  técnica e potencial de uso no contexto da Educação~4.0, contribuindo para
+  a democratização da autoria de experiências imersivas educacionais.
+
+  \vspace{\onelineskip}
+  \noindent\textbf{Palavras-chave:}
+  Realidade Aumentada.
+  WebAR.
+  Narradores Virtuais.
+  Avatares 3D.
+  Síntese de Voz.
+  Lip Sync.
+  Plataforma No-Code.
+  Educação.
+\end{resumo}
+
+% Abstract (inglês)
+\begin{resumo}[Abstract]
+  \begin{otherlanguage*}{english}
+    Augmented Reality (AR) has been widely studied as a pedagogical tool
+    capable of promoting interactive and multimodal learning experiences.
+    However, the creation of personalized AR content still imposes significant
+    technical barriers for educators without a background in software
+    development or 3D modeling. A prior exploratory study conducted as part of
+    this research identified that existing tools operate in a fragmented
+    manner, requiring users to master multiple independent platforms to
+    complete a full AR authoring workflow.
+
+    To address this gap, this work presents \textbf{ContAR}, a no-code web
+    platform for authoring 3D virtual narrators in educational Augmented
+    Reality. The platform integrates, within a single interface, the creation
+    and customization of 3D avatars, synthetic speech generation with
+    precise lip synchronization via visemes, sequential scene and story
+    composition, and browser-accessible AR publication (WebXR Surface AR
+    and AR.js Marker AR).
+
+    The architecture follows a Single-Page Application (SPA) model using
+    React and Three.js on the frontend, and a REST API with Node.js and
+    MongoDB on the backend. Technical contributions include a universal
+    skeleton mapper (\texttt{BoneMapper}) compatible with Mixamo, VRM, and
+    CC3 rigs; a lip synchronization controller (\texttt{LipSyncController})
+    based on visemes generated by Azure Cognitive Services; and support for
+    the VRM Animation standard (\texttt{.vrma}) via
+    \texttt{@pixiv/three-vrm-animation}.
+
+    Platform evaluation was conducted using the Expert Walkthrough method
+    with [N] specialists in HCI, Augmented Reality, and Education. Results
+    indicate [summary of results — to be completed after data collection].
+    The platform demonstrates technical viability and potential for use in
+    the context of Education 4.0, contributing to the democratization of
+    immersive educational experience authoring.
+
+    \vspace{\onelineskip}
+    \noindent\textbf{Keywords:}
+    Augmented Reality.
+    WebAR.
+    Virtual Narrators.
+    3D Avatars.
+    Speech Synthesis.
+    Lip Sync.
+    No-Code Platform.
+    Education.
+  \end{otherlanguage*}
+\end{resumo}
+
+% Listas
+\pdfbookmark[0]{\listfigurename}{lof}
+\listoffigures*
+\cleardoublepage
+
+\pdfbookmark[0]{\listtablename}{lot}
+\listoftables*
+\cleardoublepage
+
+% Lista de abreviaturas
+\begin{siglas}
+  \item[ABNT]  Associação Brasileira de Normas Técnicas
+  \item[API]   Application Programming Interface
+  \item[AR]    Augmented Reality (Realidade Aumentada)
+  \item[AR.js] Augmented Reality JavaScript Library
+  \item[CRUD]  Create, Read, Update, Delete
+  \item[CSS]   Cascading Style Sheets
+  \item[GLB]   GL Binary (formato binário do glTF)
+  \item[glTF]  Graphics Language Transmission Format
+  \item[HTML]  HyperText Markup Language
+  \item[HTTP]  HyperText Transfer Protocol
+  \item[HTTPS] HTTP Secure
+  \item[HCI]   Human-Computer Interaction
+  \item[IHC]   Interação Humano-Computador
+  \item[JWT]   JSON Web Token
+  \item[LLM]   Large Language Model
+  \item[MR]    Mixed Reality (Realidade Mista)
+  \item[NLP]   Natural Language Processing
+  \item[RA]    Realidade Aumentada
+  \item[REST]  Representational State Transfer
+  \item[RV]    Realidade Virtual
+  \item[SDK]   Software Development Kit
+  \item[SPA]   Single-Page Application
+  \item[SMTP]  Simple Mail Transfer Protocol
+  \item[SUS]   System Usability Scale
+  \item[TCC]   Trabalho de Conclusão de Curso
+  \item[TTS]   Text-to-Speech (Síntese de Voz)
+  \item[UFPE]  Universidade Federal de Pernambuco
+  \item[VR]    Virtual Reality (Realidade Virtual)
+  \item[VRM]   Virtual Reality Model (formato de avatar 3D humanóide)
+  \item[VRMA]  VRM Animation (padrão de animação para avatares VRM)
+  \item[WebAR] Web-based Augmented Reality
+  \item[WebXR] Web Extended Reality API
+  \item[XR]    Extended Reality (Realidade Estendida)
+\end{siglas}
+
+% Sumário
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+% =============================================================================
+% Elementos textuais
+% =============================================================================
+\textual
+
+% =============================================================================
+\chapter{Introdução}
+\label{cap:introducao}
+% =============================================================================
+
+A Realidade Aumentada (RA) tem se consolidado como uma das tecnologias mais
+promissoras para aplicações educacionais. Ao sobrepor elementos virtuais ao
+mundo físico, a RA possibilita experiências de aprendizagem interativas,
+contextualizadas e multimodais — características frequentemente associadas a
+maiores índices de engajamento e retenção de conteúdo
+\cite{fonnet2021review, munoz2021education}. Desde as formulações seminal de
+Azuma \cite{azuma1997} e a taxonomia de Realidade Mista proposta por Milgram
+e Kishino \cite{milgram1994}, o campo evoluiu de sistemas restritos a
+laboratórios especializados para experiências acessíveis diretamente pelo
+navegador de um smartphone.
+
+Esse avanço foi impulsionado, em grande parte, pela consolidação das
+tecnologias WebAR — especialmente a API WebXR \cite{webxr2020} e bibliotecas
+como AR.js \cite{arjs} — que eliminam a necessidade de instalação de
+aplicativos nativos e permitem que experiências imersivas sejam publicadas,
+compartilhadas e acessadas com um simples link. Para contextos educacionais,
+onde disponibilidade de dispositivos, restrições de infraestrutura e
+heterogeneidade de hardware são fatores críticos, essa acessibilidade
+representa uma mudança de paradigma.
+
+Paralelamente, o surgimento de ferramentas de Inteligência Artificial (IA)
+para geração de modelos tridimensionais — como Meshy AI \cite{meshy2024},
+Luma AI \cite{lumaai2024} e plataformas de criação de avatares como
+Ready Player Me \cite{readyplayerme} e Avaturn — democratizou o acesso à
+criação de conteúdo 3D, tornando-a viável mesmo para usuários sem formação
+em modelagem. Ao mesmo tempo, avanços em síntese de voz neural (TTS) e em
+técnicas de sincronização labial via visemas tornaram possível a criação de
+narradores virtuais expressivos e naturais.
+
+\section{Motivação e Contexto}
+\label{sec:motivacao}
+
+Um estudo exploratório conduzido como etapa anterior a este trabalho
+\cite{freitas2025benchmark} investigou a viabilidade de usuários não técnicos
+criarem experiências educacionais em RA utilizando ferramentas de IA
+disponíveis no mercado. Foram avaliadas três plataformas representativas —
+Ready Player Me, Meshy AI e Luma AI — segundo critérios técnicos como
+facilidade de uso, qualidade visual, tamanho de arquivo, contagem de
+polígonos e compatibilidade com WebAR.
+
+Os resultados desse estudo revelaram que, embora já seja possível criar
+modelos 3D de qualidade aceitável para WebAR, o ecossistema atual opera
+de forma \textbf{fragmentada}: o usuário precisa navegar por múltiplas
+plataformas independentes para concluir um fluxo completo de autoria,
+passando pela geração do avatar, conversão de formato, configuração de
+áudio, inserção em cena e publicação em RA. Cada transição entre ferramentas
+representa uma barreira técnica adicional, especialmente para professores
+e educadores sem formação computacional.
+
+A conclusão do estudo anterior apontou diretamente para a necessidade de
+\textit{``uma plataforma integrada voltada a usuários não técnicos, capaz
+de unificar a criação de avatares, a geração de marcadores, a inserção
+de áudio e interações, e a publicação automática em WebAR''}.
+Este Trabalho de Conclusão de Curso é a resposta concreta a essa lacuna.
+
+\section{Problema de Pesquisa}
+\label{sec:problema}
+
+Diante do cenário descrito, este trabalho endereça o seguinte problema:
+
+\begin{quote}
+  \textit{Como uma plataforma web no-code e integrada pode viabilizar a
+  autoria de narradores virtuais 3D em Realidade Aumentada por usuários
+  sem conhecimento técnico especializado, reduzindo a fragmentação do
+  ecossistema atual e tornando o fluxo completo — da criação do avatar
+  à publicação em RA — acessível no navegador?}
+\end{quote}
+
+\section{Objetivos}
+\label{sec:objetivos}
+
+\subsection{Objetivo Geral}
+\label{subsec:obj-geral}
+
+Desenvolver, documentar e avaliar o \textbf{ContAR}, uma plataforma web
+no-code para autoria de narradores virtuais 3D em Realidade Aumentada
+educacional, integrando em um único fluxo a criação de avatares, síntese
+de voz com lip sync preciso, composição de cenas e publicação em WebAR
+acessível por navegador.
+
+\subsection{Objetivos Específicos}
+\label{subsec:obj-especificos}
+
+\begin{enumerate}
+  \item Projetar e implementar uma arquitetura full-stack (React + Three.js
+        + Node.js + MongoDB) capaz de suportar o ciclo completo de autoria
+        de experiências em RA;
+  \item Desenvolver um \textit{BoneMapper} universal que permita a
+        compatibilidade de animações e poses procedurais com diferentes
+        padrões de rig (Mixamo, VRM, CC3 e genérico);
+  \item Implementar um sistema de sincronização labial baseado em visemas
+        gerados pela API Azure Cognitive Services Speech SDK e pelo padrão
+        VRM Animation (\texttt{.vrma});
+  \item Integrar modalidades complementares de Realidade Aumentada:
+        WebXR Surface AR (posicionamento em superfície) e AR.js Marker AR
+        (marcadores fiduciais impressos);
+  \item Avaliar a usabilidade da plataforma por meio do método
+        \textit{Expert Walkthrough}, identificando barreiras cognitivas,
+        pontos de confusão e oportunidades de melhoria no fluxo de autoria;
+  \item Analisar a viabilidade do ContAR como ferramenta de apoio à
+        Educação~4.0, com foco em professores de educação básica sem
+        formação técnica em TI.
+\end{enumerate}
+
+\section{Justificativa}
+\label{sec:justificativa}
+
+A relevância deste trabalho se articula em três dimensões complementares.
+
+\textbf{Dimensão pedagógica.} Pesquisas em Tecnologia Educacional demonstram
+que a RA potencializa o aprendizado ao tornar conceitos abstratos tangíveis,
+promovendo construção ativa de conhecimento
+\cite{fonnet2021review, munoz2021education}. No Brasil, a adoção de RA
+em sala de aula permanece restrita a iniciativas pontuais, em grande parte
+pela ausência de ferramentas acessíveis a professores sem formação técnica.
+O ContAR endereça diretamente essa barreira ao eliminar a necessidade de
+conhecimento em programação ou modelagem 3D.
+
+\textbf{Dimensão tecnológica.} A integração de múltiplos subsistemas
+complexos — renderização 3D em tempo real via Three.js, síntese de voz
+neural com sincronização labial por visemas, suporte a múltiplos padrões
+de avatar (GLB, VRM) e publicação em RA no navegador — em uma única
+plataforma coesa representa uma contribuição técnica não trivial, com
+potencial de referência para projetos similares na área de WebXR.
+
+\textbf{Dimensão social.} A democratização da autoria de conteúdo
+imersivo tem implicações diretas para a equidade educacional. Ao tornar
+acessível a criação de narradores virtuais personalizados, o ContAR
+abre espaço para a representação de diversidade cultural e identitária
+no material didático digital — incluindo aplicações em educação antirracista
+e valorização de culturas locais —, perspectiva alinhada a diretrizes
+pedagógicas contemporâneas \cite{lgbtqieducation}.
+
+\section{Estrutura do Trabalho}
+\label{sec:estrutura}
+
+Este trabalho está organizado em sete capítulos:
+
+O \autoref{cap:referencial} apresenta o referencial teórico, abordando
+os fundamentos de Realidade Aumentada, WebAR, avatares 3D nos formatos
+GLB e VRM, síntese de voz e lip sync, e plataformas no-code para autoria
+de conteúdo educacional.
+
+O \autoref{cap:pesquisa-anterior} descreve a pesquisa exploratória anterior,
+cujos resultados motivaram o desenvolvimento do ContAR, incluindo o benchmark
+técnico das plataformas de geração 3D avaliadas.
+
+O \autoref{cap:metodologia} apresenta a metodologia de pesquisa adotada,
+classificando o trabalho como Pesquisa-Ação combinada com Estudo de Caso,
+e descreve o protocolo do Expert Walkthrough utilizado na avaliação.
+
+O \autoref{cap:desenvolvimento} documenta o desenvolvimento da plataforma
+ContAR, detalhando as decisões de arquitetura e engenharia, os módulos
+técnicos implementados e o processo de design da experiência do usuário.
+
+O \autoref{cap:avaliacao} apresenta os resultados da avaliação do Expert
+Walkthrough, incluindo análise das heurísticas de usabilidade, pontuações
+SUS e discussão dos achados qualitativos.
+
+O \autoref{cap:conclusao} sintetiza as contribuições do trabalho, discute
+as limitações identificadas e aponta direções para trabalhos futuros,
+incluindo a proposta de evolução para um sistema de narradores contextuais
+com IA integrada.
+
+
+% =============================================================================
+\chapter{Referencial Teórico}
+\label{cap:referencial}
+% =============================================================================
+
+Este capítulo apresenta os fundamentos teóricos que sustentam o desenvolvimento
+e a avaliação do ContAR. As seções estão organizadas de forma a construir
+progressivamente o arcabouço conceitual necessário: partindo dos fundamentos
+de Realidade Aumentada e WebAR, passando pelos padrões de representação de
+avatares 3D, pelos sistemas de síntese de voz e sincronização labial, e
+chegando ao conceito de plataformas no-code para autoria de conteúdo educacional.
+
+% ---------------------------------------------------------------------------
+\section{Realidade Aumentada: Fundamentos e Evolução}
+\label{sec:ra-fundamentos}
+% ---------------------------------------------------------------------------
+
+A Realidade Aumentada foi formalmente definida por Azuma \cite{azuma1997}
+como um sistema que (1) combina elementos reais e virtuais, (2) é interativo
+em tempo real e (3) está registrado em três dimensões. Essa definição,
+embora formulada em 1997, permanece como referência na literatura por sua
+precisão e abrangência.
+
+A taxonomia proposta por Milgram e Kishino \cite{milgram1994} — o
+\textit{Continuum de Realidade Mista} — posiciona a RA entre o ambiente
+puramente real e o ambiente puramente virtual. Nesse espectro, a RA
+se situa próxima à extremidade real: objetos virtuais são sobrepostos
+ao mundo físico, mantendo o usuário ancorado na realidade. Essa propriedade
+distingue a RA da Realidade Virtual (RV), onde o usuário é completamente
+imerso em um ambiente sintético.
+
+Do ponto de vista técnico, sistemas de RA requerem três componentes
+fundamentais: (i) captura do ambiente real (geralmente via câmera),
+(ii) rastreamento da posição e orientação do usuário, e
+(iii) composição e renderização dos elementos virtuais sobre o feed real.
+As estratégias de rastreamento evoluíram de marcadores fiduciais
+(padrões impressos de alto contraste) para rastreamento markerless baseado
+em visão computacional (SLAM — \textit{Simultaneous Localization and Mapping}),
+e mais recentemente para sistemas híbridos que combinam ambas as abordagens.
+
+\subsection{Realidade Aumentada na Educação}
+\label{subsec:ra-educacao}
+
+O potencial pedagógico da RA tem sido amplamente investigado. Revisões
+sistemáticas da literatura, como as conduzidas por Fonnet e Prie
+\cite{fonnet2021review} e Muñoz-Cristóbal et al. \cite{munoz2021education},
+demonstram que a RA pode promover ganhos significativos de engajamento,
+motivação intrínseca e compreensão conceitual, especialmente em disciplinas
+que se beneficiam de visualização espacial — como Ciências, Geografia,
+Biologia e Matemática.
+
+Contudo, esses estudos também evidenciam que a maioria das aplicações
+educacionais de RA é desenvolvida por equipes especializadas, com baixa
+participação ativa de professores no processo de criação. Isso contrasta
+com princípios contemporâneos de design instrucional, que enfatizam a
+importância da autoria docente para a contextualização pedagógica do
+material \cite{ruiz2020arbeginner}. O ContAR endereça diretamente essa
+limitação ao colocar a capacidade de autoria nas mãos do educador.
+
+% ---------------------------------------------------------------------------
+\section{WebAR: Realidade Aumentada no Navegador}
+\label{sec:webar}
+% ---------------------------------------------------------------------------
+
+O paradigma WebAR emergiu como alternativa às aplicações nativas de RA,
+eliminando a necessidade de instalação de software e aproveitando a
+ubiquidade dos navegadores modernos. A transição foi viabilizada pelo
+avanço da API WebXR \cite{webxr2020}, que padronizou o acesso a recursos
+de XR nos navegadores, e pelo amadurecimento de bibliotecas JavaScript
+especializadas.
+
+\subsection{API WebXR}
+\label{subsec:webxr}
+
+A WebXR Device API é uma especificação do W3C que fornece acesso
+padronizado a dispositivos de Realidade Virtual e Aumentada diretamente
+no navegador. Ela substitui as APIs legadas WebVR e A-Frame AR, oferecendo
+suporte a recursos avançados como rastreamento de superfície (\textit{hit-test}),
+oclusão de profundidade e estimativa de iluminação ambiente.
+
+No contexto do ContAR, a WebXR é utilizada para o modo Surface AR:
+o usuário aponta a câmera para uma superfície plana (piso, mesa), o
+sistema detecta automaticamente a superfície via rastreamento SLAM do
+dispositivo, e o narrador virtual é posicionado sobre ela com ancoragem
+estável. Esse modo dispensa qualquer marcador impresso e funciona em
+dispositivos Android com Chrome e iOS com Safari (suporte parcial).
+
+\subsection{AR.js e Marcadores Fiduciais}
+\label{subsec:arjs}
+
+O AR.js \cite{arjs} é uma biblioteca JavaScript de código aberto para RA
+baseada em marcadores fiduciais. Originalmente construída sobre A-Frame e
+ARToolKit, o AR.js utiliza visão computacional para detectar padrões
+impressos (marcadores) no feed da câmera e posicionar modelos 3D sobre
+eles com rastreamento estável.
+
+As vantagens do AR.js para contextos educacionais são significativas:
+baixo custo computacional (funciona em smartphones com 2+ anos),
+compatibilidade ampla com navegadores (Chrome, Firefox, Safari),
+e a possibilidade de criar materiais didáticos impressos —
+cartilhas, pôsteres, fichas — que servem como âncoras para os
+narradores virtuais. No ContAR, o modo Marker AR usa AR.js via um iframe
+leve, permitindo que histórias criadas na plataforma sejam visualizadas
+sobre marcadores Hiro (padrão) ou customizados.
+
+\subsection{Three.js como Motor de Renderização}
+\label{subsec:threejs}
+
+O Three.js \cite{threejs} é a biblioteca JavaScript de renderização 3D
+mais utilizada na web, com mais de 97.000 estrelas no GitHub. Baseada em
+WebGL, ela abstrai as complexidades da API gráfica de baixo nível e
+fornece um sistema de cena completo com câmeras, luzes, materiais,
+geometrias, carregadores de modelos e um loop de renderização configurável.
+
+No ContAR, o Three.js r183 é o motor principal da experiência 3D,
+responsável pela renderização dos avatares no editor e nas cenas de RA.
+A escolha se justifica pela maturidade da biblioteca, pelo suporte nativo
+ao formato glTF/GLB via \texttt{GLTFLoader}, pela integração com
+\texttt{DRACOLoader} para modelos comprimidos, e pela compatibilidade
+com o plugin \texttt{VRMLoaderPlugin} para avatares no padrão VRM.
+
+% ---------------------------------------------------------------------------
+\section{Avatares 3D: Formatos GLB e VRM}
+\label{sec:avatares}
+% ---------------------------------------------------------------------------
+
+A representação de personagens virtuais humanóides em aplicações WebAR
+envolve dois aspectos críticos: o formato de armazenamento do modelo 3D
+e a estrutura de esqueleto (rig) que define como o personagem pode ser
+animado.
+
+\subsection{O Formato glTF e GLB}
+\label{subsec:gltf-glb}
+
+O glTF (\textit{Graphics Language Transmission Format}) é um padrão aberto
+do Khronos Group para transmissão e carregamento de cenas e modelos 3D.
+Projetado para ser o ``JPEG dos modelos 3D'', o glTF prioriza compactação,
+velocidade de carregamento e compatibilidade com diferentes engines.
+O GLB é a variante binária do glTF, que empacota geometria, texturas e
+animações em um único arquivo, ideal para transmissão na web.
+
+Plataformas de criação de avatares como Avaturn, Ready Player Me e
+CharacterStudio utilizam o GLB como formato de exportação padrão.
+O arquivo inclui a malha poligonal do personagem, materiais PBR
+(\textit{Physically Based Rendering}), esqueleto de ossos e, em muitos
+casos, clips de animação embutidos (idle, walk, etc.).
+
+\subsection{O Padrão VRM}
+\label{subsec:vrm}
+
+O VRM (\textit{Virtual Reality Model}) é uma extensão do glTF desenvolvida
+pela Pixiv Inc. especificamente para avatares humanóides. Além da geometria
+e animação padrão do glTF, o VRM define metadados estruturados que incluem:
+(i) mapeamento humanóide de ossos (\textit{humanoid bone names}),
+padronizando denominações como \texttt{hips}, \texttt{head},
+\texttt{leftUpperArm}; (ii) \textit{blend shapes} para expressões faciais
+(feliz, triste, surpreso, piscar) e visemas de fala; (iii) metadados de
+autoria e licença; e (iv) física de cabelo e roupas via \textit{spring bones}.
+
+A padronização do VRM tem implicações importantes para a animação e o
+lip sync: ao definir nomes canônicos para ossos e blend shapes, permite
+que animações, expressões e visemas criados para qualquer avatar VRM
+funcionem corretamente em qualquer outro avatar VRM compatível. O ContAR
+explora essa propriedade para aplicar poses procedurais, visemas de fala
+e animações no formato VRM Animation (\texttt{.vrma}) de forma
+independente do modelo específico.
+
+\subsection{BoneMapper: Mapeamento Universal de Esqueletos}
+\label{subsec:bonemapper}
+
+Um desafio central no desenvolvimento do ContAR foi garantir a
+compatibilidade de animações e poses com avatares de diferentes origens
+(Avaturn, VRoid, CharacterStudio, modelos genéricos). Cada ecossistema
+usa convenções distintas de nomenclatura de ossos: Avaturn/Mixamo usa
+\texttt{mixamorigHips}; VRM usa \texttt{J\_Bip\_C\_Hips}; CC3 usa
+\texttt{CC\_Base\_Hip}; modelos genéricos podem usar quaisquer nomes.
+
+O \texttt{BoneMapper} desenvolvido para o ContAR resolve esse problema
+identificando automaticamente o padrão de rig do avatar carregado
+(via análise heurística dos nomes de ossos) e mantendo um mapeamento
+interno de nomes canônicos para referências de objetos Three.js. Isso
+permite que todo o sistema de poses procedurais e animações opere
+sobre nomes abstratos (\texttt{leftUpperArm}, \texttt{hips}, etc.),
+independentemente da nomenclatura específica do modelo.
+
+% ---------------------------------------------------------------------------
+\section{Síntese de Voz e Sincronização Labial}
+\label{sec:tts-lipsync}
+% ---------------------------------------------------------------------------
+
+Narradores virtuais expressivos requerem não apenas voz sintética de
+qualidade, mas também sincronização precisa dos movimentos labiais com
+o áudio gerado — o que a literatura denomina \textit{lip sync}.
+
+\subsection{Text-to-Speech Neural}
+\label{subsec:tts}
+
+A geração de fala a partir de texto (\textit{Text-to-Speech}, TTS) evoluiu
+radicalmente com modelos neurais profundos. Sistemas como os disponíveis
+no Azure Cognitive Services Speech SDK \cite{azurespeech} utilizam redes
+neurais convolucionais e transformers para gerar voz que, em avaliações
+de escores MOS (\textit{Mean Opinion Score}), se aproxima da qualidade da
+fala humana natural. O Azure Neural TTS oferece mais de 400 vozes em
++140 idiomas e localidades, incluindo variantes brasileiras do português
+(\texttt{pt-BR-FranciscaNeural}, \texttt{pt-BR-AntonioNeural}, entre outras).
+
+\subsection{Visemas e Sincronização Labial}
+\label{subsec:visemas}
+
+Um \textit{visema} é a representação visual de um fonema — o conjunto de
+posições labiais e faciais que corresponde a um som específico da fala.
+O Azure Speech SDK fornece eventos \texttt{visemeReceived} durante a
+síntese de voz, entregando identificadores de visema (IDs 0--21, cobrindo
+os principais fonemas do inglês e do português) com timestamps de precisão
+de 100 nanosegundos.
+
+No ContAR, esses eventos são capturados no backend e serializados como
+uma \textit{timeline de visemas}: uma lista ordenada de objetos
+\texttt{\{start, end, value\}}, onde \texttt{value} é um código Rhubarb
+(A, B, C, D, E, F, G, H, X) mapeado a partir do ID de visema Azure.
+Essa timeline é transmitida ao frontend junto com o áudio base64 e
+consumida pelo \texttt{LipSyncController} para animar, frame a frame,
+os blend shapes de boca do avatar com crossfade suavizado.
+
+\subsection{LipSyncController}
+\label{subsec:lipsync-controller}
+
+O \texttt{LipSyncController} implementado no ContAR gerencia a animação
+dos blend shapes de fala de forma independente do rig do avatar, operando
+sobre grupos semânticos de alvos: \texttt{aa} (boca aberta), \texttt{oh}
+(boca arredondada), \texttt{ee} (boca esticada), \texttt{fv} (dentes sobre
+lábio inferior) e \texttt{mbp} (lábios fechados). Para cada grupo, o
+controlador identifica automaticamente os blend shapes correspondentes no
+modelo via padrões de nomenclatura (p.ex., \texttt{viseme\_aa},
+\texttt{jawOpen}, \texttt{mouthSmile}).
+
+O sistema opera em dois modos: (1) modo \textit{timeline}, que usa a
+sequência de visemas Azure com interpolação temporal; e
+(2) modo \textit{heurístico}, que estima o movimento labial em tempo real
+a partir da análise de amplitude e frequência do sinal de áudio via Web
+Audio API — útil quando não há timeline de visemas disponível
+(Web Speech API, arquivos de áudio importados pelo usuário).
+
+% ---------------------------------------------------------------------------
+\section{Plataformas No-Code para Autoria de Conteúdo Educacional}
+\label{sec:nocode}
+% ---------------------------------------------------------------------------
+
+O conceito de \textit{no-code} refere-se a ferramentas que permitem a
+criação de sistemas ou conteúdo funcional sem a necessidade de escrever
+código de programação, geralmente por meio de interfaces visuais,
+configurações dirigidas por formulários ou composição baseada em componentes
+\cite{nocode2022}. No contexto educacional, plataformas no-code são
+especialmente relevantes por expandir a capacidade de criação a professores
+e educadores que possuem domínio pedagógico mas não técnico.
+
+Ferramentas como Google Sites, Padlet e Canva demonstraram o potencial
+do modelo no-code para empoderar criadores de conteúdo não técnicos.
+No domínio específico da RA educacional, entretanto, as opções no-code
+permanecem limitadas: a maioria das ferramentas exige pelo menos noções
+de desenvolvimento web, uso de motores gráficos (Unity, Unreal Engine)
+ou dependência de serviços proprietários com curvas de aprendizado
+significativas.
+
+O ContAR posiciona-se nessa lacuna ao oferecer um fluxo completo de autoria
+— da criação do avatar à publicação em RA — inteiramente dentro do navegador,
+sem que o usuário precise instalar software, escrever código ou gerenciar
+arquivos entre múltiplas plataformas. A comparação com ferramentas
+equivalentes é aprofundada no \autoref{cap:pesquisa-anterior}.
+
+
+% =============================================================================
+\chapter{Pesquisa Anterior: Benchmark de Ferramentas de Criação 3D para WebAR}
+\label{cap:pesquisa-anterior}
+% =============================================================================
+
+Este capítulo apresenta a pesquisa exploratória conduzida como etapa
+anterior ao desenvolvimento do ContAR. Publicada como artigo científico
+\cite{freitas2025benchmark}, essa pesquisa identificou a lacuna que
+motivou o presente trabalho.
+
+\section{Contexto e Motivação}
+\label{sec:benchmark-contexto}
+
+O estudo foi conduzido a partir da seguinte questão: até que ponto usuários
+sem conhecimento técnico conseguem criar experiências educacionais completas
+em RA utilizando ferramentas modernas de IA e tecnologias WebAR? Para
+respondê-la, foi adotada uma metodologia de mapeamento exploratório combinado
+com benchmark técnico comparativo.
+
+\section{Ferramentas Avaliadas}
+\label{sec:benchmark-ferramentas}
+
+Três plataformas foram selecionadas por representarem diferentes paradigmas
+de criação 3D:
+
+\begin{itemize}
+  \item \textbf{Ready Player Me}: criação de avatares humanos estilizados
+        com foco em acessibilidade, via interface guiada por selfie ou
+        configuração manual de atributos físicos.
+  \item \textbf{Meshy AI}: geração de modelos 3D a partir de descrições
+        textuais (text-to-3D) ou imagens de referência, com ênfase em
+        otimização automática de malhas.
+  \item \textbf{Luma AI (Genie)}: geração neural de objetos tridimensionais
+        com foco em fidelidade visual e realismo fotográfico.
+\end{itemize}
+
+\section{Critérios e Resultados}
+\label{sec:benchmark-resultados}
+
+Os modelos gerados foram avaliados segundo sete critérios técnicos:
+facilidade de uso, qualidade visual, processo de exportação GLB, tamanho
+do arquivo, contagem de polígonos, compatibilidade com WebAR e tempo total
+do fluxo. Cada critério foi pontuado em escala ordinal de 0 a 3 (máximo: 21
+pontos). Os resultados são sintetizados na Tabela~\ref{tab:benchmark-anterior}.
+
+\begin{table}[ht]
+  \caption{Síntese do benchmark técnico das plataformas de criação 3D.}
+  \label{tab:benchmark-anterior}
+  \centering
+  \begin{tabular}{lrrrrrrrc}
+    \toprule
+    \textbf{Plataforma} & \textbf{A} & \textbf{B} & \textbf{C} &
+    \textbf{D} & \textbf{E} & \textbf{F} & \textbf{G} & \textbf{Total} \\
+    \midrule
+    Ready Player Me & 3 & 2 & 3 & 2 & 2 & 3 & 3 & \textbf{18} \\
+    Meshy AI        & 3 & 3 & 3 & 3 & 3 & 3 & 2 & \textbf{20} \\
+    Luma AI         & 2 & 3 & 2 & 1 & 1 & 2 & 2 & \textbf{13} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.3em}
+  \footnotesize{A=Facilidade de uso; B=Qualidade visual; C=Exportação GLB;
+  D=Tamanho do arquivo; E=Polígonos; F=Compatibilidade WebAR; G=Tempo do fluxo.}
+\end{table}
+
+O Meshy AI obteve a maior pontuação geral (20/21), destacando-se pela
+otimização técnica dos modelos. O Ready Player Me obteve segunda colocação
+(18/21), com vantagem significativa na facilidade de uso e no tempo total
+do fluxo. A Luma AI, embora com excelente qualidade visual, apresentou
+modelos com tamanho de arquivo e contagem de polígonos excessivos para
+dispositivos móveis (13/21).
+
+\section{A Lacuna Identificada}
+\label{sec:lacuna}
+
+A conclusão central do estudo anterior foi que, apesar da qualidade
+individual das ferramentas, o ecossistema opera de forma fragmentada.
+O usuário precisa: (1) criar o avatar em uma plataforma; (2) exportar
+em formato GLB; (3) validar o arquivo externamente; (4) inserir em uma
+cena WebAR; (5) configurar áudio separadamente; (6) publicar em um servidor.
+Cada etapa exige decisões técnicas que representam barreiras para
+usuários não técnicos.
+
+Essa fragmentação é a motivação direta para o desenvolvimento do ContAR,
+que integra todas essas etapas em um único fluxo unificado dentro do
+navegador.
+
+
+% =============================================================================
+\chapter{Metodologia da Pesquisa}
+\label{cap:metodologia}
+% =============================================================================
+
+\section{Classificação da Pesquisa}
+\label{sec:classificacao}
+
+Este trabalho é classificado como \textbf{Pesquisa-Ação} combinada com
+\textbf{Estudo de Caso}. A Pesquisa-Ação caracteriza-se pela participação
+ativa do pesquisador no fenômeno estudado, com iterações cíclicas entre
+observação, ação e reflexão \cite{tripp2005}. Essa classificação reflete
+a natureza do trabalho: o pesquisador não apenas observou o problema da
+fragmentação de ferramentas de RA, mas construiu e avaliou ativamente uma
+solução para ele.
+
+O Estudo de Caso é adotado na fase de avaliação, onde o ContAR é investigado
+como objeto de análise em profundidade, com foco nos processos de uso e
+nas percepções dos especialistas participantes.
+
+\section{Etapas da Pesquisa}
+\label{sec:etapas}
+
+A pesquisa foi estruturada em quatro etapas sequenciais:
+
+\begin{enumerate}
+  \item \textbf{Mapeamento exploratório e benchmark}: levantamento e avaliação
+        técnica de ferramentas de geração 3D para WebAR (detalhado no
+        \autoref{cap:pesquisa-anterior}), que identificou a lacuna que
+        motivou o desenvolvimento do ContAR.
+  \item \textbf{Design e desenvolvimento}: projeto da arquitetura e
+        implementação iterativa da plataforma ContAR, documentada no
+        \autoref{cap:desenvolvimento}.
+  \item \textbf{Avaliação}: condução do Expert Walkthrough com especialistas,
+        coleta de dados e análise, apresentada no \autoref{cap:avaliacao}.
+  \item \textbf{Síntese e publicação}: consolidação dos resultados em forma
+        de relatório acadêmico (este TCC) e artigo científico submetido ao
+        SVR \cite{freitas2025contar}.
+\end{enumerate}
+
+\section{Expert Walkthrough: Protocolo de Avaliação}
+\label{sec:expert-walkthrough}
+
+O método \textit{Expert Walkthrough} (também conhecido como
+\textit{Cognitive Walkthrough} especializado) é uma técnica de avaliação
+de usabilidade na qual especialistas percorrem sistematicamente as tarefas
+de um sistema, verificando cada passo segundo heurísticas de usabilidade
+e registrando problemas, dificuldades e sugestões de melhoria
+\cite{lewis1990walkthrough, nielsen1994heuristics}.
+
+A escolha desse método se justifica por: (i) ser adequado para a fase
+de avaliação formativa de protótipos; (ii) exigir de 3 a 5 avaliadores
+(escala viável para um TCC individual); (iii) identificar cerca de 75\%
+dos problemas de usabilidade em estudos empíricos \cite{nielsen1994heuristics};
+e (iv) permitir a coleta de dados ricos e contextualizados sobre a
+experiência de especialistas com o sistema.
+
+\subsection{Participantes}
+\label{subsec:participantes}
+
+Foram recrutados [N=?] especialistas com perfis complementares, seguindo
+a recomendação de Nielsen \cite{nielsen1994heuristics} de 3 a 5 avaliadores
+com conhecimento em usabilidade:
+
+\begin{itemize}
+  \item [Especialista 1] — Perfil: [IHC/Educação/XR]
+  \item [Especialista 2] — Perfil: [IHC/Educação/XR]
+  \item [Especialista 3] — Perfil: [IHC/Educação/XR]
+  % Adicionar participantes após coleta
+\end{itemize}
+
+\subsection{Tarefas}
+\label{subsec:tarefas}
+
+Foram definidas cinco tarefas cobrindo o fluxo completo de autoria:
+
+\begin{description}
+  \item[T1 — Criar e carregar um avatar:]
+    Acessar a plataforma, criar ou selecionar um avatar usando uma das
+    opções disponíveis (Avaturn, galeria CC0, upload GLB/VRM) e
+    visualizá-lo no editor 3D.
+  \item[T2 — Configurar a fala e gerar voz:]
+    Digitar um texto no campo de fala do narrador, selecionar uma voz
+    e gerar o áudio com sincronização labial via TTS.
+  \item[T3 — Definir pose e salvar a cena:]
+    Escolher uma pose no seletor, definir um título para a cena e
+    salvá-la no servidor.
+  \item[T4 — Compor e publicar uma história:]
+    Adicionar múltiplas cenas a uma história, atribuir título e
+    descrição, e obter o link de compartilhamento público.
+  \item[T5 — Visualizar em Realidade Aumentada:]
+    Acessar o link de AR no celular, posicionar o narrador em uma
+    superfície real (WebXR) ou sobre um marcador impresso (AR.js),
+    e reproduzir a história com áudio.
+\end{description}
+
+\subsection{Heurísticas Aplicadas}
+\label{subsec:heuristicas}
+
+A avaliação foi baseada nas 10 heurísticas de usabilidade de Nielsen
+\cite{nielsen1994heuristics}, complementadas por heurísticas específicas
+para sistemas de Realidade Estendida propostas por Gabbard et al.
+\cite{gabbard2006xr}:
+
+\begin{enumerate}
+  \item Visibilidade do status do sistema
+  \item Correspondência entre o sistema e o mundo real
+  \item Controle e liberdade do usuário
+  \item Consistência e padrões
+  \item Prevenção de erros
+  \item Reconhecimento em vez de lembrança
+  \item Flexibilidade e eficiência de uso
+  \item Estética e design minimalista
+  \item Ajuda ao usuário para reconhecer, diagnosticar e recuperar erros
+  \item Ajuda e documentação
+  \item[XR1.] Estabilidade e ancoragem de objetos virtuais
+  \item[XR2.] Feedback de rastreamento e estado do AR
+  \item[XR3.] Ergonomia da interação em ambiente móvel
+\end{enumerate}
+
+\subsection{Instrumentos de Coleta}
+\label{subsec:instrumentos}
+
+Os dados foram coletados por meio de três instrumentos:
+
+\begin{itemize}
+  \item \textbf{Protocolo Think Aloud}: os especialistas verbalizaram
+        seus pensamentos durante a execução das tarefas, registrados
+        em áudio com consentimento.
+  \item \textbf{Ficha de registro de problemas}: formulário estruturado
+        para catalogar problemas por heurística violada, severidade
+        (escala de Nielsen 0--4) e localização na interface.
+  \item \textbf{SUS (System Usability Scale)} \cite{brooke1996sus}:
+        questionário de 10 itens em escala Likert aplicado após a
+        sessão, gerando um score de 0 a 100.
+\end{itemize}
+
+
+% =============================================================================
+\chapter{ContAR: Desenvolvimento da Plataforma}
+\label{cap:desenvolvimento}
+% =============================================================================
+
+\section{Visão Geral da Arquitetura}
+\label{sec:arquitetura}
+
+O ContAR é uma aplicação web full-stack organizada em duas camadas
+principais: um frontend SPA (\textit{Single-Page Application}) e uma
+API REST no backend. Ambas são implantadas como serviços independentes
+em contêineres Docker, comunicando-se via HTTPS com suporte a proxy
+reverso nginx.
+
+\begin{figure}[ht]
+  \centering
+  % \includegraphics[width=0.9\textwidth]{figuras/arquitetura-geral.png}
+  \fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}
+    [Diagrama de arquitetura — a inserir]
+  \vspace{2cm}}}
+  \caption{Arquitetura geral da plataforma ContAR.}
+  \label{fig:arquitetura}
+\end{figure}
+
+\subsection{Stack Tecnológico}
+\label{subsec:stack}
+
+\begin{description}
+  \item[Frontend] React 19 + Vite + Tailwind CSS. Three.js r183 para
+    renderização 3D. Zustand para gerenciamento de estado com persistência
+    via \textit{localStorage}. React Router para navegação SPA.
+    i18next para internacionalização (PT, EN, ES, FR).
+
+  \item[Backend] Node.js 22 (LTS) com Express.js. MongoDB com Mongoose
+    para persistência de cenas, histórias e usuários. JWT para
+    autenticação. Nodemailer (Gmail SMTP) para e-mails transacionais.
+    Azure Cognitive Services Speech SDK para síntese de voz e visemas.
+    Multer para upload de arquivos GLB/VRM e áudio.
+
+  \item[Infraestrutura] Docker (frontend: \texttt{node:22-alpine} +
+    nginx; backend: \texttt{node:22-slim} para compatibilidade com
+    dependências glibc do Azure SDK). Deploy na plataforma Render.com.
+\end{description}
+
+\section{Módulos do Frontend}
+\label{sec:frontend}
+
+\subsection{SceneCanvas: Motor de Renderização 3D}
+\label{subsec:scenecanvas}
+
+O \texttt{SceneCanvas} é o componente React central do editor, responsável
+por encapsular o ciclo de vida completo da cena Three.js. Suas
+responsabilidades incluem:
+
+\begin{itemize}
+  \item Carregamento de modelos GLB e VRM via \texttt{GLTFLoader} com
+        suporte a \texttt{DRACOLoader} (compressão Draco) e
+        \texttt{VRMLoaderPlugin};
+  \item Gerenciamento de câmera com \texttt{OrbitControls} e iluminação
+        HDR via \texttt{RGBELoader};
+  \item Execução do loop de renderização com pausa automática quando o
+        componente fica fora da viewport (\texttt{IntersectionObserver});
+  \item Integração com o \texttt{AnimationController} para poses
+        procedurais e animações;
+  \item Integração com o \texttt{LipSyncController} para sincronização
+        labial em tempo real;
+  \item Painel de ferramentas de desenvolvimento (ativado via
+        \texttt{?dev} na URL) com debug de lip sync, catálogo de ossos
+        e override manual de mapeamento.
+\end{itemize}
+
+\subsection{AnimationController: Poses e Animações}
+\label{subsec:animation-controller}
+
+O \texttt{AnimationController} gerencia o \texttt{AnimationMixer} do
+Three.js com crossfade suave entre clipes, e implementa micro-animações
+procedurais: piscar de olhos com timing aleatório, respiração via
+oscilação do osso do tórax, e gestos de locutor (movimentos de braço
+sincronizados com o modo \textit{speaker}).
+
+O sistema de poses suporta 16 presets: 5 animadas (idle, walk, run,
+dance, speaker) e 11 estáticas (neutral, wave, hands on hips, salute,
+arms crossed, think, point, bow, pray, shrug, t-pose). As poses estáticas
+são implementadas como rotações procedurais de ossos no sistema de
+coordenadas local, usando uma abstração que compensa a orientação do
+rig exportado (\texttt{rotateBoneDeg}).
+
+O \texttt{AnimationController} também retargetiza clipes de animação
+via o \texttt{BoneMapper}: ao receber um clipe com nomes de ossos
+Mixamo ou VRM, renomeia as trilhas para corresponder à nomenclatura do
+avatar atualmente carregado, garantindo compatibilidade cruzada.
+
+Animações no padrão VRM Animation (\texttt{.vrma}) são suportadas via
+o pacote \texttt{@pixiv/three-vrm-animation}: o arquivo é carregado por
+um \texttt{GLTFLoader} com \texttt{VRMAnimationLoaderPlugin}, e a função
+\texttt{createVRMAnimationClip} gera um \texttt{AnimationClip} Three.js
+mapeado para os ossos humanóides do VRM específico.
+
+\subsection{LipSyncController}
+\label{subsec:lipsync-impl}
+
+O \texttt{LipSyncController} abstrai a animação de blend shapes de fala
+do avatar, independentemente do rig ou da convenção de nomenclatura.
+Ao ser instanciado com um modelo, ele percorre automaticamente todas as
+malhas com \textit{morph targets} e os agrupa semanticamente por
+padrões de expressão regular (p.ex., \texttt{/viseme.*aa/i},
+\texttt{/jawopen/i}, \texttt{/mouthsmile/i}).
+
+Durante o loop de renderização, recebe valores de ativação por grupo
+(0.0 a 1.0) e os distribui para os blend shapes correspondentes com
+ponderação proporcional. A transição entre frames usa interpolação
+linear configurável (\textit{crossfade}), produzindo movimentos labiais
+fluidos sem artefatos de pop.
+
+\section{Sistema de Cenas e Histórias}
+\label{sec:cenas-historias}
+
+O modelo de dados do ContAR é estruturado em torno de dois conceitos:
+\textbf{cenas} e \textbf{histórias}. Uma cena representa um ``quadro''
+narrativo completo — avatar, pose, fala, áudio e configuração de transformação.
+Uma história é uma sequência ordenada de cenas identificadas por ID,
+que o visualizador percorre automaticamente, reproduzindo o áudio de
+cada cena e avançando ao término.
+
+Esse modelo permite que um professor componha, de forma não-linear e
+iterativa, narrativas complexas: pode criar cenas individualmente,
+revisitá-las, reordenar e reagrupar em diferentes histórias, e publicar
+com um link único. O visualizador (\texttt{/story/:id}) é público e
+não requer autenticação.
+
+\section{Realidade Aumentada no ContAR}
+\label{sec:ar-contar}
+
+O ContAR implementa duas modalidades complementares de RA, acessíveis
+na rota \texttt{/ar}:
+
+\textbf{Surface AR (WebXR):} usa a API WebXR com suporte a
+\textit{hit-test} para detectar superfícies planas via SLAM do
+dispositivo. O avatar é posicionado sobre um retículo e ancorado ao
+toque do usuário. Suporta controle de escala persistido no
+\textit{localStorage} e reprodução automática de histórias com áudio.
+
+\textbf{Marker AR (AR.js):} carrega um iframe com uma cena A-Frame + AR.js
+configurada para detectar o marcador Hiro padrão ou marcadores
+customizados. O avatar é renderizado sobre o marcador com orientação e
+escala configuráveis via parâmetros de URL (\texttt{?modelUrl=},
+\texttt{?scale=}).
+
+
+% =============================================================================
+\chapter{Avaliação: Expert Walkthrough}
+\label{cap:avaliacao}
+% =============================================================================
+
+\section{Condução das Sessões}
+\label{sec:conducao}
+
+% [A preencher após coleta de dados]
+As sessões foram conduzidas [individualmente / remotamente via videoconferência]
+com duração média de [X] minutos cada. Os especialistas foram orientados a
+verbalizar seus pensamentos em voz alta (protocolo Think Aloud) durante
+a execução das tarefas, e receberam acesso à versão de produção da
+plataforma sem assistência do pesquisador, exceto em casos de bloqueio
+total na tarefa.
+
+\section{Resultados Quantitativos}
+\label{sec:resultados-quant}
+
+\subsection{SUS Score}
+\label{subsec:sus}
+
+% [A preencher após coleta de dados]
+A pontuação média na System Usability Scale foi de \textbf{[X]} pontos
+(desvio padrão: [Y]), o que corresponde à classificação ``[Excellent /
+Good / OK]'' segundo a escala de adjunto de Bangor et al. \cite{bangor2008sus}.
+A Tabela~\ref{tab:sus} apresenta as pontuações individuais.
+
+\begin{table}[ht]
+  \caption{Pontuações SUS individuais.}
+  \label{tab:sus}
+  \centering
+  \begin{tabular}{lc}
+    \toprule
+    \textbf{Especialista} & \textbf{SUS Score} \\
+    \midrule
+    E1 & --- \\
+    E2 & --- \\
+    E3 & --- \\
+    \midrule
+    \textbf{Média} & \textbf{---} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Problemas Identificados por Heurística}
+\label{subsec:problemas}
+
+% [A preencher após análise dos dados]
+Foram identificados [N] problemas de usabilidade, distribuídos conforme
+a Tabela~\ref{tab:heuristicas}.
+
+\begin{table}[ht]
+  \caption{Distribuição de problemas por heurística violada.}
+  \label{tab:heuristicas}
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Heurística} & \textbf{Ocorrências} & \textbf{Severidade Média} \\
+    \midrule
+    H1 — Visibilidade do status & --- & --- \\
+    H3 — Controle e liberdade  & --- & --- \\
+    H6 — Reconhecimento        & --- & --- \\
+    H9 — Recuperação de erros  & --- & --- \\
+    XR2 — Feedback AR          & --- & --- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Resultados Qualitativos}
+\label{sec:resultados-qual}
+
+% [A preencher após análise dos dados]
+A análise das verbalizações registradas durante o Think Aloud revelou
+[principais achados qualitativos]. Os especialistas identificaram como
+pontos fortes [X, Y, Z], e como principais oportunidades de melhoria [A, B, C].
+
+\section{Discussão}
+\label{sec:discussao}
+
+% [A preencher após coleta e análise]
+Os resultados obtidos permitem [análise em relação à questão de pesquisa].
+Em comparação com o benchmark anterior \cite{freitas2025benchmark},
+o ContAR demonstra [...]
+
+
+% =============================================================================
+\chapter{Conclusão e Trabalhos Futuros}
+\label{cap:conclusao}
+% =============================================================================
+
+\section{Síntese das Contribuições}
+\label{sec:contribuicoes}
+
+Este trabalho apresentou o ContAR, uma plataforma web no-code para autoria
+de narradores virtuais 3D em Realidade Aumentada educacional, respondendo
+à lacuna identificada em pesquisa anterior: a ausência de um ecossistema
+integrado que permita a usuários não técnicos completar o fluxo de autoria
+em RA sem fragmentação entre ferramentas.
+
+As contribuições se articulam em três dimensões:
+
+\textbf{Contribuição técnica:} (i) arquitetura full-stack integrada para
+autoria WebAR no-code; (ii) \texttt{BoneMapper} com compatibilidade
+universal de rigs (Mixamo, VRM, CC3, genérico); (iii)
+\texttt{LipSyncController} com modos timeline (visemas Azure) e heurístico
+(análise de áudio); (iv) suporte ao padrão VRM Animation para avatares
+VRM; (v) publicação em RA dual-mode (WebXR Surface AR + AR.js Marker AR).
+
+\textbf{Contribuição metodológica:} avaliação de usabilidade via Expert
+Walkthrough com heurísticas de Nielsen complementadas por heurísticas XR
+específicas, produzindo um protocolo replicável para avaliação de sistemas
+de autoria WebAR.
+
+\textbf{Contribuição social:} democratização da autoria de experiências
+imersivas educacionais, com implicações para a representação de diversidade
+cultural no material didático digital e para a Educação~4.0 no contexto
+brasileiro.
+
+\section{Limitações}
+\label{sec:limitacoes}
+
+O presente trabalho apresenta algumas limitações que devem ser consideradas
+na interpretação dos resultados:
+
+\begin{itemize}
+  \item O Expert Walkthrough não substitui testes com usuários finais
+        (professores e estudantes). Uma avaliação com o público-alvo primário
+        poderá revelar problemas de usabilidade distintos dos identificados
+        pelos especialistas.
+  \item O suporte WebXR para Surface AR depende da implementação do
+        navegador no dispositivo. Dispositivos iOS com versões antigas
+        do Safari apresentam suporte limitado.
+  \item A síntese de voz via Azure TTS requer configuração de credenciais
+        de API, o que introduz uma barreira de configuração para implantações
+        independentes.
+  \item Os modelos de avatar gerados por IA de terceiros (Avaturn,
+        CharacterStudio) estão sujeitos a mudanças nas APIs e políticas
+        de serviço dessas plataformas.
+\end{itemize}
+
+\section{Trabalhos Futuros}
+\label{sec:trabalhos-futuros}
+
+Com base nos resultados e nas limitações identificadas, sugere-se como
+direções para trabalhos futuros:
+
+\textbf{Avaliação com usuários finais:} conduzir testes de usabilidade
+com professores da educação básica, avaliando o impacto do ContAR na
+redução do tempo de criação de material didático imersivo em comparação
+com fluxos fragmentados existentes.
+
+\textbf{Narradores contextuais com IA:} integrar um LLM (Large Language
+Model) para que o narrador responda a perguntas dos estudantes em tempo
+real, transformando o personagem virtual de um apresentador estático em
+um agente conversacional educacional. Essa proposta, sugerida pelo
+orientador Prof. Dr. [Nome], representa a fronteira de pesquisa mais
+promissora e a ponte natural para um projeto de mestrado.
+
+\textbf{Expressões faciais VRM:} explorar o sistema de expressões do
+padrão VRM (\texttt{vrm.expressionManager}) para adicionar emoções
+sincronizadas ao conteúdo narrativo — felicidade, surpresa, seriedade —
+enriquecendo a comunicação paraverbal do narrador.
+
+\textbf{Eye tracking (VRM LookAt):} implementar o sistema
+\texttt{vrm.lookAt} para que os olhos do narrador acompanhem a câmera
+do usuário, aumentando a sensação de presença e engajamento.
+
+\textbf{Biblioteca de poses e animações:} desenvolver ou curatorial um
+repositório de animações Mixamo convertidas para GLB e de arquivos VRMA
+compatíveis, expandindo as opções expressivas do narrador sem dependência
+de serviços externos.
+
+\textbf{Aplicações em Educação Antirracista:} investigar o potencial do
+ContAR para a criação de narradores com representações diversas de etnia,
+cultura e identidade, contribuindo para práticas pedagógicas de valorização
+da diversidade alinhadas a diretrizes educacionais brasileiras contemporâneas.
+
+
+% =============================================================================
+% Elementos pós-textuais
+% =============================================================================
+\postextual
+
+% Referências
+\bibliographystyle{abntex2-alf}
+\bibliography{referencias}
+
+% As referências abaixo devem estar no arquivo referencias.bib
+% Exemplos de entradas necessárias:
+%
+% @inproceedings{azuma1997,
+%   author    = {Azuma, Ronald T.},
+%   title     = {A Survey of Augmented Reality},
+%   journal   = {Presence: Teleoperators and Virtual Environments},
+%   year      = {1997}, volume = {6}, number = {4}, pages = {355--385}
+% }
+%
+% @article{milgram1994,
+%   author  = {Milgram, Paul and Kishino, Fumio},
+%   title   = {A Taxonomy of Mixed Reality Visual Displays},
+%   journal = {IEICE Transactions on Information and Systems},
+%   year    = {1994}
+% }
+%
+% @misc{webxr2020,
+%   author = {{W3C}},
+%   title  = {WebXR Device API},
+%   year   = {2020},
+%   url    = {https://www.w3.org/TR/webxr/}
+% }
+%
+% @inproceedings{freitas2025benchmark,
+%   author = {Freitas, Jorge Luiz Cunha de},
+%   title  = {Facilitando a Criação de Experiências Educacionais em
+%             Realidade Aumentada por Usuários Não Técnicos: Um Mapeamento
+%             Exploratório e Avaliação Técnica de Ferramentas de IA e WebAR},
+%   booktitle = {[Nome do Evento/Disciplina]},
+%   year = {2025}
+% }
+
+% Apêndices (opcional)
+\begin{apendicesenv}
+  \partapendices
+
+  \chapter{Questionário SUS Aplicado}
+  \label{ap:sus}
+  % [Inserir o questionário SUS adaptado para o ContAR]
+
+  \chapter{Ficha de Registro de Problemas do Expert Walkthrough}
+  \label{ap:ficha}
+  % [Inserir a ficha de coleta de dados]
+
+  \chapter{Termo de Consentimento Livre e Esclarecido (TCLE)}
+  \label{ap:tcle}
+  % [Inserir o TCLE utilizado nas sessões]
+
+\end{apendicesenv}
+
+\end{document}

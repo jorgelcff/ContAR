@@ -10,6 +10,7 @@ import SpeechBubble from './SpeechBubble';
 import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
+import { mapBones as mapBonesApi } from '../../api/sceneApi';
 
 const BONE_LABELS = {
   hips: 'Quadril', spine: 'Coluna', chest: 'Tórax', upperChest: 'Tórax superior',
@@ -129,6 +130,7 @@ export default function SceneCanvas({
   animSpeed,
   animLoopOnce,
   vrmExpression,
+  textDisplayMode = 'bubble',
 }) {
   // Enable Three.js resource cache so reloading the same GLB/HDR skips a round-trip.
   THREE.Cache.enabled = true;
@@ -234,6 +236,7 @@ export default function SceneCanvas({
     name: "",
   });
   const [rigCopyState, setRigCopyState] = useState("");
+  const [aiMapState, setAiMapState] = useState(""); // '' | 'loading' | 'ok:N' | 'error'
   const [boneOverrides, setBoneOverrides] = useState({});
   const [boneMapperInfo, setBoneMapperInfo] = useState({
     source: "none",
@@ -289,6 +292,7 @@ export default function SceneCanvas({
       animControllerRef.current._boneMapper = effective;
       animControllerRef.current._speakerBones = undefined;
       animControllerRef.current._chestBone = undefined;
+      animControllerRef.current._hipsParentCorrection = undefined;
     }
 
     applyPosePreset(
@@ -426,12 +430,19 @@ export default function SceneCanvas({
       () => {},
     );
 
-    // Load animation clips from /animations/manifest.json
+    // Load animation clips from /animations/manifest.json (single fetch, dual registration).
+    // Each clip is registered in externalClipsRef (used by applyPosePreset) AND in
+    // extraClipsRef (merged into avatarClipsRef when a new avatar loads).
+    // applyPosePreset is only called when the newly loaded clip matches the CURRENT pose
+    // — calling it for every clip would stopAll()+resetToRestPose() on every file arrival,
+    // causing T-pose flashes for each of the 8 animation files in the manifest.
     fetch('/animations/manifest.json')
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : null)
+      .catch(() => null)
       .then((manifest) => {
-        const list = Array.isArray(manifest.animations) ? manifest.animations : [];
-        list.forEach((anim) => {
+        if (!Array.isArray(manifest?.animations)) return;
+        const PRESETS = ['idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'speaker'];
+        manifest.animations.forEach((anim) => {
           if (!anim.file) return;
           gltfLoader.load(
             `/animations/${anim.file}`,
@@ -439,60 +450,49 @@ export default function SceneCanvas({
               const clip = gltf.animations?.[0];
               if (!clip) return;
               const preset = anim.preset || anim.name || '';
-              clip.name = preset;
-              // Register by explicit preset first
+              clip.name = preset || clip.name || anim.file;
+
+              // ── externalClipsRef: used by applyPosePreset ──────────────────
+              // Track whether this clip was the FIRST to fill the current-pose slot.
+              // If it was, we restart the pose once. Subsequent clips for the same
+              // preset (e.g. idle_alt also tagged "idle") must not trigger another restart.
+              let filledCurrentPoseSlot = false;
+              const tags = Array.isArray(anim.tags) ? anim.tags : [];
               if (preset && !externalClipsRef.current[preset]) {
                 externalClipsRef.current[preset] = clip;
+                if (preset === posePresetRef.current) filledCurrentPoseSlot = true;
               }
-              // Also scan tags for any matching preset keyword
-              const tags = Array.isArray(anim.tags) ? anim.tags : [];
-              const PRESETS = ['idle', 'walk', 'run', 'dance', 'speaker'];
               for (const p of PRESETS) {
                 if (!externalClipsRef.current[p] && tags.some((t) => String(t).toLowerCase().includes(p))) {
                   externalClipsRef.current[p] = clip;
+                  if (p === posePresetRef.current) filledCurrentPoseSlot = true;
                 }
               }
-              // Add to controller and reapply pose if avatar is already loaded
+
+              // ── extraClipsRef: available when the next avatar loads ────────
+              if (!extraClipsRef.current.some((c) => c.name === clip.name)) {
+                extraClipsRef.current = [...extraClipsRef.current, clip];
+              }
+
               if (avatarRef.current && animControllerRef.current) {
                 animControllerRef.current.addClips([clip]);
-                applyPosePreset(
-                  avatarRef.current,
-                  animControllerRef.current,
-                  idleClipRef.current,
-                  avatarClipsRef.current,
-                  posePresetRef.current,
-                  boneMapperRef.current,
-                  externalClipsRef.current,
-                );
-              }
-            },
-            undefined,
-            () => {}, // silently skip missing files (not all presets have a file yet)
-          );
-        });
-      })
-      .catch(() => {}); // manifest is optional
+                avatarClipsRef.current = [...avatarClipsRef.current, clip];
 
-    // Pre-load extra animations from manifest (walk, run, dance, etc.)
-    fetch('/animations/manifest.json')
-      .then((r) => r.ok ? r.json() : null)
-      .catch(() => null)
-      .then((manifest) => {
-        if (!Array.isArray(manifest?.animations)) return;
-        manifest.animations.forEach(({ name, file }) => {
-          if (!name || !file) return;
-          gltfLoader.load(
-            `/animations/${file}`,
-            (gltf) => {
-              const clips = gltf.animations || [];
-              if (!clips.length) return;
-              // Tag clip with declared name so pickAnimationClip can find it
-              clips.forEach((clip) => { if (!clip.name || clip.name === 'Armature') clip.name = name; });
-              extraClipsRef.current = [...extraClipsRef.current, ...clips];
-              if (animControllerRef.current) {
-                animControllerRef.current.addClips(clips);
+                // Only restart the pose when this clip was the first to fill the
+                // current-pose slot. Avoids stopAll()+resetToRestPose() storms when
+                // multiple manifest files share the same preset tag.
+                if (filledCurrentPoseSlot) {
+                  applyPosePreset(
+                    avatarRef.current,
+                    animControllerRef.current,
+                    idleClipRef.current,
+                    avatarClipsRef.current,
+                    posePresetRef.current,
+                    boneMapperRef.current,
+                    externalClipsRef.current,
+                  );
+                }
               }
-              avatarClipsRef.current = [...avatarClipsRef.current, ...clips];
             },
             undefined,
             () => {}, // silently skip missing files
@@ -1005,6 +1005,40 @@ export default function SceneCanvas({
             vrmaLoaderRef.current,
           );
         }
+
+        // AI bone enhancement — fires asynchronously for 'generic' skeletons that
+        // resolved too few bones. Animation already plays with the sync mapping;
+        // the AI response upgrades it in-place when it arrives.
+        if (boneMapper.source === 'generic' && boneMapper.resolvedCount < 14) {
+          const allBones = [];
+          model.traverse((n) => { if (n?.isBone && n.name) allBones.push(n); });
+          BoneMapper.enhanceWithAI(boneMapper, allBones, mapBonesApi)
+            .then(() => {
+              // Only apply if this avatar is still the active one
+              if (cancelled || loadId !== activeAvatarLoadIdRef.current) return;
+              boneMapperRef.current = boneMapper;
+              baseBoneMapperRef.current = boneMapper;
+              if (animControllerRef.current) {
+                animControllerRef.current._boneMapper = boneMapper;
+                animControllerRef.current._boneNameSet = null; // force rebuild
+                animControllerRef.current._boneByName = null;
+                animControllerRef.current._speakerBones = undefined;
+                animControllerRef.current._chestBone = undefined;
+                animControllerRef.current._hipsParentCorrection = undefined;
+              }
+              setBoneMapperInfo({ source: boneMapper.source, resolvedCount: boneMapper.resolvedCount });
+              applyPosePreset(
+                model,
+                animControllerRef.current,
+                idleClipRef.current,
+                avatarClipsRef.current,
+                posePresetRef.current,
+                boneMapper,
+                externalClipsRef.current,
+              );
+            })
+            .catch(() => {});
+        }
       },
       undefined,
       (err) => {
@@ -1067,6 +1101,57 @@ export default function SceneCanvas({
     }
   }, [vrmExpression]);
 
+  const handleAiMapBones = async () => {
+    const model = avatarRef.current;
+    const mapper = boneMapperRef.current;
+    if (!model || !mapper) return;
+
+    setAiMapState("loading");
+    const allBones = [];
+    model.traverse((n) => { if (n?.isBone && n.name) allBones.push(n); });
+
+    try {
+      const boneNames = allBones.map((b) => b.name);
+      const aiMapping = await mapBonesApi(boneNames);
+
+      const byName = Object.fromEntries(allBones.map((b) => [b.name, b]));
+      let added = 0;
+      for (const [standard, boneName] of Object.entries(aiMapping)) {
+        if (byName[boneName]) {
+          mapper.set(standard, byName[boneName]);
+          added++;
+        }
+      }
+      mapper.source = 'ai';
+
+      boneMapperRef.current = mapper;
+      baseBoneMapperRef.current = mapper;
+      if (animControllerRef.current) {
+        animControllerRef.current._boneMapper = mapper;
+        animControllerRef.current._boneNameSet = null;
+        animControllerRef.current._boneByName = null;
+        animControllerRef.current._speakerBones = undefined;
+        animControllerRef.current._chestBone = undefined;
+        animControllerRef.current._hipsParentCorrection = undefined;
+      }
+      setBoneMapperInfo({ source: mapper.source, resolvedCount: mapper.resolvedCount });
+      applyPosePreset(
+        model,
+        animControllerRef.current,
+        idleClipRef.current,
+        avatarClipsRef.current,
+        posePresetRef.current,
+        mapper,
+        externalClipsRef.current,
+      );
+      setAiMapState(`ok:${added}`);
+      window.setTimeout(() => setAiMapState(""), 3000);
+    } catch {
+      setAiMapState("error");
+      window.setTimeout(() => setAiMapState(""), 3000);
+    }
+  };
+
   const handleCopyRigReport = async () => {
     const report = buildRigReport({
       debugSnapshot,
@@ -1075,6 +1160,8 @@ export default function SceneCanvas({
       blendshapeSnapshot,
       manualJawBoneName,
       mouthMarkerInfo,
+      boneMapperInfo,
+      boneMapper: boneMapperRef.current,
     });
     try {
       await navigator.clipboard.writeText(report);
@@ -1119,13 +1206,20 @@ export default function SceneCanvas({
           </div>
         </div>
       )}
-      {renderCtx && (
+      {renderCtx && textDisplayMode === 'bubble' && (
         <SpeechBubble
           text={speechText}
           avatarRef={avatarRef}
           camera={renderCtx.camera}
           renderer={renderCtx.renderer}
         />
+      )}
+      {textDisplayMode === 'subtitle' && speechText && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4 w-full max-w-2xl">
+          <div className="bg-black/70 backdrop-blur-sm text-white text-base text-center font-medium leading-snug rounded-lg px-5 py-2.5 shadow-xl wrap-break-word">
+            {speechText}
+          </div>
+        </div>
       )}
       {showDevTools && (
         <div className="absolute right-3 top-3 z-20 rounded-md border border-cyan-700/70 bg-cyan-950/75 px-3 py-2 text-xs text-cyan-100">
@@ -1146,7 +1240,7 @@ export default function SceneCanvas({
         </div>
       )}
       {showDevTools && (
-        <div className="absolute left-3 bottom-3 z-20 w-96 max-h-[80vh] overflow-y-auto rounded-md border border-amber-700/70 bg-amber-950/90 px-3 py-2 text-xs text-amber-100">
+        <div className="absolute left-3 top-3 bottom-3 z-20 w-96 overflow-y-auto rounded-md border border-amber-700/70 bg-amber-950/90 px-3 py-2 text-xs text-amber-100">
           <p className="font-semibold uppercase tracking-wide text-amber-200">
             Rig Debug
           </p>
@@ -1169,6 +1263,22 @@ export default function SceneCanvas({
           </button>
           {rigCopyState && (
             <p className="mt-1 text-[11px] text-amber-300">{rigCopyState}</p>
+          )}
+
+          <button
+            onClick={handleAiMapBones}
+            disabled={aiMapState === "loading"}
+            className="mt-2 w-full rounded border border-amber-600 bg-amber-800/60 px-2 py-1 text-xs text-amber-100 hover:bg-amber-700/70 disabled:opacity-50"
+          >
+            {aiMapState === "loading" ? "⏳ Mapeando com IA..." : "✨ Mapear ossos com IA"}
+          </button>
+          {aiMapState.startsWith("ok") && (
+            <p className="mt-1 text-[11px] text-green-400">
+              ✓ {aiMapState.split(":")[1]} ossos mapeados — pose reaplicada
+            </p>
+          )}
+          {aiMapState === "error" && (
+            <p className="mt-1 text-[11px] text-red-400">Erro ao chamar a API</p>
           )}
 
           <p className="mt-3 font-semibold text-amber-200">
@@ -1514,13 +1624,16 @@ function buildRigReport({
   blendshapeSnapshot,
   manualJawBoneName,
   mouthMarkerInfo,
+  boneMapperInfo,
+  boneMapper,
 }) {
   const lines = [];
-  lines.push("=== AVATURN RIG REPORT ===");
+  lines.push("=== CONTАР RIG REPORT ===");
+  lines.push(`skeletonSource=${boneMapperInfo?.source ?? "unknown"}  resolvedBones=${boneMapperInfo?.resolvedCount ?? 0}`);
   lines.push(`mode=${debugSnapshot.mode}`);
   lines.push(`analyserReady=${debugSnapshot.analyserReady}`);
-  lines.push(`mouthTargets=${debugSnapshot.mouthTargetCount}`);
-  lines.push(`jawBones=${debugSnapshot.jawBoneCount}`);
+  lines.push(`mouthTargets=${debugSnapshot.mouthTargetCount ?? 0}`);
+  lines.push(`jawBones=${debugSnapshot.jawBoneCount ?? 0}`);
   lines.push(`manualJawBone=${manualJawBoneName || "(auto)"}`);
   lines.push(
     `mouthMarker=${mouthMarkerInfo.source}${mouthMarkerInfo.name ? `:${mouthMarkerInfo.name}` : ""}`,
@@ -1528,14 +1641,26 @@ function buildRigReport({
   lines.push(`bonesCount=${boneCatalogSnapshot.length}`);
   lines.push(`meshesCount=${meshCatalogSnapshot.length}`);
   lines.push(`blendshapeCount=${blendshapeSnapshot.length}`);
-  lines.push("--- bones ---");
-  boneCatalogSnapshot.forEach((name) => lines.push(name));
+
+  // Bone mapping — standard → avatar bone name
+  if (boneMapper && boneMapper.resolvedCount > 0) {
+    lines.push("--- bone mapping ---");
+    const mapped = boneMapper.toObject();
+    for (const [standard, bone] of Object.entries(mapped)) {
+      lines.push(`  ${standard.padEnd(16)} → ${bone?.name ?? "?"}`);
+    }
+  }
+
+  lines.push("--- all bones ---");
+  boneCatalogSnapshot.forEach((name) => lines.push(`  ${name}`));
   lines.push("--- meshes ---");
-  meshCatalogSnapshot.forEach((name) => lines.push(name));
+  meshCatalogSnapshot.forEach((name) => lines.push(`  ${name}`));
   lines.push("--- blendshapes ---");
-  blendshapeSnapshot.forEach((item) =>
-    lines.push(`${item.meshName}::${item.name}`),
-  );
+  blendshapeSnapshot.forEach((item) => {
+    const mesh = item.meshName || "(unknown mesh)";
+    const name = item.name || `index:${item.index ?? "?"}`;
+    lines.push(`  ${mesh}::${name}`);
+  });
   return lines.join("\n");
 }
 
@@ -1544,7 +1669,11 @@ function buildRigReport({
 function applyTransform(model, t) {
   if (!model || !t) return;
   model.position.set(t.positionX ?? 0, t.positionY ?? 0, t.positionZ ?? 0);
-  model.rotation.y = ((t.rotationY ?? 0) * Math.PI) / 180;
+  model.rotation.set(
+    ((t.rotationX ?? 0) * Math.PI) / 180,
+    ((t.rotationY ?? 0) * Math.PI) / 180,
+    ((t.rotationZ ?? 0) * Math.PI) / 180,
+  );
   model.scale.setScalar(t.scale ?? 1);
 }
 
@@ -1585,7 +1714,7 @@ function applyPosePreset(
   ensureRestPoseSnapshot(model);
   resetToRestPose(model);
 
-  const animatedPresets = ["idle", "walk", "run", "dance", "speaker"];
+  const animatedPresets = ["idle", "walk", "walk_circle", "slow_run", "run", "dance", "speaker"];
   if (animatedPresets.includes(normalized)) {
     if (animationController) {
       const clip = pickAnimationClip(normalized, idleClip, avatarClips, externalClips);
@@ -1631,11 +1760,13 @@ function applyPosePreset(
 
 function pickAnimationClip(preset, idleClip, avatarClips = [], externalClips = {}) {
   const keywordsByPreset = {
-    idle:    [/idle/, /stand/],
-    walk:    [/walk/],
-    run:     [/run/, /jog/],
-    dance:   [/dance/],
-    speaker: [/speak/, /talk/, /narrat/, /present/, /explain/, /lecture/],
+    idle:        [/idle/, /stand/],
+    walk:        [/^walk$/],
+    walk_circle: [/walk.?circle/, /circle.?walk/],
+    slow_run:    [/slow.?run/, /slow.?jog/],
+    run:         [/^run$/],
+    dance:       [/dance/],
+    speaker:     [/speak/, /talk/, /narrat/, /present/, /explain/, /lecture/],
   };
 
   const patterns = keywordsByPreset[preset] || [];

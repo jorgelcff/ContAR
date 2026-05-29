@@ -180,3 +180,12 @@ export async function generateTTS(text, voiceId) {
   const { data } = await api.post('/tts/generate', { text, voiceId });
   return data; // { audioBase64, alignment }
 }
+
+/**
+ * Ask the backend to map raw avatar bone names to standard humanoid names via OpenAI.
+ * Returns a Record<standardName, avatarBoneName> or throws on failure.
+ */
+export async function mapBones(boneNames) {
+  const { data } = await api.post('/bones/map', { bones: boneNames });
+  return data.mapping || {};
+}

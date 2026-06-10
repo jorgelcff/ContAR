@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import Header from '../components/ui/Header';
 import SceneCanvas from '../components/3d/SceneCanvas';
@@ -227,7 +226,6 @@ function StoryOverlay({ story, storyId, compact = false, onStart }) {
 function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
-  const buttonHostRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
@@ -237,6 +235,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
   const controllerRef = useRef(null);
   const hitTestSourceRef = useRef(null);
   const referenceSpaceRef = useRef(null);
+  const xrSessionRef = useRef(null);
   const lockPlacementRef = useRef(true);
   const placedRef = useRef(false);
   const scaleRef = useRef(initialScale);
@@ -247,6 +246,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
   const lipSyncDataRef = useRef(null);
   const webAudioInitRef = useRef(false);
   const [supported, setSupported] = useState(null);
+  const [arActive, setArActive] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [loadingModel, setLoadingModel] = useState(false);
   const [scale, setScale] = useState(initialScale);
   const [lockPlacement, setLockPlacement] = useState(true);
@@ -272,6 +273,41 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
       // resuming it here, audio.play() advances silently with no sound.
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     } catch (e) { /* audio context blocked or already connected */ }
+  };
+
+  // Must be called directly from a click handler — requestSession requires
+  // transient user activation. three.js's ARButton swallows rejections from
+  // this call silently, which left the page on a transparent black canvas
+  // with no feedback when the session failed to start (e.g. hit-test
+  // unsupported, camera permission denied).
+  const startArSession = async () => {
+    const renderer = rendererRef.current;
+    const container = containerRef.current;
+    if (!renderer || !container || starting || arActive) return;
+    setStarting(true);
+    setError('');
+    try {
+      const session = await navigator.xr.requestSession('immersive-ar', {
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay'],
+        domOverlay: { root: container },
+      });
+      renderer.xr.setReferenceSpaceType('local');
+      await renderer.xr.setSession(session);
+    } catch (err) {
+      console.error('Failed to start AR session', err);
+      if (err?.name === 'NotAllowedError') {
+        setError('Permissão de câmera negada. Toque no ícone de cadeado/informações na barra de endereço, ative "Câmera" para este site e tente novamente.');
+      } else {
+        setError(`Não foi possível iniciar a sessão AR: ${err?.message || err?.name || 'erro desconhecido'}`);
+      }
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const stopArSession = () => {
+    xrSessionRef.current?.end?.().catch(() => {});
   };
 
   // Async WebXR support check — avoids false negatives on browsers
@@ -373,18 +409,26 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
       const session = renderer.xr.getSession();
       if (!session || hitTestSourceRequested) return;
       hitTestSourceRequested = true;
+      xrSessionRef.current = session;
+      setArActive(true);
+      setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
 
       session.addEventListener('end', () => {
         hitTestSourceRequested = false;
         hitTestSourceRef.current = null;
         referenceSpaceRef.current = null;
+        xrSessionRef.current = null;
         reticle.visible = false;
+        setArActive(false);
       });
 
       session.requestReferenceSpace('viewer').then((viewerSpace) => {
         session.requestHitTestSource({ space: viewerSpace }).then((source) => {
           hitTestSourceRef.current = source;
         });
+      }).catch((err) => {
+        console.error('AR hit-test source request failed', err);
+        setError('Não foi possível ativar a detecção de superfície (hit-test).');
       });
 
       session.requestReferenceSpace('local').then((space) => {
@@ -437,16 +481,6 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
     });
     resizeObserver.observe(container);
 
-    const arButton = ARButton.createButton(renderer, {
-      requiredFeatures: ['hit-test'],
-      optionalFeatures: ['dom-overlay'],
-      domOverlay: { root: container },
-    });
-    arButton.className = `${arButton.className} !static !w-full`;
-    if (buttonHostRef.current) {
-      buttonHostRef.current.appendChild(arButton);
-    }
-
     setStatus(t('tapToPlace'));
 
     return () => {
@@ -455,9 +489,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
       if (controllerRef.current && sceneRef.current) {
         sceneRef.current.remove(controllerRef.current);
       }
-      if (buttonHostRef.current) {
-        buttonHostRef.current.innerHTML = '';
-      }
+      xrSessionRef.current?.end?.().catch(() => {});
+      xrSessionRef.current = null;
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
@@ -601,7 +634,14 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
           <span className="shrink-0 text-xs text-gray-400">{t('scale')}</span>
         </label>
 
-        <div ref={buttonHostRef} className="mt-3 flex justify-center" />
+        {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+
+        <button
+          onClick={arActive ? stopArSession : startArSession}
+          disabled={starting}
+          className="mt-3 w-full min-h-12 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 px-4 py-3 text-sm font-semibold text-white transition-colors disabled:opacity-60">
+          {starting ? 'Iniciando AR…' : arActive ? 'Encerrar AR' : 'Iniciar AR'}
+        </button>
       </div>
     </div>
   );

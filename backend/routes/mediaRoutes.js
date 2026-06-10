@@ -7,10 +7,14 @@ const { requireAuth } = require('../middleware/authMiddleware');
 
 // Resolve the public base URL for constructing file URLs.
 // In production (Docker/Render) req.get('host') returns the internal container
-// address, not the public hostname. BACKEND_URL overrides this.
+// address, not the public hostname. BACKEND_URL overrides this — but only
+// when it points somewhere reachable from the browser. A BACKEND_URL left
+// over from a local .env (http://localhost:...) would otherwise leak into
+// production responses and break uploads with a CORS/loopback error.
 function serverBaseUrl(req) {
-  if (process.env.BACKEND_URL) {
-    return process.env.BACKEND_URL.replace(/\/$/, '');
+  const configured = process.env.BACKEND_URL;
+  if (configured && !/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(configured)) {
+    return configured.replace(/\/$/, '');
   }
   const proto = req.get('X-Forwarded-Proto') || req.protocol;
   const host  = req.get('X-Forwarded-Host')  || req.get('host');

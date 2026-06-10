@@ -311,7 +311,10 @@ export default function StoryViewerPage() {
               className="md:hidden absolute top-3 right-3 z-30 rounded-full bg-black/60 border border-white/20 w-10 h-10 flex items-center justify-center text-white text-lg backdrop-blur-sm active:bg-black/80"
               aria-label={fullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
             >
-              {fullscreen ? '✕' : '⛶'}
+              {fullscreen
+                ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              }
             </button>
 
             {/* Mobile controls */}
@@ -389,7 +392,7 @@ export default function StoryViewerPage() {
                   </Suspense>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center bg-gray-900 gap-4 px-6 text-center">
-                    <span className="text-5xl">👤</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14 text-gray-600"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 7a7 7 0 0 1 14 0"/></svg>
                     <p className="text-gray-300 font-medium">Nenhum avatar configurado nesta cena</p>
                     <p className="text-xs text-gray-500 max-w-xs">
                       Abra esta cena no editor, selecione um avatar e salve novamente.

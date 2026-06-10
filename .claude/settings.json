@@ -24,7 +24,9 @@
       "Bash(node -e \"require\\('./node_modules/@pixiv/three-vrm-animation/lib/three-vrm-animation.module.js'\\); console.log\\('OK'\\)\")",
       "Bash(npm uninstall *)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\avaturn-threejs\" -Force)",
-      "Bash(Select-Object Name, PSIsContainer)"
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(npx vite *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\PC\\\\Documents\\\\GitHub\\\\avaturn-threejs\\\\docs\" -Recurse -Include \"*.md\", \"*.txt\", \"*.doc\", \"*.docx\")"
     ]
   }
 }

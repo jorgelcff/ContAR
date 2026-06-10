@@ -15,17 +15,72 @@
 html[data-theme='light'] {
   color-scheme: light;
 
-  /* Surfaces: remap dark grays → light grays */
+  /* ── Surfaces: remap dark grays → light grays ────────────────────── */
   --color-gray-950: oklch(98.5% 0.002 247.839);  /* near-white page bg  */
   --color-gray-900: oklch(100%  0     0);          /* white card bg       */
   --color-gray-800: oklch(96.8% 0.007 247.896);   /* raised surface      */
   --color-gray-700: oklch(93%   0.013 255.508);   /* border / divider    */
 
-  /* Text: shift mid-range grays darker for legibility on light bg */
+  /* ── Mid-range grays → dark for text legibility on light bg ─────── */
   --color-gray-600: oklch(44.3% 0.017 265.754);
   --color-gray-500: oklch(37.3% 0.015 265.807);
   --color-gray-400: oklch(44.3% 0.017 265.754);
   --color-gray-300: oklch(27.9% 0.017 264.364);
+
+  /* ── Accent text (100–400 shades) → darker equivalents ──────────── *
+   * These light shades fail WCAG AA on white; remap to their ~700     *
+   * counterparts which pass 4.5:1.                                    */
+  --color-cyan-100:    oklch(44.0% 0.095 203.8);
+  --color-cyan-200:    oklch(44.0% 0.095 203.8);
+  --color-cyan-300:    oklch(52.2% 0.117 204.9);
+  --color-cyan-400:    oklch(52.2% 0.117 204.9);
+  --color-cyan-500:    oklch(52.2% 0.117 204.9);
+
+  --color-emerald-100: oklch(52.7% 0.132 150.7);
+  --color-emerald-200: oklch(52.7% 0.132 150.7);
+  --color-emerald-300: oklch(52.7% 0.132 150.7);
+  --color-emerald-400: oklch(52.7% 0.132 150.7);
+
+  --color-red-100:     oklch(50.5% 0.215 27.3);
+  --color-red-200:     oklch(50.5% 0.215 27.3);
+  --color-red-300:     oklch(50.5% 0.215 27.3);
+  --color-red-400:     oklch(50.5% 0.215 27.3);
+
+  --color-blue-100:    oklch(42.1% 0.199 264.7);
+  --color-blue-200:    oklch(42.1% 0.199 264.7);
+  --color-blue-300:    oklch(42.1% 0.199 264.7);
+  --color-blue-400:    oklch(42.1% 0.199 264.7);
+
+  --color-amber-100:   oklch(55.5% 0.163 48.8);
+  --color-amber-200:   oklch(55.5% 0.163 48.8);
+  --color-amber-300:   oklch(55.5% 0.163 48.8);
+  --color-amber-400:   oklch(55.5% 0.163 48.8);
+
+  /* ── Dark overlay backgrounds (950/900) → light tints ───────────── *
+   * bg-*-950/* and bg-*-900/* are used as dark-tinted overlays; on a  *
+   * white surface they'd become invisible, so flip to light tints.    */
+  --color-cyan-950:    oklch(95%  0.030 213);
+  --color-emerald-950: oklch(95%  0.035 155);
+  --color-red-950:     oklch(95%  0.022  20);
+  --color-blue-950:    oklch(95%  0.022 265);
+  --color-amber-950:   oklch(95%  0.042  88);
+  --color-amber-900:   oklch(92%  0.050  88);
+  --color-red-900:     oklch(94%  0.028  20);
+
+  /* ── Button/interactive surfaces (700/600) → light tints ────────── *
+   * text-white on these is overridden to near-black, so the bg must   *
+   * be light enough for dark text to pass 4.5:1 contrast.             *
+   * 600 is made slightly darker than 700 so hover darkens correctly.  */
+  --color-cyan-700:    oklch(89%  0.065 213);
+  --color-cyan-600:    oklch(83%  0.085 212);
+  --color-blue-700:    oklch(89%  0.050 263);
+  --color-blue-600:    oklch(83%  0.072 263);
+  --color-emerald-700: oklch(91%  0.042 155);
+  --color-emerald-600: oklch(85%  0.062 155);
+  --color-amber-700:   oklch(93%  0.052  88);
+  --color-amber-600:   oklch(86%  0.075  88);
+  --color-red-700:     oklch(93%  0.028  20);
+  --color-red-600:     oklch(86%  0.048  20);
 }
 
 /* text-white → near-black in light mode.
@@ -45,3 +100,10 @@ html[data-theme='light'] .border-white\/20 { border-color: oklch(0% 0 0 / 20%); 
 html[data-theme='light'] .bg-white\/2  { background-color: oklch(0% 0 0 / 2%);  }
 html[data-theme='light'] .bg-white\/5  { background-color: oklch(0% 0 0 / 5%);  }
 html[data-theme='light'] .bg-white\/10 { background-color: oklch(0% 0 0 / 10%); }
+
+/* Prevent jarring dark flash on gray nav/surface hover states.
+ * --color-gray-600 is mapped dark for text use; override the bg class
+ * independently so hover doesn't jump from near-white to dark gray.   */
+html[data-theme='light'] .hover\:bg-gray-600:hover   { background-color: oklch(88%  0.011 255); }
+html[data-theme='light'] .hover\:bg-gray-800:hover   { background-color: oklch(94%  0.008 255); }
+html[data-theme='light'] .active\:bg-gray-800:active { background-color: oklch(94%  0.008 255); }

@@ -91,7 +91,7 @@ export default function ViewerPage() {
               onClick={() => audio.isPlaying ? audio.pause() : audio.play().catch(() => {})}
               className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold text-white transition-colors"
             >
-              {audio.isPlaying ? '⏸ Pausar' : '▶ Play'}
+              {audio.isPlaying ? 'Pausar' : 'Play'}
             </button>
           )}
           <Link to={arHref}

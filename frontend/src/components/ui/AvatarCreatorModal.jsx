@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom';
 import AvaturnEmbed from './AvaturnEmbed';
 import AvatarGallery from './AvatarGallery';
 import CharacterStudioEmbed from './CharacterStudioEmbed';
+import Icon from './Icon';
 
 const CREATORS = {
-  avaturn:         { label: 'Criar Avatar — Avaturn',      icon: '🧑‍🎨' },
-  characterstudio: { label: 'CharacterStudio',             icon: '🎨' },
-  gallery:         { label: 'Galeria de Avatares (CC0)',   icon: '🖼' },
+  avaturn:         { label: 'Criar Avatar — Avaturn',    icon: 'avatar' },
+  characterstudio: { label: 'CharacterStudio',           icon: 'palette' },
+  gallery:         { label: 'Galeria de Avatares (CC0)', icon: 'folder' },
 };
 
 export default function AvatarCreatorModal({ creator, onExport, onClose }) {
@@ -20,7 +21,7 @@ export default function AvatarCreatorModal({ creator, onExport, onClose }) {
 
   if (!creator) return null;
 
-  const meta = CREATORS[creator] ?? { label: creator, icon: '👤' };
+  const meta = CREATORS[creator] ?? { label: creator, icon: 'avatar' };
 
   return createPortal(
     <div
@@ -32,14 +33,14 @@ export default function AvatarCreatorModal({ creator, onExport, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-lg leading-none">{meta.icon}</span>
+            <Icon name={meta.icon} className="w-4 h-4 text-gray-300" />
             <p className="text-sm font-semibold text-gray-100">{meta.label}</p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+            className="rounded-lg px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 transition-colors flex items-center gap-1"
           >
-            ✕ Fechar
+            <Icon name="close" className="w-4 h-4" /> Fechar
           </button>
         </div>
 

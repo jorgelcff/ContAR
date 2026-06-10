@@ -28,6 +28,27 @@ export class AnimationController {
     // yet computed; null = no correction needed; Quaternion = correction to apply.
     this._hipsParentCorrection = undefined;
 
+    // Ground clamping: keeps feet on the floor after Mixamo retargeting (position
+    // tracks are dropped, so the hips Y oscillation that walk/run animations rely
+    // on is missing — without correction the feet float above the ground plane).
+    // undefined = not yet captured; null = no hips bone found; number = bind-pose Y.
+    this._hipsRestY = undefined;
+    // Bind-pose height of the lowest toe/foot bone above the model root (world Y).
+    // The toe bone sits above the visual sole; using this offset makes the clamp
+    // land the sole — not the toe joint — exactly on the ground plane.
+    this._toeRestY = undefined;
+    this._groundClampVec = new THREE.Vector3();
+
+    // ── Circular motion (walk_circle) ────────────────────────
+    // Procedural orbit applied on top of the in-place animation: the model
+    // moves around a fixed center point and its Y rotation tracks the tangent.
+    this._circularMotion = false;
+    this._circleAngle    = 0;
+    this._circleCenter   = new THREE.Vector3();
+    this._circleBaseRotY = 0;
+    this._circleRadius   = 0.8;              // metres — diameter ≈ 1.6 m
+    this._circleSpeed    = Math.PI / 7;      // rad/s → full loop ≈ 14 s
+
     // ── Blink ────────────────────────────────────────────────
     this._blinkTimer = 0;
     this._blinkInterval = 2.5 + Math.random() * 4;
@@ -83,6 +104,25 @@ export class AnimationController {
           this._boneByName.set(n.name, n);
         }
       });
+      // Capture hips bind-pose local Y here, before any animation modifies it.
+      if (this._hipsRestY === undefined) {
+        const hipsBone = this._boneMapper?.get('hips');
+        this._hipsRestY = hipsBone ? hipsBone.position.y : null;
+      }
+      // Capture bind-pose toe/foot height above the model root.
+      // getWorldPosition works here because the hierarchy is complete even before
+      // the model is added to the scene (updateWorldMatrix traverses up correctly).
+      if (this._toeRestY === undefined) {
+        const lToe = this._boneMapper?.get('leftToes')  ?? this._boneMapper?.get('leftFoot');
+        const rToe = this._boneMapper?.get('rightToes') ?? this._boneMapper?.get('rightFoot');
+        const mPos = new THREE.Vector3();
+        const bPos = new THREE.Vector3();
+        this._model.getWorldPosition(mPos);
+        let minOff = Infinity;
+        if (lToe) { lToe.getWorldPosition(bPos); minOff = Math.min(minOff, bPos.y - mPos.y); }
+        if (rToe) { rToe.getWorldPosition(bPos); minOff = Math.min(minOff, bPos.y - mPos.y); }
+        this._toeRestY = isFinite(minOff) ? minOff : 0;
+      }
     }
     const boneNameSet = this._boneNameSet;
     const boneByName = this._boneByName;
@@ -177,6 +217,20 @@ export class AnimationController {
       (track) => boneNameSet.has(getBoneName(track.name)),
     );
 
+    // FIX FOR VRM: Mixamo animations often contain a 90-degree X-axis rotation on the Hips 
+    // to compensate for their Armature export rotation. VRM models do not have this armature, 
+    // so applying Mixamo Hips quaternions directly makes the VRM character lie face down or float horizontally.
+    // Safest strategy: for VRM, drop the Hips track. The character stays perfectly upright 
+    // anchored to its native rest pose, while the spine and all limbs animate correctly.
+    if (this._boneMapper && this._boneMapper.source === 'vrm') {
+      const hipsBone = this._boneMapper.get('hips');
+      if (hipsBone) {
+        retargetedClip.tracks = retargetedClip.tracks.filter(
+          (track) => track.name !== `${hipsBone.name}.quaternion`
+        );
+      }
+    }
+
     // ── Hips parent-rotation correction ──────────────────────────────────────
     // Gallery/Studio avatars (Blender-exported) often have a non-bone Armature
     // Object3D sitting above mixamorigHips with a non-identity local rotation.
@@ -208,6 +262,40 @@ export class AnimationController {
       }
     }
 
+    // ── Blender-convention hips rotation detection (non-VRM) ─────────────────
+    // Some Mixamo GLB exports bake a ~90° X rotation into the hips quaternion
+    // track to compensate for Blender's Y↑→Z↑ axis convention. When the avatar's
+    // armature parent has an identity rotation (so _hipsParentCorrection = null),
+    // this rotation goes uncorrected and the character lies flat on its side.
+    // Detection: if the majority of sampled keyframes have |euler.x| > 45°
+    // AFTER any parent correction, the track is incompatible → drop it so the
+    // character keeps its upright bind-pose hips orientation.
+    if (this._boneMapper && this._boneMapper.source !== 'vrm') {
+      const hipsBone = this._boneMapper.get('hips');
+      if (hipsBone) {
+        const hipsTrackName = `${hipsBone.name}.quaternion`;
+        const hipsTrack = retargetedClip.tracks.find((t) => t.name === hipsTrackName);
+        if (hipsTrack && hipsTrack.values.length >= 4) {
+          const keyCount = hipsTrack.values.length / 4;
+          const step = Math.max(1, Math.floor(keyCount / 6));
+          const _tmpQ = new THREE.Quaternion();
+          const _tmpE = new THREE.Euler();
+          let largeX = 0, total = 0;
+          for (let k = 0; k < keyCount; k += step) {
+            const i = k * 4;
+            _tmpQ.set(hipsTrack.values[i], hipsTrack.values[i + 1], hipsTrack.values[i + 2], hipsTrack.values[i + 3]).normalize();
+            _tmpE.setFromQuaternion(_tmpQ, 'XYZ');
+            if (Math.abs(_tmpE.x) > Math.PI / 4) largeX++;
+            total++;
+          }
+          if (largeX > total * 0.5) {
+            retargetedClip.tracks = retargetedClip.tracks.filter((t) => t.name !== hipsTrackName);
+            if (_dbg) console.log(`[AnimCtrl] "${clip.name}": dropped hips.quaternion — Blender-convention ~90° X rotation detected`);
+          }
+        }
+      }
+    }
+
     if (_dbg) {
       // eslint-disable-next-line no-console
       console.groupCollapsed(`[AnimCtrl] retarget "${clip.name}" — mapper: ${this._boneMapper.source} (${this._boneMapper.resolvedCount} bones)`);
@@ -225,6 +313,12 @@ export class AnimationController {
   }
 
   play(clipOrName, fadeDuration = 0.4) {
+    // Determine the clip name before resolving the action so we can toggle
+    // circular motion even when the same action is already current.
+    const nameHint = (clipOrName instanceof THREE.AnimationClip)
+      ? (clipOrName.name ?? '')
+      : String(clipOrName ?? '');
+
     let action;
     if (clipOrName instanceof THREE.AnimationClip) {
       const clip = this._retargetClip(clipOrName);
@@ -232,9 +326,28 @@ export class AnimationController {
       action.enabled = true;
       this._actions.set(clip.name.toLowerCase(), action);
     } else {
-      action = this._findAction(String(clipOrName ?? '').toLowerCase());
+      action = this._findAction(nameHint.toLowerCase());
     }
     if (!action) return false;
+
+    // ── Circular motion: enable for walk_circle, disable for everything else ──
+    const wantsCircle = /walk.?circle|circle.?walk/i.test(nameHint);
+    if (wantsCircle && !this._circularMotion) {
+      this._circularMotion = true;
+      this._circleAngle    = 0;
+      this._circleCenter.copy(this._model.position);
+      this._circleBaseRotY = this._model.rotation.y;
+    } else if (!wantsCircle) {
+      if (this._circularMotion) {
+        // Restore model to the circle's conceptual center so it doesn't
+        // snap to an arbitrary orbit position when switching to another pose.
+        this._model.position.x = this._circleCenter.x;
+        this._model.position.z = this._circleCenter.z;
+        this._model.rotation.y = this._circleBaseRotY;
+      }
+      this._circularMotion = false;
+    }
+
     if (action === this._currentAction) return true;
     action.reset();
     action.enabled = true;
@@ -282,6 +395,18 @@ export class AnimationController {
   stopAll() {
     this._mixer.stopAllAction();
     this._currentAction = null;
+    // Restore hips bind-pose Y so static poses display correctly after animation stops.
+    if (typeof this._hipsRestY === 'number') {
+      const hipsBone = this._boneMapper?.get('hips');
+      if (hipsBone) hipsBone.position.y = this._hipsRestY;
+    }
+    // Restore model to orbit center and disable circular motion.
+    if (this._circularMotion) {
+      this._model.position.x = this._circleCenter.x;
+      this._model.position.z = this._circleCenter.z;
+      this._model.rotation.y = this._circleBaseRotY;
+      this._circularMotion = false;
+    }
   }
 
   setProceduralMode(mode = 'default') {
@@ -297,6 +422,8 @@ export class AnimationController {
 
   update(delta) {
     this._mixer.update(delta);
+    this._groundClamp();
+    this._updateCircularMotion(delta);
     this._updateBlink(delta);
     this._updateBreathing(delta);
     this._updateSpeakerGestures(delta);
@@ -308,6 +435,71 @@ export class AnimationController {
   }
 
   // ── Private ───────────────────────────────────────────────────────────────
+
+  /**
+   * Procedural orbit for the walk_circle pose.
+   * Moves the model along a circle of radius _circleRadius centred on _circleCenter,
+   * and rotates it to always face the direction of travel (tangent to the circle).
+   * Y position is intentionally left untouched — _groundClamp handles it.
+   */
+  _updateCircularMotion(delta) {
+    if (!this._circularMotion || !this._currentAction) return;
+    this._circleAngle += this._circleSpeed * delta;
+    const r = this._circleRadius;
+    const a = this._circleAngle;
+    this._model.position.x = this._circleCenter.x + r * Math.sin(a);
+    this._model.position.z = this._circleCenter.z + r * Math.cos(a);
+    // Tangent direction: d/dθ (sin θ, cos θ) = (cos θ, -sin θ)
+    // atan2(vx, vz) gives the Y-axis rotation that makes +Z face the velocity.
+    this._model.rotation.y = this._circleBaseRotY + Math.atan2(Math.cos(a), -Math.sin(a));
+  }
+
+  /**
+   * After the mixer updates quaternions (position tracks are dropped for Mixamo
+   * retargeting), the hips Y no longer oscillates as the animation intended.
+   * This causes feet to float above the ground plane during walk/run/dance clips.
+   *
+   * Fix: each frame, find the lowest foot world-Y and translate the hips bone so
+   * the foot touches the model's ground (model root world-Y). Pure translation —
+   * no IK solver needed.
+   */
+  _groundClamp() {
+    if (!this._currentAction || !this._boneMapper) return;
+
+    const hipsBone = this._boneMapper.get('hips');
+    if (!hipsBone) { this._hipsRestY = null; return; }
+
+    // Capture bind-pose local Y once, before any clamp offset accumulates.
+    if (this._hipsRestY === undefined) {
+      this._hipsRestY = hipsBone.position.y;
+    }
+
+    // Prefer toe bones (closer to the actual ground contact point) over ankle
+    // bones. The ankle (leftFoot) sits ~8–12 cm above the sole; clamping the
+    // ankle to groundY would push the sole that far below the floor.
+    const lRef = this._boneMapper.get('leftToes')  ?? this._boneMapper.get('leftFoot');
+    const rRef = this._boneMapper.get('rightToes') ?? this._boneMapper.get('rightFoot');
+    if (!lRef && !rRef) return;
+
+    const pos = this._groundClampVec;
+    let minFootY = Infinity;
+    if (lRef) { lRef.getWorldPosition(pos); minFootY = Math.min(minFootY, pos.y); }
+    if (rRef) { rRef.getWorldPosition(pos); minFootY = Math.min(minFootY, pos.y); }
+    if (!isFinite(minFootY)) return;
+
+    // Ground level = model root world-Y (the container sits on the scene floor).
+    this._model.getWorldPosition(pos);
+    const groundY = pos.y;
+
+    // _toeRestY is the bind-pose height of the toe/foot bone above the model root.
+    // In bind pose the sole is at groundY while the toe bone is at groundY + _toeRestY,
+    // so that is the correct target — not groundY itself.
+    const toeRestY = this._toeRestY ?? 0;
+    const floatDelta = minFootY - (groundY + toeRestY);
+    if (Math.abs(floatDelta) > 0.0005) {
+      hipsBone.position.y -= floatDelta;
+    }
+  }
 
   /**
    * Compute the inverse world quaternion of the first non-bone ancestor of the
@@ -326,26 +518,35 @@ export class AnimationController {
     while (node && node.isBone) node = node.parent;
     if (!node) return null;
 
-    this._model.updateMatrixWorld(true);
-    const parentWorldQ = new THREE.Quaternion();
-    node.getWorldQuaternion(parentWorldQ);
+    // We want the rotation of 'node' relative to this._model, NOT the world.
+    // If we use getWorldQuaternion, we'll accidentally invert the user's manual 
+    // container rotation (model.rotation, Math.PI VRM corrections, etc), which
+    // would bake incorrect opposite rotations into every animation clip!
+    if (node === this._model) return null;
+
+    const offsetQ = new THREE.Quaternion();
+    let current = node;
+    while (current && current !== this._model) {
+      offsetQ.premultiply(current.quaternion);
+      current = current.parent;
+    }
 
     const eps = 1e-4;
     const isIdentity =
-      Math.abs(parentWorldQ.x) < eps &&
-      Math.abs(parentWorldQ.y) < eps &&
-      Math.abs(parentWorldQ.z) < eps; // w ≈ 1 follows automatically
+      Math.abs(offsetQ.x) < eps &&
+      Math.abs(offsetQ.y) < eps &&
+      Math.abs(offsetQ.z) < eps; // w ≈ 1 follows automatically
     if (isIdentity) return null;
 
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
       console.log(
-        `[AnimCtrl] hips parent "${node.name}" has non-identity rotation`,
-        parentWorldQ,
-        '→ applying correction',
+        `[AnimCtrl] hips parent "${node.name}" has non-identity internal rotation`,
+        offsetQ,
+        "→ applying correction",
       );
     }
-    return parentWorldQ.invert();
+    return offsetQ.invert();
   }
 
   _findAction(key) {

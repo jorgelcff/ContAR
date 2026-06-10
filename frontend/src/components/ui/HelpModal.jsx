@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 // ── FAQ data ────────────────────────────────────────────────────────────────
 const FAQ = [
   {
-    section: '👤 Avatares',
+    section: 'Avatares',
     items: [
       {
         q: 'Como adiciono meu próprio avatar?',
@@ -16,16 +16,16 @@ const FAQ = [
       },
       {
         q: 'Por que o avatar aparece muito pequeno ou deslocado?',
-        a: 'Na aba Avatar, clique em "⚙️ Configurações avançadas" e ajuste os sliders de Escala e Posição. Arraste o slider de Escala para a direita para aumentar o tamanho.',
+        a: 'Na aba Avatar, clique em "Configurações avançadas" e ajuste os sliders de Escala e Posição. Arraste o slider de Escala para a direita para aumentar o tamanho.',
       },
     ],
   },
   {
-    section: '💬 Voz e Fala',
+    section: 'Voz e Fala',
     items: [
       {
         q: 'Como faço o avatar falar?',
-        a: '1. Vá para a aba Fala\n2. Digite o texto no campo\n3. Clique em "🎙️ Gerar Voz (TTS)"\n4. Aguarde alguns segundos\n5. Clique em Play para ouvir o personagem falar com lábios sincronizados.',
+        a: '1. Vá para a aba Fala\n2. Digite o texto no campo\n3. Clique em "Gerar Voz (TTS)"\n4. Aguarde alguns segundos\n5. Clique em Play para ouvir o personagem falar com lábios sincronizados.',
       },
       {
         q: 'O TTS funciona em português?',
@@ -41,12 +41,12 @@ const FAQ = [
       },
       {
         q: 'Posso gravar minha própria voz?',
-        a: 'Sim! No painel de Áudio, clique no botão de microfone 🎙️. O browser vai pedir permissão — clique em "Permitir". Fale normalmente e clique em "Parar" quando terminar.',
+        a: 'Sim! No painel de Áudio, clique no botão de microfone. O browser vai pedir permissão — clique em "Permitir". Fale normalmente e clique em "Parar" quando terminar.',
       },
     ],
   },
   {
-    section: '🎬 Cenas e Histórias',
+    section: 'Cenas e Histórias',
     items: [
       {
         q: 'Qual é a diferença entre Cena e História?',
@@ -54,16 +54,16 @@ const FAQ = [
       },
       {
         q: 'Como salvo minha cena?',
-        a: 'Na aba Cena, dê um nome para a cena e clique em "💾 Salvar Cena". Após salvar, o autosave passa a funcionar automaticamente: qualquer mudança é salva em 3 segundos.',
+        a: 'Na aba Cena, dê um nome para a cena e clique em "Salvar Cena". Após salvar, o autosave passa a funcionar automaticamente: qualquer mudança é salva em 3 segundos.',
       },
       {
         q: 'Como compartilho minha história?',
-        a: 'Na aba História, clique em "📝 Salvar História". Um link aparece logo abaixo — clique em "🔗 Copiar link" e compartilhe com quem quiser. Não é necessário ter conta para assistir.',
+        a: 'Na aba História, clique em "Salvar História". Um link aparece logo abaixo — clique em "Copiar link" e compartilhe com quem quiser. Não é necessário ter conta para assistir.',
       },
     ],
   },
   {
-    section: '🛠️ Problemas Comuns',
+    section: 'Problemas Comuns',
     items: [
       {
         q: 'A voz não gerou, apareceu um erro.',
@@ -84,31 +84,31 @@ const FAQ = [
 // ── Guides data ─────────────────────────────────────────────────────────────
 const GUIDES = [
   {
-    title: '🚀 Criar sua primeira cena (5 min)',
+    title: 'Criar sua primeira cena (5 min)',
     steps: [
       'Na aba Avatar, clique em "Criar Avatar" e crie ou escolha um personagem.',
       'Na aba Fala, escreva o que o avatar vai dizer.',
-      'Clique em "🎙️ Gerar Voz (TTS)" e aguarde a voz ser criada.',
+      'Clique em "Gerar Voz (TTS)" e aguarde a voz ser criada.',
       'Clique em Play para ver o avatar falar.',
-      'Na aba Cena, dê um nome e clique em "💾 Salvar Cena".',
+      'Na aba Cena, dê um nome e clique em "Salvar Cena".',
     ],
   },
   {
-    title: '📖 Criar uma história com múltiplas cenas (15 min)',
+    title: 'Criar uma história com múltiplas cenas (15 min)',
     steps: [
       'Crie e salve a primeira cena (guia acima).',
       'Clique em "Adicionar cena atual à história" — a cena 1 fica registrada.',
       'Altere o texto, avatar ou pose para criar a segunda cena.',
       'Repita para quantas cenas quiser.',
-      'Na aba História, clique em "📝 Salvar História".',
+      'Na aba História, clique em "Salvar História".',
       'Copie o link que aparece e compartilhe!',
     ],
   },
   {
-    title: '🎙️ Gravar sua própria voz',
+    title: 'Gravar sua própria voz',
     steps: [
       'Na aba Fala, localize o painel de Áudio.',
-      'Clique no ícone de microfone 🎙️.',
+      'Clique no botão de microfone.',
       'Permita o acesso ao microfone quando o browser pedir.',
       'Fale normalmente.',
       'Clique em "Parar Gravação" quando terminar.',
@@ -116,7 +116,7 @@ const GUIDES = [
     ],
   },
   {
-    title: '⏱️ Usar a Timeline',
+    title: 'Usar a Timeline',
     steps: [
       'Gere ou carregue um áudio.',
       'Na Timeline (barra na parte inferior), clique no "+" da trilha Áudio.',
@@ -179,7 +179,7 @@ export default function HelpModal({ onClose }) {
 
         {/* Tabs */}
         <div className="flex border-b border-gray-700 shrink-0 px-5">
-          {[{ id: 'faq', label: '❓ Perguntas Frequentes' }, { id: 'guides', label: '📋 Como Fazer' }].map((t) => (
+          {[{ id: 'faq', label: 'Perguntas Frequentes' }, { id: 'guides', label: 'Como Fazer' }].map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}

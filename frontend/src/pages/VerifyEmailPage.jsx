@@ -41,7 +41,7 @@ export default function VerifyEmailPage() {
 
         {status === 'success' && (
           <>
-            <span className="text-5xl">✅</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14 text-emerald-400"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
             <div>
               <h2 className="text-lg font-bold text-white">{t('verifyEmailSuccessTitle')}</h2>
               <p className="text-sm text-gray-400 mt-1">{message}</p>
@@ -55,7 +55,7 @@ export default function VerifyEmailPage() {
 
         {status === 'error' && (
           <>
-            <span className="text-5xl">❌</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14 text-red-400"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
             <div>
               <h2 className="text-lg font-bold text-red-300">{t('verifyEmailErrorTitle')}</h2>
               <p className="text-sm text-gray-400 mt-1">{message}</p>

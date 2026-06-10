@@ -1,255 +1,172 @@
-# ContAR — Experience Walkthrough
+# ContAR — Walkthrough da Experiência
 
-Guia completo de como usar o ContAR do zero até ter uma história com narrador 3D em AR.
-
----
-
-## Antes de começar (expectativa real)
-
-- O fluxo recomendado é: **uma cena simples primeiro**, depois história completa.
-- O editor já está pronto para uso, mas ainda há refinamentos em andamento para onboarding e mobile.
-- Em AR, o resultado varia conforme navegador, câmera e suporte do dispositivo.
+Guia direto de como usar o ContAR do zero até ter uma história com narrador 3D.
 
 ---
 
-## Visão Geral do Fluxo
+## Fluxo principal
 
 ```
-Criar conta → Criar avatar → Criar cena → Adicionar fala/áudio → Montar história → Visualizar → Abrir em AR
+Criar conta → Criar avatar → Configurar cena → Montar história → Visualizar → AR
 ```
 
 ---
 
-## 1. Criar Conta
+## 1. Criar conta
 
-1. Acesse a aplicação e clique em **Entrar** no cabeçalho
-2. Na tela de login, clique em **Criar conta**
-3. Preencha nome, email e senha (mínimo 6 caracteres)
+1. Clique em **Entrar** no cabeçalho
+2. Clique em **Criar conta**
+3. Preencha nome, e-mail e senha (mínimo 6 caracteres)
 4. Clique em **Cadastrar**
-5. Um email de verificação será enviado (opcional — você já pode usar a plataforma)
 
-> **Dica:** Se esquecer a senha, use o link "Esqueci minha senha" na tela de login.
-
----
-
-## 2. Criar o Avatar do Narrador
-
-<!-- Você tem três opções para obter um avatar: -->
-
-### Avaturn
-
-1. No editor, clique na aba **Avatar** no painel esquerdo
-2. Clique em **Abrir Avaturn**
-3. No widget que abre, crie ou selecione um avatar 3D personalizado
-4. Clique em **Next/Exportar** — o avatar aparece automaticamente na cena
-
-<!-- ### Opção B — Upload de arquivo GLB/VRM
-1. No editor, aba **Avatar** → clique em **Carregar GLB/VRM**
-2. Selecione um arquivo `.glb` ou `.vrm` do seu computador
-3. O avatar carrega imediatamente como preview
-4. O arquivo é enviado ao servidor em segundo plano para persistir entre sessões
-
-> **Importante em produção:** o servidor precisa da variável `BACKEND_URL` configurada para que a URL seja pública. Se você ver um aviso de "URL localhost", configure essa variável no Render. -->
-<!--
-### Opção C — URL direta
-1. Cole uma URL pública de um arquivo `.glb` no campo de URL
-2. Clique em **Carregar**
-
-### Opção D — Ready Player Me (alternativa gratuita)
-1. Acesse [readyplayer.me](https://readyplayer.me) e crie um avatar
-2. Ao exportar, copie a URL do arquivo `.glb`
-3. Cole no campo de URL do editor e clique em **Carregar**
-
-### Opção E — VRoid Hub
-1. Acesse [hub.vroid.com](https://hub.vroid.com) e escolha um avatar VRM gratuito
-2. Baixe o arquivo `.vrm`
-3. Use o upload de arquivo no editor -->
+> O e-mail de verificação é opcional — você já pode usar a plataforma sem confirmar.
 
 ---
 
-## 3. Configurar a Cena
+## 2. Criar o avatar
 
-### 3.1 — Ajustar o Avatar
+1. Clique em **Nova cena** no painel de cenas
+2. No painel esquerdo, vá para a aba **Avatar**
+3. Clique em **Abrir Avaturn** — o widget abre dentro da própria página
+4. Customize o personagem (rosto, cabelo, roupa) e clique em **Next**
+5. O avatar aparece automaticamente na cena 3D
 
-- **Pose:** selecione `idle`, `walk`, `dance`, `speaker` ou outra na aba Avatar
-- **Posição/Rotação/Escala:** use os sliders em "Transformações avançadas"
-- **Bones customizados:** no modo `?dev`, calibre ossos manualmente para avatares com rigging não-padrão
+> **Avaturn salva automaticamente.** Você pode reutilizar o mesmo avatar em outras cenas pela galeria.
 
-### 3.2 — Adicionar a Fala do Narrador
+---
 
-1. Vá para a aba **Fala** no painel esquerdo
-2. Digite o texto que o narrador vai "dizer"
-3. O texto aparece na bolha de fala acima do avatar na cena
+## 3. Configurar a cena
 
-### 3.3 — Gerar Áudio (lip sync)
+### Pose e animação
 
-**Com Azure TTS (recomendado, gratuito 500k chars/mês):**
+- Na aba **Avatar**, escolha a pose: `idle`, `walk`, `walk_circle`, `slow_run`, `run`, `dance` ou `speaker`
+- As poses mudam a animação do personagem em tempo real
 
+### Posição e escala
+
+- Em **Transformações avançadas**, use os sliders para ajustar posição (X/Y/Z), rotação e escala
+- As mudanças são aplicadas imediatamente no preview
+
+### Texto da fala
+
+1. Vá para a aba **Fala**
+2. Digite o que o narrador vai dizer
+3. O texto aparece na bolha de fala acima do avatar
+
+### Gerar áudio com lip sync
+
+**Azure TTS (recomendado):**
 1. Vá para a aba **Áudio**
-2. Clique em **✨ Gerar fala** na seção "Gerar fala com IA"
-3. Escolha a voz (Francisca Neural, Antonio Neural, etc.)
-4. O áudio é gerado com visemes sincronizados automaticamente
+2. Clique em **✨ Gerar fala com IA**
+3. Escolha a voz (Francisca Neural, Antonio Neural…)
+4. O áudio é gerado e sincronizado automaticamente com o avatar
 
-**Com Voz do Navegador (gratuito, sem API):**
-
-1. Clique em **🔊 Falar agora** na seção "Voz do Navegador"
+**Voz do navegador (preview rápido, sem API):**
+1. Clique em **🔊 Falar agora**
 2. A voz do browser fala o texto com lip sync aproximado
-3. Útil para preview rápido
 
-**Com áudio próprio:**
+**Áudio próprio:**
+1. Clique em **Gravar** (microfone) ou **Carregar áudio** (MP3/WAV)
+2. Em **Configurações avançadas**, clique em **Gerar timeline local** para adicionar lip sync baseado no texto
 
-1. Clique em **Gravar** para capturar pelo microfone
-2. Ou **Carregar áudio** para fazer upload de um MP3/WAV
-3. Em "Configurações avançadas", clique em **Gerar timeline local** para adicionar lip sync baseado no texto
-
-### 3.4 — Nomear e Salvar a Cena
+### Salvar a cena
 
 1. Vá para a aba **Cena**
-2. Digite um nome no campo de título (ex: "Cena 1 — Introdução")
-3. Clique em **💾 Salvar cena** — ou aguarde o auto-save (3 segundos após qualquer mudança)
-4. O ID da cena aparece após o primeiro save
+2. Digite um nome (ex: "Cena 1 — Introdução")
+3. Clique em **💾 Salvar** — ou aguarde o auto-save (3 segundos após qualquer mudança)
 
 ---
 
-## 4. Montar a História
+## 4. Montar a história — como o editor funciona
 
-### 4.1 — Adicionar cenas à história
+### O editor trabalha em uma cena de cada vez
 
-1. Na aba **Cena**, com a cena salva, clique em **+ Adicionar cena à história**
-2. Repita o processo: edite o avatar, fala, áudio → salve → adicione à história
-3. Cada cena tem sua própria pose, texto e áudio
+O editor tem sempre uma **cena ativa**. Tudo que você configura (avatar, pose, texto, áudio) pertence a essa cena ativa. A cena ativa muda dependendo do que você fez por último:
 
-### 4.2 — Configurar a história
+| Situação | Cena ativa |
+|---|---|
+| Abriu `/editor` sem parâmetros | A última cena da sessão (ou nova, se primeira vez) |
+| Clicou "Adicionar à história" | A cena recém-criada por esse clique |
+| Clicou no lápis de um card da história | A cena daquele card |
+
+### Fluxo para criar uma história com várias cenas
+
+```
+Configure → Adicionar à história → mude o conteúdo → Adicionar à história → repita
+```
+
+**Passo a passo:**
+
+1. Configure o avatar, pose, texto e áudio para a **Cena 1**
+2. Na aba **Cena** ou **História**, clique em **+ Adicionar cena à história**
+   - Isso salva o estado atual como uma nova cena e a adiciona à lista no painel inferior
+   - A cena aparece como **#1** no painel inferior
+3. **Mude o conteúdo** do editor para a Cena 2 (novo texto, nova pose, novo áudio)
+   - Faça isso em menos de 3 segundos ou salve manualmente antes — o autosave atualiza a cena ativa, não cria uma nova
+4. Clique em **+ Adicionar à história** novamente
+   - Isso cria uma nova cena separada (**#2**) e a adiciona à lista
+5. Repita para quantas cenas quiser
+
+> **Regra principal:** "Adicionar à história" sempre cria uma cena nova. Autosave atualiza a cena que você está editando. São operações diferentes.
+
+### Editar uma cena já criada
+
+No painel inferior (StoryBuilder), cada card de cena tem um **botão de lápis (✏️)**. Clicar nele carrega aquela cena no editor. Qualquer mudança vai atualizar aquela cena específica via autosave.
+
+Para voltar a criar cenas novas depois de editar uma existente, clique em **+ Adicionar à história** novamente — isso criará uma nova cena a partir do conteúdo atual.
+
+### Reordenar cenas
+
+Arraste os cards no painel inferior para mudar a ordem de reprodução da história.
+
+### Publicar
 
 1. Vá para a aba **História**
-2. Digite o título da história
-3. Adicione uma descrição opcional
-4. Clique em **📖 Publicar história**
-5. O link de compartilhamento é gerado
-
-### 4.3 — Gerenciar cenas da história
-
-- A lista de cenas aparece na aba História
-- Arraste para reordenar (funcionalidade futura) ou remova individualmente
-- Cada cena pode ser editada independentemente — as mudanças são salvas automaticamente
+2. Digite o título e uma descrição opcional
+3. Clique em **📖 Publicar história**
+4. O link público é gerado na hora
 
 ---
 
-## 5. Visualizar a História
+## 5. Visualizar
 
-### 5.1 — Pelo Viewer
-
-1. Acesse `/stories` para ver suas histórias
-2. Clique em **▶ Assistir** ou use o link de compartilhamento `/story/[ID]`
-3. Na tela de splash, clique no botão **▶** grande para iniciar
-4. As cenas avançam automaticamente quando o áudio termina
-5. Use os botões ◀ ▶▶ para navegar manualmente
-
-### 5.2 — Controles do Viewer
-
-| Controle           | Ação                    |
-| ------------------ | ----------------------- |
-| ▶ / ⏸              | Iniciar / pausar        |
-| ◀ / ▶▶             | Cena anterior / próxima |
-| Slider escala      | Redimensionar o avatar  |
-| ⛶                  | Tela cheia (mobile)     |
-| Barra de progresso | Mostra % da cena atual  |
+- Acesse `/stories` para ver suas histórias
+- Clique em **▶ Assistir** ou use o link público gerado
+- As cenas avançam automaticamente quando o áudio termina
+- Use ◀ / ▶▶ para navegar manualmente
 
 ---
 
-## 6. Experiência em AR
+## 6. Abrir em AR
 
-### 6.1 — Via Botão no Viewer
+### Marcador Hiro (funciona em qualquer smartphone)
 
-1. No viewer da história, clique em **AR** no topo
-2. Você vai para `/ar?storyId=[ID]` com a história pré-configurada
-3. Na tela do AR, abra **Configurações avançadas** para ajustar tamanho
-4. Clique no modo desejado e depois em **▶ Iniciar história**
+1. No viewer, clique em **AR** no topo
+2. Clique em **Demo com Marcador Hiro**
+3. Imprima ou exiba o marcador: `https://bit.ly/hiro-marker`
+4. Aponte a câmera — o narrador aparece sobre o marcador e conta a história
 
-### 6.2 — AR de Marcador (funciona em qualquer celular)
+### Superfície (Android com ARCore ou iOS 15+)
 
-1. Acesse `/ar` no celular
-2. Em "Configurações avançadas", configure o ID da história
-3. Clique em **▶ Demo com Marcador Hiro**
-4. Imprima ou exiba o marcador Hiro: `https://bit.ly/hiro-marker`
-5. Aponte a câmera — o narrador aparece sobre o papel e conta a história
-
-### 6.3 — AR de Superfície (Android + ARCore ou iOS 15+)
-
-1. Clique em **Abrir AR de Superfície**
-2. Aguarde o reticle (anel ciano) aparecer no chão
-3. Toque para posicionar o narrador
-4. Clique em **▶ Iniciar história**
-5. O áudio toca e o avatar faz lip sync em tempo real
+1. No viewer, clique em **AR**
+2. Clique em **Abrir AR de Superfície**
+3. Aguarde o anel aparecer no chão
+4. Toque para posicionar o narrador e clique em **▶ Iniciar história**
 
 ---
 
 ## 7. Compartilhar
 
-### Link de visualização
+O link público gerado ao publicar funciona sem login:
 
 ```
 https://avaturn-threejs-1.onrender.com/story/[ID]
 ```
 
-Qualquer pessoa com o link pode assistir sem criar conta.
-
-<!-- ### QR Code para AR
-Gere um QR Code apontando para:
-```
-https://avaturn-threejs-1.onrender.com/ar?storyId=[ID]
-```
-Imprima junto com o marcador Hiro para uma experiência completa de AR sem app. -->
-
 ---
 
-<!--
-## 8. Alternativas de Criação de Personagem
+## Limitações atuais
 
-| Serviço | Tipo | Gratuito | Qualidade | Integração |
-|---|---|---|---|---|
-| **Avaturn** | Realista, customizável | Sim (conta) | Alta | Nativo no ContAR |
-| **Ready Player Me** | Cartoon/Realista | Sim | Alta | URL GLB |
-| **VRoid Studio** | Anime | Sim | Alta | Upload VRM |
-| **VRoid Hub** | Anime | Sim | Alta | URL/Download VRM |
-| **Mixamo + Adobe Fuse** | Realista | Sim (CC) | Média | Download GLB |
-| **Reallusion CC** | Realista | Trial | Muito alta | Export GLB |
-
-### Como usar Ready Player Me no ContAR
-1. Acesse [readyplayer.me](https://readyplayer.me/avatar)
-2. Crie o avatar (customização facial, roupa, cor)
-3. Clique em **Pose** → **T-Pose** para melhores resultados
-4. Copie o link de exportação GLB: `https://models.readyplayer.me/[ID].glb?morphTargets=ARKit`
-5. Cole no campo de URL do editor ContAR
-
-> **Dica:** adicione `?morphTargets=ARKit` na URL do RPM para habilitar blendshapes faciais e lip sync completo.
-
-### Como usar VRoid Studio no ContAR
-1. Baixe [VRoid Studio](https://vroid.com/studio) (Windows/Mac)
-2. Crie seu personagem
-3. Exporte como `.vrm`
-4. Faça upload no editor ContAR (suporte a VRM nativo) -->
-
----
-
-<!--
-## 9. Dicas de Produção
-
-- **Cold start no Render (free tier):** o backend dorme após 15min. Configure o [UptimeRobot](https://uptimerobot.com) para pingar `https://avaturn-threejs.onrender.com/health` a cada 5min
-- **Áudio no mobile:** o áudio só toca após o usuário clicar — é a política de autoplay dos browsers. A splash screen resolve isso
-- **Lip sync melhor:** use Azure TTS com vozes Neural — timing real vs estimado por texto
-- **AR mais estável:** marcador Hiro em papel A4 impresso com boa iluminação funciona melhor que tela de celular
-- **Salvar antes de sair:** o auto-save funciona mas aguarde o indicador "Salvo" aparecer antes de fechar a aba
-
----
-
-## 10. Problemas Comuns
-
-| Problema | Causa Provável | Solução |
-|---|---|---|
-| Tela escura no viewer | Cena sem avatar configurado | Abra a cena no editor e selecione um avatar |
-| Avatar sumiu ao recarregar | URL era local (blob) ou localhost | Configure `BACKEND_URL` no Render |
-| Áudio não toca | Política de autoplay | Clique em ▶ na splash screen |
-| AR mostra 502 | Backend dormindo (free tier) | Aguarde 30s ou configure keep-alive |
-| Lip sync travado | Áudio sem timeline de visemas | Use Azure TTS ou clique em "Gerar timeline local" |
-| "Cannot GET /" no backend | Normal — não há rota raiz | Use `/health` ou `/api/...` | -->
+- A experiência mobile ainda está em ajuste — recomenda-se desktop para autoria
+- AR de superfície depende do suporte ARCore/WebXR do navegador
+- O backend no free tier do Render pode demorar ~30s para responder após ficar inativo

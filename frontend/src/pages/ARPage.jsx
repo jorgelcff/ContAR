@@ -215,7 +215,7 @@ function StoryOverlay({ story, storyId, compact = false, onStart }) {
           className="flex-1 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-white disabled:opacity-40">◀</button>
         <button onClick={story.togglePlay}
           className="flex-1 py-1.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-xs text-white font-semibold">
-          {story.isPlaying ? '⏸' : '▶'}
+          {story.isPlaying ? '‖' : '▶'}
         </button>
         <button onClick={story.next} disabled={story.index >= story.scenes.length - 1}
           className="flex-1 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-white disabled:opacity-40">▶▶</button>
@@ -578,11 +578,11 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
               if (modelRootRef.current) modelRootRef.current.visible = false;
             }}
             className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
-            🔄 {t('reset')}
+            {t('reset')}
           </button>
           <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
             <input type="checkbox" checked={lockPlacement} onChange={(e) => setLockPlacement(e.target.checked)} className="w-5 h-5 accent-cyan-400 cursor-pointer" />
-            <span>{lockPlacement ? '🔒 Posição fixada' : '🔓 Mover avatar'}</span>
+            <span>{lockPlacement ? 'Posição fixada' : 'Mover avatar'}</span>
           </label>
         </div>
 
@@ -736,7 +736,7 @@ export default function ARPage() {
           {/* HTTPS warning */}
           {isHttp && (
             <div className="rounded-2xl border border-amber-600/50 bg-amber-950/40 px-4 py-3 flex gap-3 items-start">
-              <span className="text-xl shrink-0">⚠️</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-amber-400 mt-0.5"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
               <div>
                 <p className="text-sm font-semibold text-amber-300">HTTPS necessário para AR</p>
                 <p className="text-xs text-amber-200/70 mt-0.5">
@@ -754,7 +754,7 @@ export default function ARPage() {
           {/* Avatar source banner */}
           {isUsingStoredAvatar ? (
             <div className="rounded-2xl border border-emerald-600/30 bg-emerald-950/30 px-4 py-3 flex items-center gap-3">
-              <span className="text-xl shrink-0">✅</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-emerald-400"><path d="M20 6 9 17l-5-5"/></svg>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-emerald-300">Usando seu avatar salvo</p>
                 <p className="text-xs text-emerald-200/60 mt-0.5 truncate">{storedAvatarUrl}</p>
@@ -765,7 +765,7 @@ export default function ARPage() {
             </div>
           ) : isBlobOnly ? (
             <div className="rounded-2xl border border-amber-600/40 bg-amber-950/30 px-4 py-3 flex items-center gap-3">
-              <span className="text-xl shrink-0">⚠️</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-amber-400"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-300">Avatar local detectado</p>
                 <p className="text-xs text-amber-200/60 mt-0.5">
@@ -778,7 +778,7 @@ export default function ARPage() {
             </div>
           ) : (
             <div className="rounded-2xl border border-white/8 bg-white/3 px-4 py-3 flex items-center gap-3">
-              <span className="text-xl shrink-0">ℹ️</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-blue-400"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
               <div className="flex-1">
                 <p className="text-sm text-gray-300">Usando avatar padrão de demonstração</p>
                 <p className="text-xs text-gray-500 mt-0.5">
@@ -797,17 +797,16 @@ export default function ARPage() {
             {/* Surface AR */}
             <div className="rounded-2xl border border-cyan-500/20 bg-cyan-950/20 p-5 flex flex-col gap-4">
               <div>
-                <span className="text-2xl">🏠</span>
-                <h2 className="mt-2 text-lg font-bold text-cyan-200">AR de Superfície</h2>
+                <h2 className="text-lg font-bold text-cyan-200">AR de Superfície</h2>
                 <p className="mt-1 text-sm text-gray-300">
                   Ancora o avatar em uma mesa, chão ou parede usando WebXR. Toque para posicionar.
                 </p>
               </div>
               <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
                 <p className="font-semibold text-gray-300 mb-1">Requisitos:</p>
-                <p>📱 Android com <strong className="text-white">Chrome 81+</strong> e ARCore</p>
-                <p>🍎 iPhone/iPad com <strong className="text-white">Safari iOS 15+</strong></p>
-                <p>🔒 Página em <strong className="text-white">HTTPS</strong> (ou localhost)</p>
+                <p>Android com <strong className="text-white">Chrome 81+</strong> e ARCore</p>
+                <p>iPhone/iPad com <strong className="text-white">Safari iOS 15+</strong></p>
+                <p>Página em <strong className="text-white">HTTPS</strong> (ou localhost)</p>
               </div>
               <Link to={surfaceHref}
                 className="mt-auto inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
@@ -818,17 +817,16 @@ export default function ARPage() {
             {/* Marker AR */}
             <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-950/20 p-5 flex flex-col gap-4">
               <div>
-                <span className="text-2xl">🎯</span>
-                <h2 className="mt-2 text-lg font-bold text-fuchsia-200">AR de Marcador</h2>
+                <h2 className="text-lg font-bold text-fuchsia-200">AR de Marcador</h2>
                 <p className="mt-1 text-sm text-gray-300">
                   Aponte a câmera para um marcador impresso — o avatar aparece ancorado sobre ele.
                 </p>
               </div>
               <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
                 <p className="font-semibold text-gray-300 mb-1">Requisitos:</p>
-                <p>📱 <strong className="text-white">Qualquer celular</strong> com câmera</p>
-                <p>🌐 Chrome, Safari, Firefox</p>
-                <p>🖨️ Marcador impresso (ou na tela)</p>
+                <p><strong className="text-white">Qualquer celular</strong> com câmera</p>
+                <p>Chrome, Safari, Firefox</p>
+                <p>Marcador impresso (ou na tela)</p>
               </div>
               <div className="mt-auto flex flex-col gap-2">
                 <Link to={hiroHref}
@@ -845,7 +843,7 @@ export default function ARPage() {
 
           {/* Demo instructions */}
           <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
-            <p className="text-sm font-semibold text-white mb-3">🎯 Como testar o Demo Hiro agora</p>
+            <p className="text-sm font-semibold text-white mb-3">Como testar o Demo Hiro agora</p>
             <ol className="space-y-2 text-sm text-gray-300">
               <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">1.</span> Abra esta página no celular</li>
               <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">2.</span> Imprima ou exiba na tela outro dispositivo o marcador Hiro:
@@ -863,7 +861,7 @@ export default function ARPage() {
           {/* Scale pre-config + URL inputs */}
           <details className="rounded-2xl border border-white/5 bg-white/3">
             <summary className="px-5 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
-              ⚙️ Configurações avançadas
+              Configurações avançadas
             </summary>
             <div className="px-5 pb-5 pt-2 flex flex-col gap-4">
 
@@ -911,7 +909,7 @@ export default function ARPage() {
                 />
                 {storyId && (
                   <p className="text-xs text-emerald-400 mt-1.5">
-                    ✓ História configurada — os botões acima já incluem o ID.
+                    História configurada — os botões acima já incluem o ID.
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
@@ -1030,7 +1028,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
       <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-base">⚠️</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0 text-amber-400"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
             <h2 className="font-semibold text-amber-300">AR não disponível neste dispositivo</h2>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">WebXR requer Android+ARCore ou iOS Safari 15+. Mostrando 3D normal.</p>
@@ -1087,7 +1085,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
               className="flex-1 py-2 rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">◀</button>
             <button onClick={() => setIsPlaying((p) => !p)}
               className="flex-1 py-2 rounded-lg bg-cyan-700 text-xs text-white font-semibold">
-              {isPlaying ? '⏸' : '▶'}
+              {isPlaying ? '‖' : '▶'}
             </button>
             <button onClick={() => setIndex((i) => Math.min(scenes.length - 1, i + 1))} disabled={index >= scenes.length - 1}
               className="flex-1 py-2 rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">▶▶</button>

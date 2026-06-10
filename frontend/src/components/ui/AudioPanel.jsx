@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Icon from './Icon';
 
 const PROVIDERS = [
-  { id: 'azure',      label: '✨ Síntese com IA',        desc: 'Azure Neural — lip sync preciso' },
-  { id: 'webspeech',  label: '🔊 Voz do navegador',       desc: 'Gratuito, sem API, funciona offline' },
+  { id: 'azure',      label: 'Síntese com IA',       desc: 'Azure Neural — lip sync preciso' },
+  { id: 'webspeech',  label: 'Voz do navegador',      desc: 'Gratuito, sem API, funciona offline' },
 ];
 
 const AZURE_VOICES = [
@@ -135,7 +136,7 @@ export default function AudioPanel({
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Gerando…
               </>
-            ) : '✨ Gerar fala'}
+            ) : <span className="flex items-center gap-1.5"><Icon name="sparkles" className="w-4 h-4" /> Gerar fala</span>}
           </button>
         )}
 
@@ -145,7 +146,7 @@ export default function AudioPanel({
               onClick={onStopWebSpeech}
               className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors"
             >
-              ⏹ Parar fala
+              Parar fala
             </button>
           ) : (
             <button
@@ -153,7 +154,7 @@ export default function AudioPanel({
               disabled={!hasSpeechText}
               className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
             >
-              🔊 Falar agora
+              <span className="flex items-center justify-center gap-1.5"><Icon name="volume" className="w-4 h-4" /> Falar agora</span>
             </button>
           )
         )}
@@ -161,7 +162,7 @@ export default function AudioPanel({
         {/* Status feedback */}
         {!!visemeTimeline?.length && !isGenerating && provider === 'azure' && (
           <p className="text-xs text-emerald-400 flex items-center gap-1.5">
-            <span>✓</span> {visemeTimeline.length} visemes sincronizados
+            <Icon name="check" className="w-3.5 h-3.5" /> {visemeTimeline.length} visemes sincronizados
           </p>
         )}
         {provider === 'webspeech' && !isSpeaking && (
@@ -234,7 +235,7 @@ export default function AudioPanel({
             </div>
             <div className="mt-1 grid grid-cols-2 gap-x-2 text-[11px]">
               <span>RMS: {(audioMetrics?.rms || 0).toFixed(3)}</span>
-              <span>{audioMetrics?.clipping ? '⚠ Clipping' : 'OK'}</span>
+              <span>{audioMetrics?.clipping ? 'Clipping!' : 'OK'}</span>
             </div>
           </div>
 

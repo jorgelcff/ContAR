@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSceneStore } from '../../store/useSceneStore';
+import Icon from './Icon';
 
 export default function TimelinePanel() {
   const { t } = useTranslation();
@@ -93,7 +94,7 @@ export default function TimelinePanel() {
           className="flex items-center gap-2 text-xs font-bold text-gray-300 uppercase tracking-widest hover:text-white transition-colors"
         >
           <span>{collapsed ? '▶' : '▼'}</span>
-          📺 Timeline
+          Timeline
           {!collapsed && <span className="text-[10px] text-gray-500 font-normal border border-gray-600 rounded px-1">{timelineDuration}s</span>}
         </button>
         <div className="flex gap-2">
@@ -170,7 +171,7 @@ export default function TimelinePanel() {
                   width: toPercentage(b.endSec - b.startSec)
                 }}
               >
-                🎙️ {b.ref}
+                <Icon name="microphone" className="w-3 h-3 shrink-0" /> {b.ref}
                 <button 
                   onMouseDown={(e) => { e.stopPropagation(); removeTimelineBlock(b.id); }}
                   className="absolute -top-2 -right-2 bg-red-600 rounded-full w-4 h-4 text-white z-30 opacity-0 group-hover:opacity-100 items-center justify-center flex hover:scale-110"

@@ -130,7 +130,7 @@ export default function SceneCanvas({
   animSpeed,
   animLoopOnce,
   vrmExpression,
-  textDisplayMode = 'bubble',
+  textDisplayMode = "bubble",
 }) {
   // Enable Three.js resource cache so reloading the same GLB/HDR skips a round-trip.
   THREE.Cache.enabled = true;
@@ -211,8 +211,18 @@ export default function SceneCanvas({
   // Apply a .vrma animation whenever the URL changes (or after VRM loads)
   useEffect(() => {
     vrmaUrlRef.current = vrmaUrl || null;
-    if (vrmaUrl && vrmRef.current && animControllerRef.current && vrmaLoaderRef.current) {
-      loadVRMAAnimation(vrmaUrl, vrmRef.current, animControllerRef.current, vrmaLoaderRef.current);
+    if (
+      vrmaUrl &&
+      vrmRef.current &&
+      animControllerRef.current &&
+      vrmaLoaderRef.current
+    ) {
+      loadVRMAAnimation(
+        vrmaUrl,
+        vrmRef.current,
+        animControllerRef.current,
+        vrmaLoaderRef.current,
+      );
     }
   }, [vrmaUrl]);
 
@@ -436,12 +446,20 @@ export default function SceneCanvas({
     // applyPosePreset is only called when the newly loaded clip matches the CURRENT pose
     // — calling it for every clip would stopAll()+resetToRestPose() on every file arrival,
     // causing T-pose flashes for each of the 8 animation files in the manifest.
-    fetch('/animations/manifest.json')
-      .then((r) => r.ok ? r.json() : null)
+    fetch("/animations/manifest.json")
+      .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
       .then((manifest) => {
         if (!Array.isArray(manifest?.animations)) return;
-        const PRESETS = ['idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'speaker'];
+        const PRESETS = [
+          "idle",
+          "walk",
+          "walk_circle",
+          "slow_run",
+          "run",
+          "dance",
+          "speaker",
+        ];
         manifest.animations.forEach((anim) => {
           if (!anim.file) return;
           gltfLoader.load(
@@ -449,7 +467,7 @@ export default function SceneCanvas({
             (gltf) => {
               const clip = gltf.animations?.[0];
               if (!clip) return;
-              const preset = anim.preset || anim.name || '';
+              const preset = anim.preset || anim.name || "";
               clip.name = preset || clip.name || anim.file;
 
               // ── externalClipsRef: used by applyPosePreset ──────────────────
@@ -460,10 +478,14 @@ export default function SceneCanvas({
               const tags = Array.isArray(anim.tags) ? anim.tags : [];
               if (preset && !externalClipsRef.current[preset]) {
                 externalClipsRef.current[preset] = clip;
-                if (preset === posePresetRef.current) filledCurrentPoseSlot = true;
+                if (preset === posePresetRef.current)
+                  filledCurrentPoseSlot = true;
               }
               for (const p of PRESETS) {
-                if (!externalClipsRef.current[p] && tags.some((t) => String(t).toLowerCase().includes(p))) {
+                if (
+                  !externalClipsRef.current[p] &&
+                  tags.some((t) => String(t).toLowerCase().includes(p))
+                ) {
                   externalClipsRef.current[p] = clip;
                   if (p === posePresetRef.current) filledCurrentPoseSlot = true;
                 }
@@ -909,7 +931,7 @@ export default function SceneCanvas({
         });
 
         // Apply current transform
-        applyTransform(model, transform);
+        applyTransform(model, transform, !!gltf.userData.vrm);
 
         sceneRef.current.add(model);
         avatarRef.current = model;
@@ -1009,9 +1031,11 @@ export default function SceneCanvas({
         // AI bone enhancement — fires asynchronously for 'generic' skeletons that
         // resolved too few bones. Animation already plays with the sync mapping;
         // the AI response upgrades it in-place when it arrives.
-        if (boneMapper.source === 'generic' && boneMapper.resolvedCount < 14) {
+        if (boneMapper.source === "generic" && boneMapper.resolvedCount < 14) {
           const allBones = [];
-          model.traverse((n) => { if (n?.isBone && n.name) allBones.push(n); });
+          model.traverse((n) => {
+            if (n?.isBone && n.name) allBones.push(n);
+          });
           BoneMapper.enhanceWithAI(boneMapper, allBones, mapBonesApi)
             .then(() => {
               // Only apply if this avatar is still the active one
@@ -1026,7 +1050,10 @@ export default function SceneCanvas({
                 animControllerRef.current._chestBone = undefined;
                 animControllerRef.current._hipsParentCorrection = undefined;
               }
-              setBoneMapperInfo({ source: boneMapper.source, resolvedCount: boneMapper.resolvedCount });
+              setBoneMapperInfo({
+                source: boneMapper.source,
+                resolvedCount: boneMapper.resolvedCount,
+              });
               applyPosePreset(
                 model,
                 animControllerRef.current,
@@ -1061,7 +1088,8 @@ export default function SceneCanvas({
   /* ── Transform updates (live sliders) ────────────────────────────── */
   useEffect(() => {
     if (!avatarRef.current || !transform) return;
-    applyTransform(avatarRef.current, transform);
+    const isVRM = !!vrmRef.current;
+    applyTransform(avatarRef.current, transform, isVRM);
   }, [transform]);
 
   useEffect(() => {
@@ -1093,11 +1121,21 @@ export default function SceneCanvas({
     if (!vrm?.expressionManager) return;
     const mgr = vrm.expressionManager;
     // Reset all known expressions first
-    ['happy', 'sad', 'angry', 'surprised', 'relaxed', 'neutral'].forEach((name) => {
-      try { mgr.setValue(name, 0); } catch { /* ignore unsupported */ }
-    });
-    if (vrmExpression && vrmExpression !== 'neutral') {
-      try { mgr.setValue(vrmExpression, 1); } catch { /* ignore */ }
+    ["happy", "sad", "angry", "surprised", "relaxed", "neutral"].forEach(
+      (name) => {
+        try {
+          mgr.setValue(name, 0);
+        } catch {
+          /* ignore unsupported */
+        }
+      },
+    );
+    if (vrmExpression && vrmExpression !== "neutral") {
+      try {
+        mgr.setValue(vrmExpression, 1);
+      } catch {
+        /* ignore */
+      }
     }
   }, [vrmExpression]);
 
@@ -1108,7 +1146,9 @@ export default function SceneCanvas({
 
     setAiMapState("loading");
     const allBones = [];
-    model.traverse((n) => { if (n?.isBone && n.name) allBones.push(n); });
+    model.traverse((n) => {
+      if (n?.isBone && n.name) allBones.push(n);
+    });
 
     try {
       const boneNames = allBones.map((b) => b.name);
@@ -1122,7 +1162,7 @@ export default function SceneCanvas({
           added++;
         }
       }
-      mapper.source = 'ai';
+      mapper.source = "ai";
 
       boneMapperRef.current = mapper;
       baseBoneMapperRef.current = mapper;
@@ -1134,7 +1174,10 @@ export default function SceneCanvas({
         animControllerRef.current._chestBone = undefined;
         animControllerRef.current._hipsParentCorrection = undefined;
       }
-      setBoneMapperInfo({ source: mapper.source, resolvedCount: mapper.resolvedCount });
+      setBoneMapperInfo({
+        source: mapper.source,
+        resolvedCount: mapper.resolvedCount,
+      });
       applyPosePreset(
         model,
         animControllerRef.current,
@@ -1184,8 +1227,18 @@ export default function SceneCanvas({
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <div className="h-16 w-16 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-              <span className="absolute inset-0 flex items-center justify-center text-2xl select-none">
-                👤
+              <span className="absolute inset-0 flex items-center justify-center text-cyan-400 select-none">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-7 h-7"
+                >
+                  <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 7a7 7 0 0 1 14 0" />
+                </svg>
               </span>
             </div>
             <p className="text-sm text-cyan-200 font-medium">
@@ -1199,14 +1252,25 @@ export default function SceneCanvas({
       )}
       {avatarLoadError && (
         <div className="absolute top-3 left-3 right-3 z-20 rounded-xl border border-red-700/60 bg-red-950/90 px-4 py-3 text-sm text-red-200 flex items-start gap-2">
-          <span className="shrink-0 text-base">⚠️</span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-5 h-5 shrink-0 text-red-400"
+          >
+            <path d="M12 3 2 20h20L12 3Z" />
+            <path d="M12 9v5m0 3h.01" />
+          </svg>
           <div>
             <p className="font-medium">Não foi possível carregar o avatar</p>
             <p className="text-xs text-red-300/80 mt-0.5">{avatarLoadError}</p>
           </div>
         </div>
       )}
-      {renderCtx && textDisplayMode === 'bubble' && (
+      {renderCtx && textDisplayMode === "bubble" && (
         <SpeechBubble
           text={speechText}
           avatarRef={avatarRef}
@@ -1214,7 +1278,7 @@ export default function SceneCanvas({
           renderer={renderCtx.renderer}
         />
       )}
-      {textDisplayMode === 'subtitle' && speechText && (
+      {textDisplayMode === "subtitle" && speechText && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4 w-full max-w-2xl">
           <div className="bg-black/70 backdrop-blur-sm text-white text-base text-center font-medium leading-snug rounded-lg px-5 py-2.5 shadow-xl wrap-break-word">
             {speechText}
@@ -1270,15 +1334,19 @@ export default function SceneCanvas({
             disabled={aiMapState === "loading"}
             className="mt-2 w-full rounded border border-amber-600 bg-amber-800/60 px-2 py-1 text-xs text-amber-100 hover:bg-amber-700/70 disabled:opacity-50"
           >
-            {aiMapState === "loading" ? "⏳ Mapeando com IA..." : "✨ Mapear ossos com IA"}
+            {aiMapState === "loading"
+              ? "Mapeando com IA..."
+              : "Mapear ossos com IA"}
           </button>
           {aiMapState.startsWith("ok") && (
             <p className="mt-1 text-[11px] text-green-400">
-              ✓ {aiMapState.split(":")[1]} ossos mapeados — pose reaplicada
+              {aiMapState.split(":")[1]} ossos mapeados — pose reaplicada
             </p>
           )}
           {aiMapState === "error" && (
-            <p className="mt-1 text-[11px] text-red-400">Erro ao chamar a API</p>
+            <p className="mt-1 text-[11px] text-red-400">
+              Erro ao chamar a API
+            </p>
           )}
 
           <p className="mt-3 font-semibold text-amber-200">
@@ -1435,15 +1503,15 @@ function loadVRMAAnimation(url, vrm, animController, vrmaLoader) {
     (vrmaGltf) => {
       const vrmAnimations = vrmaGltf.userData.vrmAnimations;
       if (!Array.isArray(vrmAnimations) || !vrmAnimations.length) {
-        console.warn('VRMA: nenhuma animação encontrada no arquivo');
+        console.warn("VRMA: nenhuma animação encontrada no arquivo");
         return;
       }
       const clip = createVRMAnimationClip(vrmAnimations[0], vrm);
-      clip.name = '__vrma__';
+      clip.name = "__vrma__";
       animController.play(clip, 0.4);
     },
     undefined,
-    (err) => console.error('VRMA load error:', err),
+    (err) => console.error("VRMA load error:", err),
   );
 }
 
@@ -1629,7 +1697,9 @@ function buildRigReport({
 }) {
   const lines = [];
   lines.push("=== CONTАР RIG REPORT ===");
-  lines.push(`skeletonSource=${boneMapperInfo?.source ?? "unknown"}  resolvedBones=${boneMapperInfo?.resolvedCount ?? 0}`);
+  lines.push(
+    `skeletonSource=${boneMapperInfo?.source ?? "unknown"}  resolvedBones=${boneMapperInfo?.resolvedCount ?? 0}`,
+  );
   lines.push(`mode=${debugSnapshot.mode}`);
   lines.push(`analyserReady=${debugSnapshot.analyserReady}`);
   lines.push(`mouthTargets=${debugSnapshot.mouthTargetCount ?? 0}`);
@@ -1666,12 +1736,17 @@ function buildRigReport({
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
 
-function applyTransform(model, t) {
+function applyTransform(model, t, isVRM = false) {
   if (!model || !t) return;
   model.position.set(t.positionX ?? 0, t.positionY ?? 0, t.positionZ ?? 0);
+
+  // Characters from VRM standard face +Z.
+  // To make them face the camera (which looks down -Z), we apply Math.PI (180deg) base rotation.
+  const baseRotY = isVRM ? Math.PI : 0;
+
   model.rotation.set(
     ((t.rotationX ?? 0) * Math.PI) / 180,
-    ((t.rotationY ?? 0) * Math.PI) / 180,
+    ((t.rotationY ?? 0) * Math.PI) / 180 + baseRotY,
     ((t.rotationZ ?? 0) * Math.PI) / 180,
   );
   model.scale.setScalar(t.scale ?? 1);

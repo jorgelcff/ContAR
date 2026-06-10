@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Icon from './Icon';
 
 const OSA_BASE = 'https://raw.githubusercontent.com/ToxSam/open-source-avatars/main/data';
 const COLLECTIONS_URL = `${OSA_BASE}/projects.json`;
@@ -85,7 +86,7 @@ export default function AvatarGallery({ onSelect, onClose, fullHeight = false })
             <p className="text-xs font-semibold text-gray-200">Galeria de avatares</p>
             <p className="text-[10px] text-gray-500">Open Source Avatars · licença CC0</p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors"><Icon name="close" className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -138,7 +139,7 @@ export default function AvatarGallery({ onSelect, onClose, fullHeight = false })
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-2xl">👤</div>
+                <div className="w-full h-full flex items-center justify-center text-gray-500"><Icon name="avatar" className="w-8 h-8" /></div>
               )}
               <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <p className="text-[9px] text-white truncate">{avatar.name}</p>

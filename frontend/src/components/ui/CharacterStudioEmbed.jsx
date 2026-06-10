@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Icon from './Icon';
 
 const STUDIO_URL = 'https://studio.m3org.com/';
 
@@ -49,15 +50,15 @@ export default function CharacterStudioEmbed({ onExport, onClose, fullHeight = f
             <p className="text-xs font-semibold text-gray-200">CharacterStudio</p>
             <p className="text-[10px] text-gray-500">M3-org · open-source · VRM/GLB</p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors"><Icon name="close" className="w-4 h-4" /></button>
         </div>
       )}
 
       {/* Tab toggle */}
       <div className="flex gap-1 rounded-xl bg-gray-800 p-1 shrink-0">
         {[
-          { id: 'studio', label: '🎨 Editor' },
-          { id: 'upload', label: '📁 Importar arquivo' },
+          { id: 'studio', label: 'Editor' },
+          { id: 'upload', label: 'Importar arquivo' },
         ].map((t) => (
           <button
             key={t.id}
@@ -88,8 +89,8 @@ export default function CharacterStudioEmbed({ onExport, onClose, fullHeight = f
           </div>
 
           {exported ? (
-            <p className="text-xs text-emerald-400 text-center shrink-0">
-              ✓ Avatar exportado e carregado no editor!
+            <p className="text-xs text-emerald-400 text-center shrink-0 flex items-center justify-center gap-1">
+              <Icon name="check" className="w-3.5 h-3.5" /> Avatar exportado e carregado no editor!
             </p>
           ) : (
             <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-200 shrink-0">
@@ -111,9 +112,9 @@ export default function CharacterStudioEmbed({ onExport, onClose, fullHeight = f
           </p>
           <button
             onClick={() => fileRef.current?.click()}
-            className="w-full py-6 rounded-xl border-2 border-dashed border-gray-600 hover:border-cyan-500 text-gray-400 hover:text-cyan-300 text-sm transition-colors"
+            className="w-full py-6 rounded-xl border-2 border-dashed border-gray-600 hover:border-cyan-500 text-gray-400 hover:text-cyan-300 text-sm transition-colors flex items-center justify-center gap-2"
           >
-            📂 Clique para selecionar VRM / GLB
+            <Icon name="upload" className="w-5 h-5" /> Clique para selecionar VRM / GLB
           </button>
           <input
             ref={fileRef}

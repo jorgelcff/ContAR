@@ -1,31 +1,29 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 
 const ONBOARDING_KEY = 'avaturn:onboarding:done';
 
 const STEPS = [
   {
-    icon: '👤',
+    icon: 'avatar',
     title: 'Comece pelo avatar',
     description:
       'Abra a aba Avatar e clique em "Criar Avatar" ou faça upload de um GLB/VRM. O objetivo aqui é só ter um personagem carregado para testar o fluxo.',
     hint: 'Painel esquerdo → aba Avatar → "Criar Avatar"',
-    hintIcon: '👈',
   },
   {
-    icon: '💬',
+    icon: 'speech',
     title: 'Defina a fala da cena',
     description:
       'Na aba Fala, escreva um texto curto (1 ou 2 frases) e gere o áudio. Começar com texto pequeno ajuda a validar rápido antes de refinar.',
     hint: 'Painel esquerdo → aba Fala → "Gerar Voz (TTS)"',
-    hintIcon: '👈',
   },
   {
-    icon: '▶️',
+    icon: 'play',
     title: 'Teste, salve e siga',
     description:
       'Use o Play para conferir áudio e lip sync. Se estiver bom, salve a cena e depois adicione à história. Você pode ajustar pose e texto em seguida.',
     hint: 'Painel esquerdo → Áudio → botão Play',
-    hintIcon: '👈',
   },
 ];
 
@@ -62,14 +60,16 @@ export default function OnboardingOverlay({ onDone }) {
 
         {/* Ícone e título */}
         <div className="flex flex-col items-center text-center gap-3">
-          <span className="text-6xl leading-none">{current.icon}</span>
+          <div className="w-16 h-16 rounded-2xl bg-cyan-700/20 border border-cyan-700/30 flex items-center justify-center text-cyan-400">
+            <Icon name={current.icon} className="w-8 h-8" />
+          </div>
           <h2 className="text-xl font-bold text-white">{current.title}</h2>
           <p className="text-gray-400 text-sm leading-relaxed">{current.description}</p>
         </div>
 
         {/* Dica de onde clicar */}
         <div className="flex items-center gap-2 bg-gray-800 rounded-xl px-4 py-3 border border-gray-700">
-          <span className="text-lg">{current.hintIcon}</span>
+          <Icon name="arrow-left" className="w-4 h-4 text-cyan-400 shrink-0" />
           <span className="text-xs text-cyan-300 font-medium">{current.hint}</span>
         </div>
 
@@ -104,7 +104,7 @@ export default function OnboardingOverlay({ onDone }) {
             onClick={next}
             className="flex-1 py-3 rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-semibold transition-all active:scale-95 shadow-lg shadow-blue-900/30"
           >
-            {isLast ? '🚀 Começar!' : 'Próximo →'}
+            {isLast ? 'Começar!' : 'Próximo →'}
           </button>
         </div>
       </div>

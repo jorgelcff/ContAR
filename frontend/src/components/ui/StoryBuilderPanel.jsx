@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import Icon from './Icon';
 import { useSceneStore } from '../../store/useSceneStore';
 
 const DEFAULT_TITLES = new Set(['untitled scene', 'untitled', 'sem título', 'sem titulo']);
@@ -117,14 +118,14 @@ export default function StoryBuilderPanel() {
                         className="ml-auto px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 text-xs text-white"
                         title="Editar esta cena"
                       >
-                        ✏️
+                        <Icon name="edit" className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(index)}
                         className="px-2 py-1 rounded bg-red-900 hover:bg-red-700 text-xs text-white"
                         title="Remover da história"
                       >
-                        ✕
+                        <Icon name="close" className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </>

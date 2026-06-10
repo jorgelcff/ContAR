@@ -75,6 +75,24 @@ export default function LeftPanel({
     setFullTransform(DEFAULT_TRANSFORM);
   };
 
+  const handleNewScene = () => {
+    if (!window.confirm('Criar uma nova cena? O conteúdo atual já foi salvo automaticamente.')) return;
+    audio?.stop?.();
+    setSpeechInput('');
+    setUrlInput('');
+    setTransformByPose({ idle: DEFAULT_TRANSFORM });
+    useSceneStore.setState({
+      currentSceneId: '',
+      avatarUrl: '',
+      speechText: '',
+      sceneTitle: '',
+      posePreset: 'idle',
+      narrativeAudioUrl: '',
+      transform: DEFAULT_TRANSFORM,
+      timelineBlocks: [],
+    });
+  };
+
   const [activeTab, setActiveTab] = useState('avatar');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -287,17 +305,17 @@ export default function LeftPanel({
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => { closeAllAvatarPanels(); setModalCreator('characterstudio'); }}
-                className="py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium transition-colors"
+                className="py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
                 title="CharacterStudio — editor VRM open-source"
               >
-                🎨 Studio
+                <Icon name="palette" className="w-3.5 h-3.5" /> Studio
               </button>
               <button
                 onClick={() => { closeAllAvatarPanels(); setModalCreator('gallery'); }}
-                className="py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors"
+                className="py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
                 title="Galeria de avatares gratuitos (CC0)"
               >
-                🖼 Galeria
+                <Icon name="folder" className="w-3.5 h-3.5" /> Galeria
               </button>
               <a
                 href="https://hub.vroid.com/en/models"
@@ -306,7 +324,7 @@ export default function LeftPanel({
                 title="VRoid Hub — avatares anime VRM gratuitos"
                 className="py-2 rounded-xl bg-pink-700 hover:bg-pink-600 text-white text-xs font-medium transition-colors flex items-center justify-center"
               >
-                🌸 VRoid
+                VRoid
               </a>
             </div>
             <p className="text-[10px] text-gray-500 -mt-2 text-center">
@@ -327,7 +345,7 @@ export default function LeftPanel({
                 disabled={isUploadingGlb}
                 className="flex-1 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-medium transition-colors"
               >
-                {isUploadingGlb ? '⏳ Enviando...' : 'GLB / VRM'}
+                {isUploadingGlb ? 'Enviando...' : 'GLB / VRM'}
               </button>
             </div>
 
@@ -383,9 +401,9 @@ export default function LeftPanel({
                 <div className="flex gap-2">
                   <button
                     onClick={() => vrmaInputRef.current?.click()}
-                    className="flex-1 py-2 rounded-xl bg-violet-700 hover:bg-violet-600 text-white text-xs font-medium transition-colors"
+                    className="flex-1 py-2 rounded-xl bg-violet-700 hover:bg-violet-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
                   >
-                    📦 Carregar .vrma
+                    <Icon name="upload" className="w-3.5 h-3.5" /> Carregar .vrma
                   </button>
                   {vrmaUrl && (
                     <button
@@ -393,7 +411,7 @@ export default function LeftPanel({
                       className="px-3 py-2 rounded-xl bg-gray-600 hover:bg-gray-500 text-white text-xs transition-colors"
                       title="Remover animação VRM"
                     >
-                      ✕
+                      <Icon name="close" className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -406,7 +424,7 @@ export default function LeftPanel({
                 />
                 {vrmaUrl ? (
                   <p className="text-xs text-violet-300 flex items-center gap-1">
-                    <span>✓</span> Animação VRM aplicada
+                    <Icon name="check" className="w-3.5 h-3.5" /> Animação VRM aplicada
                   </p>
                 ) : (
                   <p className="text-[10px] text-gray-600">
@@ -483,12 +501,12 @@ export default function LeftPanel({
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Expressão (VRM)</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
-                  { value: '',          label: '😐 Neutro' },
-                  { value: 'happy',     label: '😄 Feliz' },
-                  { value: 'sad',       label: '😢 Triste' },
-                  { value: 'angry',     label: '😠 Raiva' },
-                  { value: 'surprised', label: '😮 Surpreso' },
-                  { value: 'relaxed',   label: '😌 Relaxado' },
+                  { value: '',          label: 'Neutro' },
+                  { value: 'happy',     label: 'Feliz' },
+                  { value: 'sad',       label: 'Triste' },
+                  { value: 'angry',     label: 'Raiva' },
+                  { value: 'surprised', label: 'Surpreso' },
+                  { value: 'relaxed',   label: 'Relaxado' },
                 ].map(({ value, label }) => (
                   <button
                     key={value}
@@ -511,7 +529,7 @@ export default function LeftPanel({
               onClick={() => setShowAdvanced((v) => !v)}
               className="flex items-center justify-between w-full text-xs text-gray-400 hover:text-gray-200 py-1 transition-colors"
             >
-              <span>⚙️ Configurações avançadas</span>
+              <span className="flex items-center gap-1"><Icon name="settings" className="w-3.5 h-3.5" /> Configurações avançadas</span>
               <span>{showAdvanced ? '▲' : '▼'}</span>
             </button>
             {showAdvanced && (
@@ -554,9 +572,9 @@ export default function LeftPanel({
                 <p className="text-xs font-medium text-gray-400">Exibir texto como</p>
                 <div className="grid grid-cols-3 gap-1">
                   {[
-                    { value: 'bubble',   label: '💬 Balão' },
-                    { value: 'subtitle', label: '📺 Legenda' },
-                    { value: 'none',     label: '🚫 Nenhum' },
+                    { value: 'bubble',   label: 'Balão' },
+                    { value: 'subtitle', label: 'Legenda' },
+                    { value: 'none',     label: 'Nenhum' },
                   ].map(({ value, label }) => (
                     <button
                       key={value}
@@ -581,7 +599,10 @@ export default function LeftPanel({
                       disabled={tts.isGenerating || !speechInput.trim()}
                       className="flex-1 py-3 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white text-sm font-semibold transition-all shadow-md shadow-purple-900/30"
                     >
-                      {tts.isGenerating ? '⏳ Gerando voz...' : '🎙️ Gerar Voz (TTS)'}
+                      {tts.isGenerating
+                        ? 'Gerando voz...'
+                        : <span className="flex items-center justify-center gap-1.5"><Icon name="microphone" className="w-4 h-4" /> Gerar Voz (TTS)</span>
+                      }
                     </button>
                     <TooltipIcon text="Converte o texto acima em áudio com voz sintética e sincroniza os lábios do avatar automaticamente." />
                   </div>
@@ -600,7 +621,7 @@ export default function LeftPanel({
                   <div className="flex flex-col gap-1.5 pt-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
-                        <span className="text-xs font-medium text-gray-400">🔊 Intensidade da fala</span>
+                        <span className="text-xs font-medium text-gray-400 flex items-center gap-1"><Icon name="volume" className="w-3.5 h-3.5" /> Intensidade da fala</span>
                         <TooltipIcon text="Controla o quanto a boca do avatar se move. Aumente se os lábios parecerem parados." />
                       </div>
                       <span className={`text-xs font-semibold ${labelColor}`}>{label}</span>
@@ -667,11 +688,17 @@ export default function LeftPanel({
             />
             <button onClick={onSave} disabled={isSaving}
               className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
-              {isSaving ? t('saving') : `💾 ${t('saveScene')}`}
+              {isSaving ? t('saving') : <span className="flex items-center justify-center gap-1.5"><Icon name="save" className="w-4 h-4" />{t('saveScene')}</span>}
             </button>
             <button onClick={onAddCurrentSceneToStory}
               className="w-full py-2 rounded-xl bg-sky-700 hover:bg-sky-600 text-white text-sm font-medium transition-colors">
               {t('addCurrentSceneToStory')}
+            </button>
+
+            <button onClick={handleNewScene}
+              className="w-full py-2 rounded-xl border border-gray-600 hover:bg-gray-700 text-gray-200 text-sm font-medium transition-colors flex items-center justify-center gap-1.5">
+              <Icon name="plus" className="w-4 h-4" />
+              Nova cena
             </button>
 
             {currentSceneId && (
@@ -718,19 +745,22 @@ export default function LeftPanel({
 
             <button onClick={onSaveStory} disabled={isStorySaving}
               className="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
-              {isStorySaving ? t('savingStory') : isStoryLinked ? `📝 ${t('updateStory')}` : `📝 ${t('saveStory')}`}
+              {isStorySaving ? t('savingStory') : <span className="flex items-center justify-center gap-1.5"><Icon name="edit" className="w-4 h-4" />{isStoryLinked ? t('updateStory') : t('saveStory')}</span>}
             </button>
             <button onClick={onPublishStory} disabled={isStorySaving}
-              className="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
-              🚀 {t('publish')}
+              className="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+              <Icon name="rocket" className="w-4 h-4" /> {t('publish')}
             </button>
 
             {storyShareUrl && (
               <>
                 <div className="rounded-xl bg-gray-900 px-3 py-2 text-xs text-blue-300 break-all">{storyShareUrl}</div>
                 <button onClick={copyStoryLink}
-                  className="w-full py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors">
-                  {copiedStory ? '✅ Copiado!' : '🔗 Copiar link'}
+                  className="w-full py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors flex items-center justify-center gap-1.5">
+                  {copiedStory
+                    ? <><Icon name="check" className="w-4 h-4 text-emerald-400" /> Copiado!</>
+                    : <><Icon name="link" className="w-4 h-4" /> Copiar link</>
+                  }
                 </button>
               </>
             )}

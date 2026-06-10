@@ -229,9 +229,11 @@ export default function EditorPage() {
       const result = await saveScene(buildScenePayload(undefined));
       const sceneId = result?.sceneId;
       if (!sceneId) throw new Error('Missing sceneId in save response');
-      setCurrentSceneId(sceneId);
       useSceneStore.getState().addStoryScene(sceneId);
-      addToast('Cena adicionada à história!', 'success');
+      // Detach from this scene: further edits/autosave should create a new
+      // scene instead of overwriting the one we just added to the story.
+      setCurrentSceneId('');
+      addToast('Cena adicionada à história! Mude o conteúdo para criar a próxima cena.', 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro: ${err.message}`, 'error');

@@ -148,6 +148,7 @@ export default function SceneCanvas({
   const idleClipRef = useRef(null);
   const avatarClipsRef = useRef([]);
   const posePresetRef = useRef(posePreset);
+  const transformRef = useRef(transform);
   const loaderRef = useRef(null);
   const vrmaLoaderRef = useRef(null);
   const vrmRef = useRef(null);
@@ -1087,6 +1088,7 @@ export default function SceneCanvas({
 
   /* ── Transform updates (live sliders) ────────────────────────────── */
   useEffect(() => {
+    transformRef.current = transform;
     if (!avatarRef.current || !transform) return;
     const isVRM = !!vrmRef.current;
     applyTransform(avatarRef.current, transform, isVRM);
@@ -1103,6 +1105,12 @@ export default function SceneCanvas({
       boneMapperRef.current,
       externalClipsRef.current,
     );
+    // Switching pose can reset the model's position/rotation (e.g. leaving
+    // walk_circle snaps back to its orbit center) — re-apply the configured
+    // transform afterwards so scene transitions land on the right spot.
+    if (transformRef.current) {
+      applyTransform(avatarRef.current, transformRef.current, !!vrmRef.current);
+    }
   }, [posePreset]);
 
   // ── Animation speed ─────────────────────────────────────────

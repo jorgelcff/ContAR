@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import { getPublicStory, getScene } from '../api/sceneApi';
 import useAudio from '../hooks/useAudio';
+import { stripEmojis, linkifyText } from '../utils/text';
 
 const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
@@ -220,9 +221,9 @@ export default function StoryViewerPage() {
           {!fullscreen && (
           <div className="shrink-0 border-b border-gray-700 bg-gray-800 px-4 py-3 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold">{story?.metadata?.title || t('appTitle')}</h2>
+              <h2 className="font-semibold">{stripEmojis(story?.metadata?.title) || t('appTitle')}</h2>
               {story?.metadata?.description && (
-                <p className="text-xs text-gray-400">{story.metadata.description}</p>
+                <p className="text-xs text-gray-400">{linkifyText(story.metadata.description)}</p>
               )}
             </div>
             <div className="hidden md:flex items-center gap-2">
@@ -266,11 +267,11 @@ export default function StoryViewerPage() {
                 <div className="flex flex-col items-center gap-6 text-center max-w-sm w-full">
                   <div>
                     <h1 className="text-2xl font-bold text-white leading-snug">
-                      {story?.metadata?.title || t('appTitle')}
+                      {stripEmojis(story?.metadata?.title) || t('appTitle')}
                     </h1>
                     {story?.metadata?.description && (
                       <p className="text-sm text-gray-400 mt-2 leading-relaxed">
-                        {story.metadata.description}
+                        {linkifyText(story.metadata.description)}
                       </p>
                     )}
                   </div>

@@ -628,7 +628,7 @@ function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId }
       </div>
 
       <div className="flex-1 overflow-hidden bg-black relative">
-        <iframe title="Marker AR" src={iframeSrc} className="h-full w-full border-0" />
+        <iframe title="Marker AR" src={iframeSrc} allow="camera; microphone" className="h-full w-full border-0" />
 
         {/* Story splash overlay */}
         <StoryOverlay story={story} storyId={storyId} onStart={() => story.start()} />
@@ -805,8 +805,8 @@ export default function ARPage() {
               <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
                 <p className="font-semibold text-gray-300 mb-1">Requisitos:</p>
                 <p>Android com <strong className="text-white">Chrome 81+</strong> e ARCore</p>
-                <p>iPhone/iPad com <strong className="text-white">Safari iOS 15+</strong></p>
                 <p>Página em <strong className="text-white">HTTPS</strong> (ou localhost)</p>
+                <p className="text-amber-400">iPhone/iPad: não suportado (use o AR de Marcador ao lado)</p>
               </div>
               <Link to={surfaceHref}
                 className="mt-auto inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
@@ -1031,7 +1031,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0 text-amber-400"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
             <h2 className="font-semibold text-amber-300">AR não disponível neste dispositivo</h2>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">WebXR requer Android+ARCore ou iOS Safari 15+. Mostrando 3D normal.</p>
+          <p className="text-xs text-gray-400 mt-0.5">AR de superfície (WebXR) requer Android com Chrome+ARCore — o iOS Safari não suporta esse modo. Mostrando 3D normal.</p>
           {!storyId && (
             <p className="text-xs text-gray-500 mt-1">
               Tente o <a href={hiroHref} className="text-fuchsia-400 hover:underline">Demo com Marcador Hiro</a> — funciona em qualquer celular.

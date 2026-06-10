@@ -101,13 +101,11 @@ Configure → Adicionar à história → mude o conteúdo → Adicionar à hist�
 2. Na aba **Cena** ou **História**, clique em **+ Adicionar cena à história**
    - Isso salva o estado atual como uma nova cena e a adiciona à lista no painel inferior
    - A cena aparece como **#1** no painel inferior
-3. **Mude o conteúdo** do editor para a Cena 2 (novo texto, nova pose, novo áudio)
-   - Faça isso em menos de 3 segundos ou salve manualmente antes — o autosave atualiza a cena ativa, não cria uma nova
+   - O editor se "desconecta" dessa cena: a partir daqui, qualquer mudança cria uma cena nova (a #1 não é mais sobrescrita)
+3. **Mude o conteúdo** do editor para a Cena 2 (novo texto, nova pose, novo áudio) — sem pressa, o autosave vai criar uma cena separada para esse novo conteúdo
 4. Clique em **+ Adicionar à história** novamente
-   - Isso cria uma nova cena separada (**#2**) e a adiciona à lista
+   - Isso cria a cena **#2** e a adiciona à lista
 5. Repita para quantas cenas quiser
-
-> **Regra principal:** "Adicionar à história" sempre cria uma cena nova. Autosave atualiza a cena que você está editando. São operações diferentes.
 
 ### Editar uma cena já criada
 
@@ -146,12 +144,14 @@ Arraste os cards no painel inferior para mudar a ordem de reprodução da histó
 3. Imprima ou exiba o marcador: `https://bit.ly/hiro-marker`
 4. Aponte a câmera — o narrador aparece sobre o marcador e conta a história
 
-### Superfície (Android com ARCore ou iOS 15+)
+### Superfície (Android com Chrome + ARCore)
 
 1. No viewer, clique em **AR**
 2. Clique em **Abrir AR de Superfície**
 3. Aguarde o anel aparecer no chão
 4. Toque para posicionar o narrador e clique em **▶ Iniciar história**
+
+> No iPhone/iPad, o Safari não suporta esse modo (WebXR não existe no iOS) — use o **Marcador Hiro** acima, que funciona em qualquer celular.
 
 ---
 

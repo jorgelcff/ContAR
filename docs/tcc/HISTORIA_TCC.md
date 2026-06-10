@@ -87,7 +87,7 @@ Cada cena é criada assim no editor:
 5. **Mude apenas o texto e a pose** para a próxima cena — o avatar pode ser o mesmo
 6. Repita o passo 4 para cada cena
 
-> Faça as mudanças para a próxima cena rapidamente (antes de 3 segundos) para evitar que o autosave grave conteúdo de transição na cena anterior.
+> Após clicar em "Adicionar à história", o editor já fica pronto para a próxima cena — pode mudar o texto e a pose sem pressa.
 
 ## Notas de produção
 

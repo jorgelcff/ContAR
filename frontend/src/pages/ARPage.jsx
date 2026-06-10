@@ -663,6 +663,8 @@ export default function ARPage() {
   const [markerUrl, setMarkerUrl] = useState(searchParams.get('markerUrl') || '');
   const [initialScale, setInitialScale] = useState(readSavedScale);
   const [storyId, setStoryId] = useState(searchParams.get('storyId') || '');
+  // null = checking, true/false = WebXR immersive-ar support result
+  const [surfaceArSupported, setSurfaceArSupported] = useState(null);
 
   // Re-resolve when store rehydrates or params change
   useEffect(() => {
@@ -670,6 +672,18 @@ export default function ARPage() {
     setMarkerUrl(searchParams.get('markerUrl') || '');
     setStoryId(searchParams.get('storyId') || '');
   }, [searchParams, storedAvatarUrl]);
+
+  // iOS Safari has no navigator.xr at all — detect this upfront so the
+  // "Abrir AR de Superfície" button can be disabled instead of leading
+  // to the 3D fallback (which looks like a broken/blocked AR mode).
+  useEffect(() => {
+    if (!navigator?.xr) { setSurfaceArSupported(false); return; }
+    let active = true;
+    navigator.xr.isSessionSupported('immersive-ar')
+      .then((ok) => { if (active) setSurfaceArSupported(ok); })
+      .catch(() => { if (active) setSurfaceArSupported(false); });
+    return () => { active = false; };
+  }, []);
 
   const handleScaleChange = (v) => {
     setInitialScale(v);
@@ -808,10 +822,16 @@ export default function ARPage() {
                 <p>Página em <strong className="text-white">HTTPS</strong> (ou localhost)</p>
                 <p className="text-amber-400">iPhone/iPad: não suportado (use o AR de Marcador ao lado)</p>
               </div>
-              <Link to={surfaceHref}
-                className="mt-auto inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                {t('openSurfaceAr')} →
-              </Link>
+              {surfaceArSupported === false ? (
+                <div className="mt-auto rounded-xl border border-amber-600/30 bg-amber-950/20 px-4 py-3 text-center text-sm font-medium text-amber-300">
+                  Não suportado neste navegador — use o AR de Marcador ao lado
+                </div>
+              ) : (
+                <Link to={surfaceHref}
+                  className="mt-auto inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                  {t('openSurfaceAr')} →
+                </Link>
+              )}
             </div>
 
             {/* Marker AR */}

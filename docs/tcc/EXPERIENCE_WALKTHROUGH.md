@@ -102,7 +102,8 @@ Configure → Adicionar à história → mude o conteúdo → Adicionar à hist�
    - Isso salva o estado atual como uma nova cena e a adiciona à lista no painel inferior
    - A cena aparece como **#1** no painel inferior
    - O editor se "desconecta" dessa cena: a partir daqui, qualquer mudança cria uma cena nova (a #1 não é mais sobrescrita)
-3. **Mude o conteúdo** do editor para a Cena 2 (novo texto, nova pose, novo áudio) — sem pressa, o autosave vai criar uma cena separada para esse novo conteúdo
+   - O campo de **título da cena** é limpo — dê um novo nome à próxima cena para diferenciá-la na lista
+3. **Mude o conteúdo** do editor para a Cena 2 (novo texto, nova pose, novo título, novo áudio) — sem pressa, o autosave vai criar uma cena separada para esse novo conteúdo
 4. Clique em **+ Adicionar à história** novamente
    - Isso cria a cena **#2** e a adiciona à lista
 5. Repita para quantas cenas quiser

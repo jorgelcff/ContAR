@@ -83,16 +83,22 @@ export default function EditorPage() {
   // ── Autosave ────────────────────────────────────────────────
   const [autosaveStatus, setAutosaveStatus] = useState(null); // null | 'saving' | Date
   const autosaveTimerRef = useRef(null);
+  const pendingPayloadRef = useRef(null);
 
   useEffect(() => {
     // Only autosave when there is meaningful content to preserve
     const hasContent = Boolean(avatarUrl || speechText || sceneTitle);
-    if (!hasContent) return;
+    if (!hasContent) {
+      pendingPayloadRef.current = null;
+      return;
+    }
+    pendingPayloadRef.current = buildScenePayload(currentSceneId || undefined);
     clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(async () => {
       setAutosaveStatus('saving');
       try {
         const result = await saveScene(buildScenePayload(currentSceneId || undefined));
+        pendingPayloadRef.current = null;
         // Capture the generated sceneId on first save
         if (result?.sceneId && !currentSceneId) {
           useSceneStore.getState().setCurrentSceneId(result.sceneId);
@@ -105,6 +111,15 @@ export default function EditorPage() {
     return () => clearTimeout(autosaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl]);
+
+  // Flush a still-pending autosave when leaving the editor (e.g. clicking
+  // "Minhas cenas" right after a change), so edits made within the 3s
+  // debounce window aren't silently dropped.
+  useEffect(() => () => {
+    if (pendingPayloadRef.current) {
+      saveScene(pendingPayloadRef.current).catch(() => {});
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isStoryLinked = Boolean(currentStoryId);
   const arHref = avatarUrl ? `/ar?mode=surface&modelUrl=${encodeURIComponent(avatarUrl)}` : '/ar';
@@ -232,8 +247,11 @@ export default function EditorPage() {
       useSceneStore.getState().addStoryScene(sceneId);
       // Detach from this scene: further edits/autosave should create a new
       // scene instead of overwriting the one we just added to the story.
+      // Also clear the title so the next scene doesn't get saved with the
+      // same name (which made it look like nothing new was created).
       setCurrentSceneId('');
-      addToast('Cena adicionada à história! Mude o conteúdo para criar a próxima cena.', 'success');
+      useSceneStore.getState().setSceneTitle('');
+      addToast('Cena adicionada à história! Mude o conteúdo (e o título) para criar a próxima cena.', 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro: ${err.message}`, 'error');

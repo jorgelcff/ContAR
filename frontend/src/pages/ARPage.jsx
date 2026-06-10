@@ -268,6 +268,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
       audioCtxRef.current = ctx;
       analyserRef.current = analyser;
       webAudioInitRef.current = true;
+      // AudioContext can start (or remain) suspended on Android — without
+      // resuming it here, audio.play() advances silently with no sound.
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     } catch (e) { /* audio context blocked or already connected */ }
   };
 

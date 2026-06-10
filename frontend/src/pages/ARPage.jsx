@@ -298,8 +298,12 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
     const container = containerRef.current;
     if (!container || supported === null || !supported) return undefined;
 
+    // Keep the scene background transparent — an opaque background color
+    // would paint over the camera passthrough during the AR session,
+    // making everything look like a black screen. The container div has
+    // its own dark background for the pre-AR preview.
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x05070c);
+    scene.background = null;
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.01, 20);

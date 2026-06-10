@@ -18,7 +18,7 @@ Descrição: A história por trás do meu Trabalho de Conclusão de Curso — o 
 **Pose:** `idle`
 
 **Texto da fala:**
-> Olá! Eu me chamo Jorge, sou estudante de Ciência da Computação no CIn da UFPE. E este narrador que você está vendo agora... é exatamente o que o meu TCC faz. Bem-vindo ao ContAR.
+> Olá! Eu me chamo Jorge, sou estudante de Sistemas de Informação no CIn da UFPE. E este narrador que você está vendo agora... é exatamente o que o meu TCC faz. Bem-vindo ao Voxar ContAR.
 
 ---
 

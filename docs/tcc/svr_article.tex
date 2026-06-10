@@ -13,9 +13,9 @@
 %   3. pdflatex svr_article.tex && bibtex svr_article && pdflatex svr_article.tex
 % =============================================================================
 
-\documentclass[12pt]{sbc-template}
+\documentclass[12pt]{article}
 
-\usepackage{graphicx,url}
+\usepackage{sbc-template}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[brazil]{babel}
@@ -25,6 +25,7 @@
 \usepackage{xcolor}
 \usepackage{microtype}
 \usepackage{float}
+\usepackage{url}
 
 \sloppy
 
@@ -35,13 +36,13 @@
        Narradores Virtuais 3D em WebAR Educacional}
 
 \author{Jorge Luiz Cunha de Freitas\inst{1},
-        [Nome do Orientador]\inst{1}}
+        Prof. Dr. Francisco Paulo Magalhaes Simões \inst{1}}
 
 \address{
   Centro de Informática (CIn) ---
   Universidade Federal de Pernambuco (UFPE) \\
   Recife -- PE -- Brasil
-  \email{jlf@cin.ufpe.br, [email-orientador]@cin.ufpe.br}
+  \email{jlf@cin.ufpe.br, fpms@cin.ufpe.br}
 }
 
 % =============================================================================
@@ -204,7 +205,7 @@ intermediários:
         CharacterStudio (editor VRM open-source), VRoid Hub (avatares anime
         VRM), ou upload direto de arquivo GLB/VRM.
   \item \textbf{Configurar narrativa}: texto da fala, geração de voz TTS
-        (Azure Neural TTS ou Web Speech API), seleção de pose (16 presets)
+        (Azure Neural TTS ou Web Speech API), seleção de pose (18 presets)
         e configuração de lip sync.
   \item \textbf{Montar a história}: salvar cenas individualmente e
         organizá-las em histórias sequenciais com título e descrição.
@@ -240,12 +241,24 @@ expressão regular sobre os nomes dos morph targets.
 \textbf{AnimationController — Poses e Animações Procedurais.}
 O \texttt{AnimationController} gerencia o \texttt{AnimationMixer} do
 Three.js com crossfade suave e implementa micro-animações procedurais
-(piscar, respiração, gestos de locutor). O sistema de poses suporta 16
-presets: 5 animadas (idle, walk, run, dance, speaker) e 11 estáticas
-(neutral, wave, hands on hips, salute, arms crossed, think, point, bow,
-pray, shrug, t-pose). Para avatares VRM, suporta o padrão VRM Animation
-(\texttt{.vrma}) via \texttt{@pixiv/three-vrm-animation}, permitindo
-animações portáveis entre diferentes avatares VRM.
+(piscar, respiração, gestos de locutor). O sistema de poses suporta 18
+presets: 7 animadas (idle, walk, walk\_circle, slow\_run, run, dance,
+speaker) e 11 estáticas (neutral, wave, hands on hips, salute, arms
+crossed, think, point, bow, pray, shrug, t-pose). Para avatares VRM,
+suporta o padrão VRM Animation (\texttt{.vrma}) via
+\texttt{@pixiv/three-vrm-animation}, permitindo animações portáveis
+entre diferentes avatares VRM.
+
+\textbf{Transformações por Pose e Modos de Exibição de Texto.}
+O editor permite ajustar posição (X, Y, Z), rotação (X, Y, Z) e escala
+do avatar via sliders, com retroalimentação imediata na cena 3D. Cada
+conjunto de valores é memorizado por pose ativa, de modo que alternar
+entre presets restaura automaticamente a transformação previamente
+configurada para aquela pose, com um botão de reset para os valores
+padrão. O texto da fala pode ser exibido como balão sobreposto ao
+avatar (\textit{bubble}), legenda na parte inferior da tela
+(\textit{subtitle}) ou ocultado (\textit{none}), permitindo adaptar a
+apresentação ao contexto pedagógico.
 
 \textbf{Publicação WebAR Dual-mode.}
 O ContAR implementa dois modos complementares de RA. O \textit{Surface AR}
@@ -263,8 +276,9 @@ controles básicos (criar avatar, digitar fala, salvar cena) estão sempre
 visíveis; configurações avançadas (lip sync, transformações, visemas) são
 colapsáveis. Um tour guiado de 11 etapas (\textit{walkthrough} interativo)
 orienta o usuário em seu primeiro acesso. O sistema inclui autosave automático,
-internacionalização em quatro idiomas (PT, EN, ES, FR), e uma barra de
-progresso que indica as etapas pendentes para uma cena completa.
+internacionalização em quatro idiomas (PT, EN, ES, FR), temas claro e escuro
+selecionáveis pelo usuário, e uma barra de progresso que indica as etapas
+pendentes para uma cena completa.
 
 % =============================================================================
 \section{Metodologia de Avaliação}
@@ -497,8 +511,8 @@ para criação de narradores contextuais responsivos a perguntas dos estudantes,
 alinhada à proposta de Simbiose Humano-IA no contexto educacional.
 
 O código-fonte da plataforma está disponível em
-\url{https://github.com/[usuario]/avaturn-threejs} e a versão de produção
-pode ser acessada em \url{https://[url-producao]}.
+\url{https://github.com/jorgelcff/contar} e a versão de produção
+pode ser acessada em \url{https://google.com}.
 
 % =============================================================================
 % Referências

@@ -58,7 +58,7 @@
 \autor{Jorge Luiz Cunha de Freitas}
 \local{Recife}
 \data{2026}
-\orientador{Prof. Dr. [Nome do Orientador]}
+\orientador{Prof. Dr. Francisco Paulo Magalhaes Simões}
 % \coorientador{Prof. Dr. [Nome do Coorientador]}  % descomente se houver
 \instituicao{
   Universidade Federal de Pernambuco \\
@@ -68,7 +68,7 @@
 \preambulo{
   Trabalho de Conclusão de Curso apresentado ao Centro de Informática
   da Universidade Federal de Pernambuco como requisito parcial para
-  obtenção do grau de [Bacharel em Ciência da Computação].
+  obtenção do grau de Bacharel em Sistemas de Informações.
 }
 
 % ---------------------------------------------------------------------------
@@ -116,7 +116,7 @@
         \hspace*{0.5cm}
         [Total de páginas] p.\\[0.5em]
         \hspace*{0.5cm}
-        Orientador: [Nome do Orientador].\\
+        Orientador: Francisco Paulo Magalhaes Simões.\\
         Trabalho de Conclusão de Curso (Graduação) ---
         Universidade Federal de Pernambuco,
         Centro de Informática, [Curso], 2026.\\[0.5em]
@@ -127,7 +127,7 @@
         4.~Síntese de Voz.
         5.~No-Code.
         6.~Educação.
-        I.~[Nome do Orientador], orient.
+        I.~Francisco Paulo Magalhaes Simões, orient.
         II.~Título.
       \end{minipage}
     }
@@ -173,8 +173,8 @@
 
 % Agradecimentos (opcional)
 \begin{agradecimentos}
-  Agradeço ao meu orientador, Prof. Dr. [Nome], pelo acompanhamento, pelas
-  discussões que moldaram as decisões arquiteturais desta pesquisa e pela
+  Agradeço ao meu orientador, Prof. Dr. Francisco Simões, pelo acompanhamento, pelas
+  discussões que moldaram as decisões desta pesquisa e pela
   sugestão de explorar a fronteira entre Inteligência Artificial e narrativas
   educacionais imersivas.
 
@@ -1099,12 +1099,15 @@ procedurais: piscar de olhos com timing aleatório, respiração via
 oscilação do osso do tórax, e gestos de locutor (movimentos de braço
 sincronizados com o modo \textit{speaker}).
 
-O sistema de poses suporta 16 presets: 5 animadas (idle, walk, run,
-dance, speaker) e 11 estáticas (neutral, wave, hands on hips, salute,
-arms crossed, think, point, bow, pray, shrug, t-pose). As poses estáticas
-são implementadas como rotações procedurais de ossos no sistema de
-coordenadas local, usando uma abstração que compensa a orientação do
-rig exportado (\texttt{rotateBoneDeg}).
+O sistema de poses suporta 18 presets: 7 animadas (idle, walk,
+walk\_circle, slow\_run, run, dance, speaker) e 11 estáticas (neutral,
+wave, hands on hips, salute, arms crossed, think, point, bow, pray,
+shrug, t-pose). A pose \texttt{walk\_circle} implementa uma órbita
+procedural ao redor de um ponto central, útil para indicar deslocamento
+do narrador sem alterar sua posição de ancoragem na cena. As poses
+estáticas são implementadas como rotações procedurais de ossos no
+sistema de coordenadas local, usando uma abstração que compensa a
+orientação do rig exportado (\texttt{rotateBoneDeg}).
 
 O \texttt{AnimationController} também retargetiza clipes de animação
 via o \texttt{BoneMapper}: ao receber um clipe com nomes de ossos
@@ -1132,6 +1135,28 @@ Durante o loop de renderização, recebe valores de ativação por grupo
 ponderação proporcional. A transição entre frames usa interpolação
 linear configurável (\textit{crossfade}), produzindo movimentos labiais
 fluidos sem artefatos de pop.
+
+\subsection{Transformações por Pose e Modos de Exibição de Texto}
+\label{subsec:transform-display}
+
+O editor oferece controles de transformação independentes para
+posição (X, Y, Z), rotação (X, Y, Z) e escala do avatar, ajustáveis
+por sliders com retroalimentação imediata na cena 3D. Cada combinação
+de valores é armazenada associada à pose ativa (\texttt{transformByPose}):
+ao alternar entre presets de pose, o editor restaura automaticamente os
+ajustes de transformação previamente definidos para aquela pose,
+evitando que o usuário precise reposicionar o avatar a cada troca.
+Um botão de reset (``Limpar'') restaura os valores padrão (posição e
+rotação iguais a zero, escala igual a um) para a pose selecionada.
+
+Para a apresentação textual da fala, o ContAR oferece três modos de
+exibição configuráveis pelo autor: balão de fala sobreposto ao avatar
+(\textit{bubble}, padrão), legenda na parte inferior da tela
+(\textit{subtitle}, no estilo de legendas de vídeo) ou texto oculto
+(\textit{none}). Essa flexibilidade permite adaptar a apresentação ao
+contexto pedagógico — por exemplo, priorizando a compreensão auditiva
+do narrador ou oferecendo suporte de leitura simultânea para alunos
+com necessidades específicas.
 
 \section{Sistema de Cenas e Histórias}
 \label{sec:cenas-historias}
@@ -1324,7 +1349,7 @@ com fluxos fragmentados existentes.
 Model) para que o narrador responda a perguntas dos estudantes em tempo
 real, transformando o personagem virtual de um apresentador estático em
 um agente conversacional educacional. Essa proposta, sugerida pelo
-orientador Prof. Dr. [Nome], representa a fronteira de pesquisa mais
+orientador Prof. Dr. Francisco Paulo Magalhaes Simões, representa a fronteira de pesquisa mais
 promissora e a ponte natural para um projeto de mestrado.
 
 \textbf{Expressões faciais VRM:} explorar o sistema de expressões do

@@ -17,6 +17,14 @@ const VISEME_PATTERNS = {
   mouthOpen: [/jaw.*open/i, /mouth.*open/i, /^jawopen$/i, /^mouthopen$/i, /viseme.*(aa|ah|ao|oh|o)/i],
 };
 
+// Bone names that represent the jaw across rig conventions (VRM, Mixamo, CC3,
+// Avaturn/ReadyPlayerMe). Used for the no-morph-target fallback.
+const JAW_BONE_PATTERNS = [
+  /^jaw$/i, /jaw_?root/i, /lower_?jaw/i, /^c_jaw/i, /j_bip_c_jaw/i, /cc_base_jawroot/i, /\bjaw\b/i,
+];
+// Max jaw-open rotation (radians) when value = 1.
+const JAW_MAX_ANGLE = 0.32;
+
 export class LipSyncController {
   constructor(model) {
     this._model = model;
@@ -28,13 +36,57 @@ export class LipSyncController {
     this._groupedTargets = { aa: [], oh: [], ee: [], fv: [], mbp: [], mouthOpen: [] };
     /** @type {Record<string, number>} current logical value per name */
     this._currentValues = {};
+    /** @type {THREE.Bone|null} jaw bone used when there are no mouth morphs */
+    this._jawBone = null;
+    this._jawRestQuat = null;
+    this._jawOpenQuat = new THREE.Quaternion();
+    this._jawTmpQuat = new THREE.Quaternion();
 
     this._discover();
+    this._discoverJawBone();
   }
 
   /** True if the avatar has at least one morph target. */
   get hasTargets() {
     return this._morphTargets.length > 0;
+  }
+
+  /** True if lipsync can be driven at all — via mouth morphs OR a jaw bone. */
+  get hasMouth() {
+    return this._mouthTargetCount > 0 || !!this._jawBone;
+  }
+
+  get _mouthTargetCount() {
+    return this._groupedTargets.aa.length + this._groupedTargets.mouthOpen.length;
+  }
+
+  /**
+   * Open the mouth by a normalized amount (0–1), using mouth morph targets when
+   * present, otherwise rotating the jaw bone. This is the unified entry point
+   * for amplitude-driven lipsync so morph-less Avaturn avatars still move.
+   * @param {number} value 0–1
+   */
+  setMouthOpen(value) {
+    const v = Math.max(0, Math.min(1, value));
+    if (this._mouthTargetCount > 0) {
+      this.setGroupValue('aa', v * 0.9);
+      this.setGroupValue('mouthOpen', v * 0.45);
+      return;
+    }
+    if (this._jawBone && this._jawRestQuat) {
+      // Rotate the jaw open around its local X axis (chin drops down).
+      this._jawOpenQuat.setFromAxisAngle({ x: 1, y: 0, z: 0 }, v * JAW_MAX_ANGLE);
+      this._jawBone.quaternion.copy(this._jawRestQuat).multiply(this._jawOpenQuat);
+    }
+  }
+
+  /** Close the mouth / reset lipsync to neutral (morphs or jaw). */
+  resetMouth() {
+    if (this._mouthTargetCount > 0) {
+      this.resetGroups();
+    } else if (this._jawBone && this._jawRestQuat) {
+      this._jawBone.quaternion.copy(this._jawRestQuat);
+    }
   }
 
   /**
@@ -132,9 +184,26 @@ export class LipSyncController {
     return this._groupedTargets[groupName] || [];
   }
 
-  /** Release resources (resets morph targets). */
+  /** Release resources (resets morph targets and jaw). */
   dispose() {
     this.resetAll();
+    this.resetMouth();
+  }
+
+  /** Find a jaw bone for the no-morph fallback and snapshot its rest pose. */
+  _discoverJawBone() {
+    // Only needed when the avatar lacks mouth-open morph targets.
+    if (this._mouthTargetCount > 0) return;
+    let best = null;
+    this._model.traverse((node) => {
+      if (best || !node.isBone) return;
+      const name = String(node.name || '');
+      if (JAW_BONE_PATTERNS.some((re) => re.test(name))) best = node;
+    });
+    if (best) {
+      this._jawBone = best;
+      this._jawRestQuat = best.quaternion.clone();
+    }
   }
 
   // ── Private ────────────────────────────────────────────────────────────────

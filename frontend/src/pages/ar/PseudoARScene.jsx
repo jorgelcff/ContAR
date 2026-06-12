@@ -242,8 +242,9 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
       // Drive pose animations (idle/walk/dance/…) + blink/breathing each frame.
       poseRigRef.current?.update(clockRef.current.getDelta());
 
-      // Heuristic lip sync driven by audio analyser
-      if (analyserRef.current && lipSyncRef.current?.hasTargets) {
+      // Amplitude-driven lip sync — uses mouth morphs, or the jaw bone as a
+      // fallback for avatars (many Avaturn exports) that ship without visemes.
+      if (analyserRef.current && lipSyncRef.current?.hasMouth) {
         const binCount = analyserRef.current.frequencyBinCount;
         if (!lipSyncDataRef.current || lipSyncDataRef.current.length !== binCount) {
           lipSyncDataRef.current = new Uint8Array(binCount);
@@ -255,12 +256,8 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
           sum += v * v;
         }
         const mouthOpen = Math.min(1, Math.sqrt(sum / binCount) * 14);
-        if (mouthOpen > 0.04) {
-          lipSyncRef.current.setGroupValue('aa', mouthOpen * 0.9);
-          lipSyncRef.current.setGroupValue('mouthOpen', mouthOpen * 0.45);
-        } else {
-          lipSyncRef.current.resetGroups();
-        }
+        if (mouthOpen > 0.04) lipSyncRef.current.setMouthOpen(mouthOpen);
+        else lipSyncRef.current.resetMouth();
       }
 
       renderer.render(scene, camera);

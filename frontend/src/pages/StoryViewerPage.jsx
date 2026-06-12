@@ -193,7 +193,10 @@ export default function StoryViewerPage() {
   }, [sceneData]);
 
   const scaleLabel = `${Math.round(scale * 100)}%`;
-  const arHref = `/ar?mode=surface&storyId=${id}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}`;
+  // Sends the user to the /ar mode menu (Surface AR, Immersive/markerless AR,
+  // Marker AR) instead of a single hardcoded mode — not every device
+  // supports WebXR hit-test, so the user needs to pick what works for them.
+  const arHref = `/ar?storyId=${id}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}`;
 
   // First scene avatar for splash background hint
   const firstAvatarUrl = storyScenes[0] ? null : null; // reserved for future thumbnail
@@ -229,7 +232,7 @@ export default function StoryViewerPage() {
             <div className="hidden md:flex items-center gap-2">
               <Link to={arHref}
                 className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center">
-                {t('openSurfaceAr')}
+                {t('viewerOpenAr')}
               </Link>
               <button onClick={() => setIsPlaying((p) => !p)} disabled={!hasStarted}
                 className="px-3 py-2 min-h-12 rounded bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-xs flex items-center">
@@ -324,7 +327,7 @@ export default function StoryViewerPage() {
               <div className="flex items-center gap-2">
                 <Link to={arHref}
                   className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center">
-                  {t('ar')}
+                  {t('viewerOpenAr')}
                 </Link>
                 {!hasStarted ? (
                   <button onClick={handleStart}

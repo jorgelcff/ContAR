@@ -30,6 +30,16 @@ const AZURE_VISEME_TO_RHUBARB = {
   21: 'B', // p b m
 };
 
+// Rejects if `promise` doesn't settle within `ms` — stops a hung Azure
+// websocket from holding the request open until Render's gateway returns a 504.
+function withTimeout(promise, ms, message) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function synthesizeWithAzure(text, voiceName) {
   const key    = process.env.AZURE_SPEECH_KEY;
   const region = process.env.AZURE_SPEECH_REGION;
@@ -142,23 +152,41 @@ exports.generateTTS = async (req, res) => {
 
   const safeText = String(text).trim().slice(0, 2500);
 
-  // Priority: Azure (free 500k/month) → ElevenLabs → 503
-  const useAzure     = !!process.env.AZURE_SPEECH_KEY && provider !== 'elevenlabs';
-  const useElevenLabs = !!process.env.ELEVENLABS_API_KEY;
+  const hasAzure      = !!process.env.AZURE_SPEECH_KEY;
+  const hasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
+
+  // Azure's SDK opens a websocket that can hang (slow/blocked); cap it so we can
+  // fall back instead of letting the request time out as a 504.
+  const tryAzure     = () => withTimeout(synthesizeWithAzure(safeText, voiceId), 22_000, 'Azure TTS timed out');
+  const tryElevenLabs = () => synthesizeWithElevenLabs(safeText, voiceId);
 
   try {
-    if (useAzure) {
-      const result = await synthesizeWithAzure(safeText, voiceId);
-      return res.json(result);
+    // Explicit ElevenLabs request
+    if (provider === 'elevenlabs' && hasElevenLabs) {
+      return res.json(await tryElevenLabs());
     }
-    if (useElevenLabs) {
-      const result = await synthesizeWithElevenLabs(safeText, voiceId);
-      return res.json(result);
+
+    // Default: Azure first (free tier), then fall back to ElevenLabs if it
+    // fails/times out — previously a transient Azure error returned a 500/504
+    // even though a working ElevenLabs key was configured.
+    if (hasAzure) {
+      try {
+        return res.json(await tryAzure());
+      } catch (azureErr) {
+        console.error('Azure TTS failed:', azureErr.message);
+        if (hasElevenLabs) return res.json(await tryElevenLabs());
+        throw azureErr;
+      }
     }
+
+    if (hasElevenLabs) {
+      return res.json(await tryElevenLabs());
+    }
+
     return res.status(503).json({ error: 'TTS not configured — set AZURE_SPEECH_KEY or ELEVENLABS_API_KEY' });
   } catch (err) {
     if (!res.headersSent) {
-      res.status(500).json({ error: err.message || 'TTS generation failed' });
+      res.status(502).json({ error: err.message || 'TTS generation failed' });
     }
   }
 };

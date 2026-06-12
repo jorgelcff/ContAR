@@ -1,15 +1,27 @@
 import { useCallback, useState } from 'react';
-import { AUTH_TOKEN_KEY } from '../api/sceneApi';
+import { generateTTS } from '../api/sceneApi';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
+function base64ToBlob(base64, type = 'audio/mpeg') {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type });
+}
 
 /**
- * useTTS — calls POST /api/tts/generate and hands the audio blob + text
- * to the caller so they can load it into useAudio and generate visemes.
+ * useTTS — generates narration audio via the backend (which calls Azure/ElevenLabs
+ * server-side, keeping the API keys off the client). Hands the MP3 File + text to
+ * the caller for useAudio + viseme generation.
+ *
+ * Uses the shared `api` client (via generateTTS) so it hits the same backend as
+ * the rest of the app — previously it used its own VITE_API_BASE env var with a
+ * localhost fallback, which sent TTS requests to localhost in production.
  *
  * @param {Object} opts
- * @param {(file: File) => void} opts.onAudioReady   — receives MP3 File for useAudio.loadFile
- * @param {(text: string) => void} opts.onVisemeReady — receives text for generateVisemeTimelineFromText
+ * @param {(file: File) => void} opts.onAudioReady   — MP3 File for useAudio.loadFile
+ * @param {(text: string, visemeTimeline: Array|null) => void} opts.onVisemeReady
+ *        — narration text plus the precise viseme timeline from the provider
+ *          (null when unavailable, so the caller can fall back to text heuristics)
  */
 export default function useTTS({ onAudioReady, onVisemeReady } = {}) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -27,28 +39,16 @@ export default function useTTS({ onAudioReady, onVisemeReady } = {}) {
       setError('');
 
       try {
-        const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
-        const res = await fetch(`${API_BASE}/api/tts/generate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ text: trimmed, voiceId }),
-        });
+        const { audioBase64, visemeTimeline } = await generateTTS(trimmed, voiceId);
+        if (!audioBase64) throw new Error('Resposta de TTS sem áudio.');
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Erro TTS: ${res.status}`);
-        }
-
-        const blob = await res.blob();
+        const blob = base64ToBlob(audioBase64);
         const file = new File([blob], 'tts-output.mp3', { type: 'audio/mpeg' });
 
         onAudioReady?.(file);
-        onVisemeReady?.(trimmed);
+        onVisemeReady?.(trimmed, Array.isArray(visemeTimeline) ? visemeTimeline : null);
       } catch (err) {
-        setError(err.message || 'Falha ao gerar voz.');
+        setError(err?.response?.data?.error || err.message || 'Falha ao gerar voz.');
       } finally {
         setIsGenerating(false);
       }

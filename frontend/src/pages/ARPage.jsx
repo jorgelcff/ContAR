@@ -10,6 +10,7 @@ import { getPublicStory, getScene } from '../api/sceneApi';
 import useAudio from '../hooks/useAudio';
 import PseudoARScene from './ar/PseudoARScene';
 import {
+  ARNarration,
   ARPoseRig,
   StoryOverlay,
   buildQueryUrl,
@@ -20,12 +21,13 @@ import {
   normalizeAvatarUrl,
   readSavedScale,
   resolveSceneAvatarUrl,
+  resolveSceneDisplayMode,
   resolveScenePosePreset,
   saveScale,
   useARStory,
 } from './ar/arShared';
 
-function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, onBack }) {
+function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
@@ -69,6 +71,10 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
   const effectivePosePreset = resolveScenePosePreset(story, storyId, posePreset);
   effectivePoseRef.current = effectivePosePreset;
+  const effectiveDisplayMode = resolveSceneDisplayMode(story, storyId, displayMode);
+  const narrationText = storyId
+    ? (story.hasStarted ? (story.currentScene?.content?.narrative?.text || '') : '')
+    : (narrativeText || '');
   const pseudoHref = useMemo(
     () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined }),
     [modelUrl, initialScale, storyId]
@@ -542,6 +548,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         }}
       />
 
+      {/* Narration text overlay (subtitle / bubble / none) */}
+      {arActive && <ARNarration mode={effectiveDisplayMode} text={narrationText} />}
+
       {/* Status panel (only shown when no story or story not started) */}
       {(!storyId || !story.hasStarted) && (
         <div className="absolute left-4 right-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
@@ -664,6 +673,7 @@ export default function ARPage() {
   const storedNarrativeAudioUrl = useSceneStore((s) => s.narrativeAudioUrl);
   const storedSpeechText = useSceneStore((s) => s.speechText);
   const storedPosePreset = useSceneStore((s) => s.posePreset);
+  const storedTextDisplayMode = useSceneStore((s) => s.textDisplayMode);
 
   // Resolve effective URL: query param → stored avatar (HTTP only) → default
   const resolveUrl = (param, stored) => {
@@ -743,6 +753,7 @@ export default function ARPage() {
         narrativeAudioUrl={storedNarrativeAudioUrl}
         narrativeText={storedSpeechText}
         posePreset={storedPosePreset}
+        displayMode={storedTextDisplayMode}
         onBack={() => window.location.assign('/ar')}
       />
     );
@@ -757,7 +768,9 @@ export default function ARPage() {
         initialScale={startScale}
         storyId={searchParams.get('storyId') || ''}
         narrativeAudioUrl={storedNarrativeAudioUrl}
+        narrativeText={storedSpeechText}
         posePreset={storedPosePreset}
+        displayMode={storedTextDisplayMode}
         onBack={() => window.location.assign('/ar')}
       />
     );
@@ -1169,6 +1182,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
           transform={transform}
           posePreset={posePreset}
           speechText={speechText}
+          textDisplayMode={currentScene?.content?.narrative?.displayMode || 'bubble'}
           visemeTimeline={audio.visemeTimeline}
           audioCurrentTime={audio.audioCurrentTime}
           lipSyncConfig={audio.lipSyncConfig}

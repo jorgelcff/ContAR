@@ -388,6 +388,7 @@ export default function StoryViewerPage() {
                       transform={transform}
                       posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
                       speechText={sceneData?.content?.narrative?.text || ''}
+                      textDisplayMode={sceneData?.content?.narrative?.displayMode || 'bubble'}
                       analyserRef={audio.analyserRef}
                       lipSyncConfig={audio.lipSyncConfig}
                       visemeTimeline={audio.visemeTimeline}

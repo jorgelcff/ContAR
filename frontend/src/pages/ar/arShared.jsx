@@ -80,6 +80,43 @@ export function resolveScenePosePreset(story, storyId, fallback) {
   return fallback || 'idle';
 }
 
+// How narration text is shown ('bubble' | 'subtitle' | 'none'): a story scene's
+// saved displayMode wins, else the page-level mode, defaulting to subtitle in AR
+// (a bottom caption reads better over a camera feed than a floating bubble).
+export function resolveSceneDisplayMode(story, storyId, fallback) {
+  if (storyId && story.currentScene?.content?.narrative?.displayMode) {
+    return story.currentScene.content.narrative.displayMode;
+  }
+  return fallback || 'subtitle';
+}
+
+// On-screen narration overlay for AR (the editor's 3D-tracked bubble can't be
+// reused over a camera feed). 'subtitle' → bottom caption, 'bubble' → a speech
+// bubble higher up, 'none' → nothing. Sits above the bottom control bar.
+export function ARNarration({ mode, text }) {
+  if (!text || mode === 'none') return null;
+
+  if (mode === 'bubble') {
+    return (
+      <div className="pointer-events-none absolute inset-x-0 bottom-48 z-20 flex justify-center px-4">
+        <div className="relative max-w-xs rounded-2xl bg-white px-4 py-2.5 text-center text-sm font-medium text-gray-900 shadow-xl">
+          {text}
+          <span className="absolute -bottom-2 left-1/2 h-0 w-0 -translate-x-1/2 border-x-8 border-x-transparent border-t-8 border-t-white" />
+        </div>
+      </div>
+    );
+  }
+
+  // subtitle (default)
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-44 z-20 flex justify-center px-4">
+      <div className="max-w-lg rounded-lg bg-black/70 px-4 py-2 text-center text-sm font-medium text-white backdrop-blur-sm">
+        {text}
+      </div>
+    </div>
+  );
+}
+
 // Loads the shared animation manifest (walk/dance/run/speaker… clips) once and
 // caches it across AR scenes. Mirrors SceneCanvas's manifest loading so AR
 // animated poses look identical to the editor. Returns { preset: AnimationClip }.

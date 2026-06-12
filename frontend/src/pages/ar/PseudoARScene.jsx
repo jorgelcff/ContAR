@@ -5,6 +5,7 @@ import Header from '../../components/ui/Header';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { useDeviceOrientation } from '../../hooks/useDeviceOrientation';
 import {
+  ARNarration,
   ARPoseRig,
   StoryOverlay,
   createAvatarGLTFLoader,
@@ -13,6 +14,7 @@ import {
   loadAnimationManifest,
   normalizeAvatarUrl,
   resolveSceneAvatarUrl,
+  resolveSceneDisplayMode,
   resolveScenePosePreset,
   saveScale,
   useARStory,
@@ -25,7 +27,7 @@ const CAMERA_HEIGHT = 1.6;
 // feed and drives the virtual camera's rotation from the device gyroscope, so
 // the avatar appears anchored as the user pans the phone. No marker and no
 // WebXR session required — works on iOS Safari and Android Chrome alike.
-export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, posePreset, onBack }) {
+export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -62,6 +64,10 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
   const effectivePosePreset = resolveScenePosePreset(story, storyId, posePreset);
   effectivePoseRef.current = effectivePosePreset;
+  const effectiveDisplayMode = resolveSceneDisplayMode(story, storyId, displayMode);
+  const narrationText = storyId
+    ? (story.hasStarted ? (story.currentScene?.content?.narrative?.text || '') : '')
+    : (narrativeText || '');
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
   const initWebAudio = () => {
@@ -379,6 +385,9 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
           startPseudoAr();
         }}
       />
+
+      {/* Narration text overlay (subtitle / bubble / none) */}
+      {arActive && <ARNarration mode={effectiveDisplayMode} text={narrationText} />}
 
       {/* Status panel (only shown when no story or story not started) */}
       {(!storyId || !story.hasStarted) && (

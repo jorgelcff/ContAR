@@ -39,8 +39,12 @@ const createAvatarSlice = (set) => ({
 const createSpeechSlice = (set) => ({
   speechText: '',
   narrativeAudioUrl: '',
+  // How narration text is shown over the avatar: 'bubble' | 'subtitle' | 'none'.
+  // Persisted per scene so the editor, story viewer and AR all render the same way.
+  textDisplayMode: 'bubble',
   setSpeechText: (text) => set({ speechText: text }),
   setNarrativeAudioUrl: (url) => set({ narrativeAudioUrl: url }),
+  setTextDisplayMode: (mode) => set({ textDisplayMode: mode }),
   clearSpeech: () => set({ speechText: '', narrativeAudioUrl: '' }),
 });
 
@@ -111,7 +115,7 @@ const createStorySlice = (set, get) => ({
   setPublishedStoryId: (id) => set({ publishedStoryId: id }),
 
   buildScenePayload: (existingId) => {
-    const { sceneTitle, avatarUrl, posePreset, transform, speechText, narrativeAudioUrl, timelineBlocks, timelineDuration } = get();
+    const { sceneTitle, avatarUrl, posePreset, transform, speechText, narrativeAudioUrl, textDisplayMode, timelineBlocks, timelineDuration } = get();
     return {
       sceneId: existingId !== undefined ? existingId : (get().currentSceneId || undefined),
       metadata: { title: sceneTitle || 'Untitled Scene', theme: '' },
@@ -132,6 +136,7 @@ const createStorySlice = (set, get) => ({
         narrative: {
           text: speechText,
           audioUrl: narrativeAudioUrl || '',
+          displayMode: textDisplayMode || 'bubble',
           bubbleStyle: { color: '#ffffff', fontSize: 14 },
         },
         timeline: {
@@ -158,6 +163,7 @@ export const useSceneStore = create(
         transform: state.transform,
         speechText: state.speechText,
         narrativeAudioUrl: sanitizeUrl(state.narrativeAudioUrl),
+        textDisplayMode: state.textDisplayMode,
         sceneTitle: state.sceneTitle,
         currentSceneId: state.currentSceneId,
         storyTitle: state.storyTitle,

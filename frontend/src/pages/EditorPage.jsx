@@ -38,6 +38,7 @@ export default function EditorPage() {
     transform, setTransform,
     posePreset, setPosePreset,
     speechText, setSpeechText,
+    textDisplayMode, setTextDisplayMode,
     sceneTitle, setSceneTitle,
     storyTitle, setStoryTitle,
     storyDescription, setStoryDescription,
@@ -74,7 +75,6 @@ export default function EditorPage() {
   const [showTour, setShowTour] = useState(shouldShowTour);
   const [mobilePanelTab, setMobilePanelTab] = useState(null);
   const [vrmaUrl, setVrmaUrl] = useState('');
-  const [textDisplayMode, setTextDisplayMode] = useState('bubble'); // 'bubble' | 'subtitle' | 'none'
 
   useEffect(() => {
     if (hadLocalAvatarOnInit()) {
@@ -115,7 +115,7 @@ export default function EditorPage() {
     }, 3000);
     return () => clearTimeout(autosaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl]);
+  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl, textDisplayMode]);
 
   // Flush a still-pending autosave when leaving the editor (e.g. clicking
   // "Minhas cenas" right after a change), so edits made within the 3s
@@ -148,6 +148,7 @@ export default function EditorPage() {
       sceneTitle: '',
       posePreset: 'idle',
       narrativeAudioUrl: '',
+      textDisplayMode: 'bubble',
     });
 
     setSceneLoading(true);
@@ -175,6 +176,7 @@ export default function EditorPage() {
           },
           speechText: narrative.text || '',
           narrativeAudioUrl: narrative.audioUrl || '',
+          textDisplayMode: narrative.displayMode || 'bubble',
         });
       })
       .catch(() => addToast('Cena não encontrada ou sem permissão de acesso.', 'error'))

@@ -126,6 +126,9 @@ export default function LeftPanel({
   const [showStoryQr, setShowStoryQr] = useState(false);
 
   useEffect(() => { setUrlInput(avatarUrl || ''); }, [avatarUrl]);
+  // Keep the speech input in sync with the store — e.g. when a scene is loaded
+  // for editing, its narration text should appear in the field, ready to edit.
+  useEffect(() => { setSpeechInput(speechText || ''); }, [speechText]);
 
   useEffect(() => () => {
     if (localBlobUrlRef.current) {

@@ -20,7 +20,7 @@ const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function EditorPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation();
   const { addToast } = useToast();
   // Tracks which sceneId was last loaded — string (not boolean) so navigating
@@ -216,6 +216,12 @@ export default function EditorPage() {
           : [];
         setStoryScenes(scenes);
         setSceneTitlesById({});
+        // Open the story's first scene for editing when entering a story
+        // directly (no sceneId in the URL), so the editor isn't blank. The
+        // scene-load effect picks up the added sceneId param.
+        if (!searchParams.get('sceneId') && scenes[0]?.sceneId) {
+          setSearchParams({ storyId: routeStoryId, sceneId: scenes[0].sceneId }, { replace: true });
+        }
       })
       .catch((err) => setError(`${t('errorLoading')}: ${err.message}`));
   // eslint-disable-next-line react-hooks/exhaustive-deps

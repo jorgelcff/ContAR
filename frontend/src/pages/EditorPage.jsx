@@ -26,6 +26,11 @@ export default function EditorPage() {
   // Tracks which sceneId was last loaded — string (not boolean) so navigating
   // between two scenes in the same session works correctly.
   const loadedSceneIdRef = useRef(null);
+  // Tracks which storyId was already fetched from the DB this session. Editing a
+  // scene navigates to /editor?sceneId=X&storyId=Y, which must NOT re-fetch and
+  // overwrite the in-memory storyScenes (the user may have added scenes that
+  // aren't persisted to the story yet) — that wiped the timeline on "Editar".
+  const loadedStoryIdRef = useRef(null);
   const [sceneLoading, setSceneLoading] = useState(false);
 
   const {
@@ -122,7 +127,10 @@ export default function EditorPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isStoryLinked = Boolean(currentStoryId);
-  const arHref = avatarUrl ? `/ar?mode=surface&modelUrl=${encodeURIComponent(avatarUrl)}` : '/ar';
+  // Route to the /ar mode menu (not straight to Surface AR) so the user can pick
+  // a mode their device supports — Surface AR needs WebXR hit-test, which many
+  // phones lack even when they report immersive-ar support.
+  const arHref = avatarUrl ? `/ar?modelUrl=${encodeURIComponent(avatarUrl)}` : '/ar';
 
   // ── Load scene from ?sceneId= URL param ─────────────────────
   useEffect(() => {
@@ -179,6 +187,11 @@ export default function EditorPage() {
     const routeStoryId = searchParams.get('storyId') || '';
     if (routeStoryId !== currentStoryId) setCurrentStoryId(routeStoryId);
     if (!routeStoryId) return;
+    // Only load each story from the DB once per mount. Without this, navigating
+    // to edit a scene within the story re-fetches and clobbers any unsaved
+    // scenes the user added to the timeline.
+    if (loadedStoryIdRef.current === routeStoryId) return;
+    loadedStoryIdRef.current = routeStoryId;
 
     getStory(routeStoryId)
       .then((data) => {
@@ -334,7 +347,7 @@ export default function EditorPage() {
           ? Tour
         </button>
         <Link to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
-          {t('openSurfaceAr')}
+          {t('viewerOpenAr')}
         </Link>
       </div>
       <div className="flex flex-1 overflow-hidden">

@@ -20,6 +20,8 @@ const SceneSchema = new mongoose.Schema({
     narrative: {
       text:     { type: String, default: '' },
       audioUrl: { type: String, default: '' },
+      // How narration text is shown: 'bubble' | 'subtitle' | 'none'.
+      displayMode: { type: String, default: 'bubble' },
       bubbleStyle: {
         color:    { type: String, default: '#ffffff' },
         fontSize: { type: Number, default: 14 },

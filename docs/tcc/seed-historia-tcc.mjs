@@ -10,6 +10,8 @@
 //   TCC_VOICE_ID    - voz Azure TTS (default: pt-BR-FranciscaNeural)
 //   TCC_SKIP_TTS    - "1" para pular a geração de áudio (cenas ficam sem narração)
 //   TCC_AVATAR_PATH - caminho do .glb (default: docs/tcc/avatar_jorge.glb)
+//   TCC_DISPLAY_MODE- modo de exibição da narração: 'subtitle' | 'bubble' | 'none'
+//                     (default: subtitle — legível sobre a câmera no AR)
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -23,6 +25,15 @@ const PASSWORD = process.env.TCC_PASSWORD;
 const VOICE_ID = process.env.TCC_VOICE_ID || 'pt-BR-FranciscaNeural';
 const SKIP_TTS = process.env.TCC_SKIP_TTS === '1';
 const AVATAR_PATH = process.env.TCC_AVATAR_PATH || path.join(__dirname, 'avatar_jorge.glb');
+const DISPLAY_MODE = process.env.TCC_DISPLAY_MODE || 'subtitle';
+
+// Estimativa de duração da fala (~2.6 palavras/seg, ritmo de narração calmo).
+// Usada como fallback de avanço da cena quando ela não tem áudio — com áudio,
+// o player avança quando a narração termina, então o tempo "pega" sozinho.
+function estimateDurationSeconds(text) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(5, Math.round(words / 2.6) + 1);
+}
 
 if (!EMAIL || !PASSWORD) {
   console.error('Defina TCC_EMAIL e TCC_PASSWORD (credenciais de uma conta já registrada no ContAR).');
@@ -151,9 +162,10 @@ async function createScene(scene, index, avatarUrl) {
       narrative: {
         text: scene.text,
         audioUrl,
+        displayMode: scene.displayMode || DISPLAY_MODE,
         bubbleStyle: { color: '#ffffff', fontSize: 14 },
       },
-      timeline: { duration: 10, blocks: [] },
+      timeline: { duration: estimateDurationSeconds(scene.text), blocks: [] },
     },
   };
 
@@ -170,7 +182,7 @@ async function createStory(sceneIds) {
       sceneId,
       order,
       transitionText: '',
-      durationSeconds: 8,
+      durationSeconds: estimateDurationSeconds(SCENES[order].text),
     })),
   };
   const data = await api('/story', { method: 'POST', body: payload });
@@ -190,8 +202,10 @@ async function main() {
   const storyId = await createStory(sceneIds);
 
   console.log('\nPronto! História criada com sucesso.');
+  console.log(`Modo de exibição da narração: ${DISPLAY_MODE}`);
   console.log(`Edite em: /editor (procure pelas cenas em /scenes)`);
-  console.log(`Assista em: /story/${storyId}`);
+  console.log(`Assista (local):     /story/${storyId}`);
+  console.log(`Assista (produção):  https://avaturn-threejs-1.onrender.com/story/${storyId}`);
 }
 
 main().catch((err) => {

@@ -44,7 +44,7 @@ export default function StoryBuilderPanel() {
   return (
     <section className="shrink-0 border-t border-gray-700 bg-gray-900/80 p-4">
       <div className="rounded-xl border border-gray-700 bg-gray-800/70 p-4 flex flex-col gap-3">
-        <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Scenes in Story</p>
+        <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{t('storyScenesTitle')}</p>
 
         {storyScenes.length === 0 && (
           <p className="text-xs text-gray-500">{t('noStoryScenes')}</p>
@@ -79,19 +79,19 @@ export default function StoryBuilderPanel() {
 
                 {isPendingDelete ? (
                   <div className="flex flex-col gap-2 py-1">
-                    <p className="text-xs text-red-300 text-center">Remover esta cena da história?</p>
+                    <p className="text-xs text-red-300 text-center">{t('removeSceneConfirm')}</p>
                     <div className="flex gap-2">
                       <button
                         onClick={handleDeleteConfirm}
                         className="flex-1 py-1.5 rounded bg-red-600 hover:bg-red-500 text-xs text-white font-medium"
                       >
-                        Remover
+                        {t('removeBtn')}
                       </button>
                       <button
                         onClick={handleDeleteCancel}
                         className="flex-1 py-1.5 rounded bg-gray-600 hover:bg-gray-500 text-xs text-white"
                       >
-                        Cancelar
+                        {t('cancel')}
                       </button>
                     </div>
                   </div>
@@ -116,14 +116,14 @@ export default function StoryBuilderPanel() {
                       <button
                         onClick={() => handleEditScene(item.sceneId)}
                         className="ml-auto px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 text-xs text-white"
-                        title="Editar esta cena"
+                        title={t('editSceneTitle')}
                       >
                         <Icon name="edit" className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(index)}
                         className="px-2 py-1 rounded bg-red-900 hover:bg-red-700 text-xs text-white"
-                        title="Remover da história"
+                        title={t('removeFromStoryTitle')}
                       >
                         <Icon name="close" className="w-3.5 h-3.5" />
                       </button>

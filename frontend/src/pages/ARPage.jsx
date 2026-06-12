@@ -86,11 +86,24 @@ function useARStory(storyId) {
   const [storyLoading, setStoryLoading] = useState(false);
   const [storyError, setStoryError] = useState('');
 
+  // Reset/prime story state synchronously when storyId changes (avoids a
+  // setState-in-effect cascade — the effect below only handles the fetch).
+  const [prevStoryId, setPrevStoryId] = useState();
+  if (storyId !== prevStoryId) {
+    setPrevStoryId(storyId);
+    if (!storyId) {
+      setStory(null);
+      setScenes([]);
+      setCurrentScene(null);
+    } else {
+      setStoryLoading(true);
+      setStoryError('');
+    }
+  }
+
   useEffect(() => {
-    if (!storyId) { setStory(null); setScenes([]); setCurrentScene(null); return; }
+    if (!storyId) return;
     let active = true;
-    setStoryLoading(true);
-    setStoryError('');
     getPublicStory(storyId)
       .then((data) => {
         if (!active) return;
@@ -106,15 +119,21 @@ function useARStory(storyId) {
     return () => { active = false; };
   }, [storyId]);
 
+  const sceneId = scenes[index]?.sceneId;
+  const [prevSceneId, setPrevSceneId] = useState(sceneId);
+  if (sceneId !== prevSceneId) {
+    setPrevSceneId(sceneId);
+    if (!sceneId) setCurrentScene(null);
+  }
+
   useEffect(() => {
-    const sceneId = scenes[index]?.sceneId;
-    if (!sceneId) { setCurrentScene(null); return; }
+    if (!sceneId) return;
     let active = true;
     getScene(sceneId)
       .then((d) => { if (active) setCurrentScene(d); })
       .catch(() => { if (active) setCurrentScene(null); });
     return () => { active = false; };
-  }, [scenes, index]);
+  }, [sceneId]);
 
   // Load + play audio when scene changes (after start)
   useEffect(() => {
@@ -223,7 +242,7 @@ function StoryOverlay({ story, storyId, compact = false, onStart }) {
   );
 }
 
-function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
+function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
@@ -254,6 +273,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const scaleLabel = `${Math.round(scale * 100)}%`;
+  const [speechPlaying, setSpeechPlaying] = useState(false);
   const story = useARStory(storyId);
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
@@ -272,8 +292,36 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
       // AudioContext can start (or remain) suspended on Android — without
       // resuming it here, audio.play() advances silently with no sound.
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-    } catch (e) { /* audio context blocked or already connected */ }
+    } catch { /* audio context blocked or already connected */ }
   };
+
+  // Toggle playback of the narration saved in the editor (non-story mode).
+  // Reuses the hidden <audio> element from useARStory and the same
+  // AudioContext/analyser used for story lip sync.
+  const toggleSpeech = () => {
+    const el = story.audioRef.current;
+    if (!el || !narrativeAudioUrl) return;
+    if (speechPlaying) {
+      el.pause();
+      setSpeechPlaying(false);
+      return;
+    }
+    initWebAudio();
+    if (el.src !== narrativeAudioUrl) {
+      el.src = narrativeAudioUrl;
+      el.load();
+    }
+    el.play().catch(() => {});
+    setSpeechPlaying(true);
+  };
+
+  useEffect(() => {
+    const el = story.audioRef.current;
+    if (!el) return;
+    const onEnded = () => setSpeechPlaying(false);
+    el.addEventListener('ended', onEnded);
+    return () => el.removeEventListener('ended', onEnded);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Must be called directly from a click handler — requestSession requires
   // transient user activation. three.js's ARButton swallows rejections from
@@ -505,7 +553,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
       loaderRef.current = null;
       reticleRef.current = null;
     };
-  }, [t]);
+  }, [t, supported]);
 
   useEffect(() => {
     if (!loaderRef.current || !modelRootRef.current) return;
@@ -568,7 +616,15 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
   }
 
   if (!supported) {
-    return <ThreeJsFallbackScene modelUrl={modelUrl} storyId={storyId} onBack={onBack} />;
+    return (
+      <ThreeJsFallbackScene
+        modelUrl={modelUrl}
+        storyId={storyId}
+        narrativeAudioUrl={narrativeAudioUrl}
+        narrativeText={narrativeText}
+        onBack={onBack}
+      />
+    );
   }
 
   return (
@@ -624,6 +680,13 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
             <input type="checkbox" checked={lockPlacement} onChange={(e) => setLockPlacement(e.target.checked)} className="w-5 h-5 accent-cyan-400 cursor-pointer" />
             <span>{lockPlacement ? 'Posição fixada' : 'Mover avatar'}</span>
           </label>
+          {!storyId && narrativeAudioUrl && (
+            <button
+              onClick={toggleSpeech}
+              className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
+              {speechPlaying ? '⏸ Pausar fala' : '▶ Tocar fala'}
+            </button>
+          )}
         </div>
 
         <label className="mt-3 flex items-center gap-3 text-sm text-gray-200">
@@ -649,7 +712,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, onBack }) {
 
 function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId }) {
   const { t } = useTranslation();
-  const story = useARStory(storyId);
+  const { audioRef, ...story } = useARStory(storyId);
 
   const iframeSrc = useMemo(
     () => buildQueryUrl('/ar-marker.html', { modelUrl, markerUrl, useHiro: useHiro ? '1' : '', scale: initialScale }),
@@ -659,7 +722,7 @@ function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId }
   return (
     <div className="relative flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
       {/* Hidden audio element — plays story narration from React (not inside iframe) */}
-      <audio ref={story.audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
+      <audio ref={audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
 
       <Header />
       <div className="border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-center justify-between gap-3">
@@ -696,6 +759,8 @@ export default function ARPage() {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || '';
   const storedAvatarUrl = useSceneStore((s) => s.avatarUrl);
+  const storedNarrativeAudioUrl = useSceneStore((s) => s.narrativeAudioUrl);
+  const storedSpeechText = useSceneStore((s) => s.speechText);
 
   // Resolve effective URL: query param → stored avatar (HTTP only) → default
   const resolveUrl = (param, stored) => {
@@ -711,20 +776,25 @@ export default function ARPage() {
   const [initialScale, setInitialScale] = useState(readSavedScale);
   const [storyId, setStoryId] = useState(searchParams.get('storyId') || '');
   // null = checking, true/false = WebXR immersive-ar support result
-  const [surfaceArSupported, setSurfaceArSupported] = useState(null);
+  // (no navigator.xr at all means AR is definitely unsupported, no need to check)
+  const [surfaceArSupported, setSurfaceArSupported] = useState(() => (navigator?.xr ? null : false));
 
-  // Re-resolve when store rehydrates or params change
-  useEffect(() => {
+  // Re-resolve synchronously when the store rehydrates or params change —
+  // avoids a setState-in-effect cascade for this derived-state sync.
+  const syncKey = `${searchParams.toString()}|${storedAvatarUrl}`;
+  const [prevSyncKey, setPrevSyncKey] = useState(syncKey);
+  if (syncKey !== prevSyncKey) {
+    setPrevSyncKey(syncKey);
     setModelUrl(resolveUrl(searchParams.get('modelUrl'), storedAvatarUrl));
     setMarkerUrl(searchParams.get('markerUrl') || '');
     setStoryId(searchParams.get('storyId') || '');
-  }, [searchParams, storedAvatarUrl]);
+  }
 
   // iOS Safari has no navigator.xr at all — detect this upfront so the
   // "Abrir AR de Superfície" button can be disabled instead of leading
   // to the 3D fallback (which looks like a broken/blocked AR mode).
   useEffect(() => {
-    if (!navigator?.xr) { setSurfaceArSupported(false); return; }
+    if (!navigator?.xr) return;
     let active = true;
     navigator.xr.isSessionSupported('immersive-ar')
       .then((ok) => { if (active) setSurfaceArSupported(ok); })
@@ -758,7 +828,16 @@ export default function ARPage() {
   if (mode === 'surface') {
     const scaleParam = parseFloat(searchParams.get('scale'));
     const startScale = Number.isFinite(scaleParam) && scaleParam > 0 ? scaleParam : readSavedScale();
-    return <SurfaceARScene modelUrl={modelUrl} initialScale={startScale} storyId={searchParams.get('storyId') || ''} onBack={() => window.location.assign('/ar')} />;
+    return (
+      <SurfaceARScene
+        modelUrl={modelUrl}
+        initialScale={startScale}
+        storyId={searchParams.get('storyId') || ''}
+        narrativeAudioUrl={storedNarrativeAudioUrl}
+        narrativeText={storedSpeechText}
+        onBack={() => window.location.assign('/ar')}
+      />
+    );
   }
 
   if (mode === 'marker') {
@@ -1007,7 +1086,7 @@ export default function ARPage() {
   );
 }
 
-function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
+function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeText, onBack }) {
   const { t } = useTranslation();
   const audio = useAudio();
   const [scale, setScale] = useState(1);
@@ -1017,7 +1096,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
   const [storyMeta, setStoryMeta] = useState(null);
   const [hasStarted, setHasStarted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const prevAudioPlaying = useRef(false);
+  const [prevAudioPlaying, setPrevAudioPlaying] = useState(false);
 
   const hiroHref = buildQueryUrl('/ar', { mode: 'marker', modelUrl: modelUrl || '/default_model.glb', useHiro: '1' });
 
@@ -1033,16 +1112,23 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
   }, [storyId]);
 
   // Fetch current scene
+  const sceneId = scenes[index]?.sceneId;
+  const [prevSceneId, setPrevSceneId] = useState(sceneId);
+  if (sceneId !== prevSceneId) {
+    setPrevSceneId(sceneId);
+    if (!sceneId) setCurrentScene(null);
+  }
+
   useEffect(() => {
-    const id = scenes[index]?.sceneId;
-    if (!id) { setCurrentScene(null); return; }
+    if (!sceneId) return;
     let active = true;
-    getScene(id).then((d) => { if (active) setCurrentScene(d); }).catch(() => {});
+    getScene(sceneId).then((d) => { if (active) setCurrentScene(d); }).catch(() => {});
     return () => { active = false; };
-  }, [scenes, index]);
+  }, [sceneId]);
 
   // Load audio + viseme timeline when scene changes
   useEffect(() => {
+    if (!storyId) return;
     const audioUrl = currentScene?.content?.narrative?.audioUrl;
     const text = currentScene?.content?.narrative?.text || '';
     if (audioUrl) {
@@ -1054,6 +1140,14 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
     }
   }, [currentScene]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Load the narration saved in the editor (non-story mode). Playback is
+  // started by the user via the "Tocar fala" button, not automatically.
+  useEffect(() => {
+    if (storyId || !narrativeAudioUrl) return;
+    audio.loadUrl(narrativeAudioUrl);
+    if (narrativeText) audio.generateVisemeTimelineFromText(narrativeText);
+  }, [storyId, narrativeAudioUrl, narrativeText]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync play/pause
   useEffect(() => {
     if (!hasStarted || !audio.audioUrl) return;
@@ -1062,20 +1156,16 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
   }, [hasStarted, isPlaying, audio.audioUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-advance: audio went from playing → stopped at end
-  useEffect(() => {
-    if (!hasStarted) return;
-    const ended = prevAudioPlaying.current && !audio.isPlaying
+  if (audio.isPlaying !== prevAudioPlaying) {
+    const ended = hasStarted && prevAudioPlaying && !audio.isPlaying
       && audio.audioDuration > 0
       && Math.abs(audio.audioCurrentTime - audio.audioDuration) < 0.5;
-    prevAudioPlaying.current = audio.isPlaying;
+    setPrevAudioPlaying(audio.isPlaying);
     if (ended) {
-      setIndex((i) => {
-        if (i < scenes.length - 1) return i + 1;
-        setIsPlaying(false);
-        return i;
-      });
+      if (index < scenes.length - 1) setIndex(index + 1);
+      else setIsPlaying(false);
     }
-  }, [audio.isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const handleStart = () => {
     audio.play().catch(() => {}); // unlock audio in gesture handler
@@ -1085,7 +1175,12 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
 
   const avatarUrl = currentScene?.content?.avatar?.modelUrl || modelUrl;
   const posePreset = currentScene?.content?.avatar?.posePreset || 'idle';
-  const speechText = currentScene?.content?.narrative?.text || '';
+  const speechText = currentScene?.content?.narrative?.text || (!storyId ? narrativeText : '') || '';
+
+  const toggleNarration = () => {
+    if (audio.isPlaying) audio.pause();
+    else audio.play().catch(() => {});
+  };
 
   const transform = useMemo(() => ({ positionX: 0, positionY: 0, positionZ: 0, rotationY: 0, scale }), [scale]);
 
@@ -1157,6 +1252,17 @@ function ThreeJsFallbackScene({ modelUrl, storyId, onBack }) {
             <button onClick={() => setIndex((i) => Math.min(scenes.length - 1, i + 1))} disabled={index >= scenes.length - 1}
               className="flex-1 py-2 rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">▶▶</button>
           </div>
+        </div>
+      )}
+
+      {/* Editor narration playback (non-story mode) */}
+      {!storyId && narrativeAudioUrl && (
+        <div className="shrink-0 border-t border-gray-800 bg-gray-900/95 px-4 py-3">
+          <button
+            onClick={toggleNarration}
+            className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold text-white transition-colors">
+            {audio.isPlaying ? '⏸ Pausar fala' : '▶ Tocar fala'}
+          </button>
         </div>
       )}
 

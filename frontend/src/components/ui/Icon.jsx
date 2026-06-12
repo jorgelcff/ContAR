@@ -134,6 +134,18 @@ const ICONS = {
       <path d="M10 15V9m4 6V9" />
     </>
   ),
+  stop: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <rect x="9" y="9" width="6" height="6" rx="1" />
+    </>
+  ),
+  waveform: (
+    <>
+      <path d="M3 12h2l2-7 3 14 3-10 2 5 2-3h4" />
+    </>
+  ),
+
   volume: (
     <>
       <path d="M11 5 6 9H3v6h3l5 4z" />

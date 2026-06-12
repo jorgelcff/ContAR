@@ -47,6 +47,20 @@ const DEFAULT_LIP_SYNC_CONFIG = {
   showBlendshapeDebug: false,
 };
 
+// Rhubarb mouth shape → viseme morph-group weights. Shared by the
+// analyser-driven and the no-analyser (Web Speech) timeline lip sync paths.
+const VISEME_GROUP_MAP = {
+  A: { aa: 1.0 },
+  B: { mbp: 1.0 },
+  C: { ee: 0.95 },
+  D: { ee: 0.75, aa: 0.35 },
+  E: { aa: 0.9, oh: 0.25 },
+  F: { oh: 1.0 },
+  G: { fv: 1.0, ee: 0.45 },
+  H: { ee: 0.5, aa: 0.45 },
+  X: { mbp: 0.3 },
+};
+
 const MOUTH_OPEN_PATTERNS = [
   /jaw.*open/i,
   /mouth.*open/i,
@@ -544,7 +558,28 @@ export default function SceneCanvas({
             ...NO_RIG_SAFE_PRESET,
           }
         : mergedLipSyncConfig;
-      if (analyser && (hasMorphs || jawBones.length > 0)) {
+      // No analyser (e.g. browser Web Speech, which speaks directly and never
+      // routes through Web Audio): drive the mouth straight from the viseme
+      // timeline so lip sync still plays. audioCurrentTime is advanced by the
+      // Web Speech timer in useAudio.
+      if (!analyser && effectiveConfig.visemeMode === "timeline" && hasMorphs && visemeTimelineRef.current.length) {
+        const timelineBlend = getTimelineBlendState(
+          visemeTimelineRef.current,
+          audioCurrentTimeRef.current,
+          Number(effectiveConfig.timelineCrossfadeSec) || 0.08,
+        );
+        lipSyncController.resetGroups();
+        if (timelineBlend) {
+          timelineBlend.forEach(({ cue, weight }) => {
+            const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
+            if (blend) {
+              Object.entries(blend).forEach(([grp, w]) => {
+                lipSyncController.setGroupValue(grp, THREE.MathUtils.clamp(0.85 * weight * w, 0, 1));
+              });
+            }
+          });
+        }
+      } else if (analyser && (hasMorphs || jawBones.length > 0)) {
         const binCount = analyser.frequencyBinCount;
         if (
           !lipSyncDataRef.current ||
@@ -672,25 +707,13 @@ export default function SceneCanvas({
             // When audio is playing, guarantee at least 40% of the viseme shows.
             const ttsFloor = isAudioActive ? 0.4 : 0;
 
-            const VISEME_MAP = {
-              A: { aa: 1.0 },
-              B: { mbp: 1.0 },
-              C: { ee: 0.95 },
-              D: { ee: 0.75, aa: 0.35 },
-              E: { aa: 0.9, oh: 0.25 },
-              F: { oh: 1.0 },
-              G: { fv: 1.0, ee: 0.45 },
-              H: { ee: 0.5, aa: 0.45 },
-              X: { mbp: 0.3 },
-            };
-
             timelineBlend.forEach(({ cue, weight }) => {
               const cueIntensity = THREE.MathUtils.clamp(
                 (ttsFloor + audioPresence * 0.6) * weight,
                 0,
                 1,
               );
-              const blend = VISEME_MAP[String(cue?.value || "").toUpperCase()];
+              const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
               if (blend) {
                 Object.entries(blend).forEach(([grp, w]) => {
                   lipSyncController.setGroupValue(grp, cueIntensity * w);

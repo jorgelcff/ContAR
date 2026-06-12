@@ -192,6 +192,14 @@ const ICONS = {
       <path d="M12 8v4m0 4h.01" />
     </>
   ),
+  qrcode: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3m4 0v4m-7 0h3m4 0h.01M17 21h.01" />
+    </>
+  ),
   copy: (
     <>
       <rect x="9" y="9" width="13" height="13" rx="2" />

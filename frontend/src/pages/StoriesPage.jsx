@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
+import StoryQrModal from '../components/ui/StoryQrModal';
 import { listStories, saveStory, deleteStory } from '../api/sceneApi';
 import { useTranslation } from 'react-i18next';
 
@@ -42,6 +43,7 @@ function SkeletonCard() {
 function StoryCard({ story, onDelete, deleting }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const shareUrl = `${window.location.origin}/story/${encodeURIComponent(story.storyId)}`;
 
   const handleCopy = async () => {
@@ -82,6 +84,13 @@ function StoryCard({ story, onDelete, deleting }) {
       <div className="flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-900/60 px-3 py-2">
         <span className="text-[10px] text-gray-500 truncate flex-1 font-mono">{shareUrl}</span>
         <button
+          onClick={() => setShowQr(true)}
+          title={t('qrButton')}
+          className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors flex items-center gap-1"
+        >
+          <Icon name="qrcode" className="w-3.5 h-3.5" /> {t('qrButton')}
+        </button>
+        <button
           onClick={handleCopy}
           className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
             copied
@@ -92,6 +101,14 @@ function StoryCard({ story, onDelete, deleting }) {
           {copied ? t('storiesCardCopied') : t('storiesCardCopy')}
         </button>
       </div>
+
+      {showQr && (
+        <StoryQrModal
+          url={shareUrl}
+          title={story.metadata?.title}
+          onClose={() => setShowQr(false)}
+        />
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-2">

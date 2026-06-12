@@ -8,6 +8,7 @@ import TransformControls from './TransformControls';
 import AudioPanel from './AudioPanel';
 import SceneProgressBar from './SceneProgressBar';
 import Icon from './Icon';
+import StoryQrModal from './StoryQrModal';
 import { TooltipIcon } from './Tooltip';
 import { useSceneStore } from '../../store/useSceneStore';
 import { listAvaturnAvatars, uploadModel } from '../../api/sceneApi';
@@ -122,6 +123,7 @@ export default function LeftPanel({
   // História tab state
   const [manualSceneId, setManualSceneId] = useState('');
   const [copiedStory, setCopiedStory] = useState(false);
+  const [showStoryQr, setShowStoryQr] = useState(false);
 
   useEffect(() => { setUrlInput(avatarUrl || ''); }, [avatarUrl]);
 
@@ -755,14 +757,28 @@ export default function LeftPanel({
             {storyShareUrl && (
               <>
                 <div className="rounded-xl bg-gray-900 px-3 py-2 text-xs text-blue-300 break-all">{storyShareUrl}</div>
-                <button onClick={copyStoryLink}
-                  className="w-full py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors flex items-center justify-center gap-1.5">
-                  {copiedStory
-                    ? <><Icon name="check" className="w-4 h-4 text-emerald-400" /> Copiado!</>
-                    : <><Icon name="link" className="w-4 h-4" /> Copiar link</>
-                  }
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={copyStoryLink}
+                    className="py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors flex items-center justify-center gap-1.5">
+                    {copiedStory
+                      ? <><Icon name="check" className="w-4 h-4 text-emerald-400" /> Copiado!</>
+                      : <><Icon name="link" className="w-4 h-4" /> Copiar link</>
+                    }
+                  </button>
+                  <button onClick={() => setShowStoryQr(true)}
+                    className="py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors flex items-center justify-center gap-1.5">
+                    <Icon name="qrcode" className="w-4 h-4" /> {t('qrButton')}
+                  </button>
+                </div>
               </>
+            )}
+
+            {showStoryQr && storyShareUrl && (
+              <StoryQrModal
+                url={storyShareUrl}
+                title={storyTitle}
+                onClose={() => setShowStoryQr(false)}
+              />
             )}
           </div>
         )}

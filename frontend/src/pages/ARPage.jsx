@@ -400,6 +400,11 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(container.clientWidth, container.clientHeight);
+    // Default clear alpha is 1 (opaque) even with alpha:true — without this,
+    // every frame paints an opaque black background that hides the AR camera
+    // passthrough behind it, leaving only WebGL-rendered objects (e.g. the
+    // reticle) visible against black.
+    renderer.setClearColor(0x000000, 0);
     renderer.xr.enabled = true;
     rendererRef.current = renderer;
     container.appendChild(renderer.domElement);
@@ -643,12 +648,18 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         story={story}
         storyId={storyId}
         compact
-        onStart={() => story.start(initWebAudio)}
+        onStart={() => {
+          // Single tap: unlock narration audio AND start the WebXR session.
+          // Both must happen synchronously in this click handler — AR session
+          // start requires transient user activation.
+          story.start(initWebAudio);
+          startArSession();
+        }}
       />
 
       {/* Status panel (only shown when no story or story not started) */}
       {(!storyId || !story.hasStarted) && (
-        <div className="absolute left-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
+        <div className="absolute left-4 right-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
           <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{t('arTitle')}</p>
           <p className="mt-2 text-sm text-gray-200">{status || t('tapToPlace')}</p>
           {loadingModel && (

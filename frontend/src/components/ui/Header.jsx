@@ -6,39 +6,10 @@ import useTheme from '../../context/useTheme';
 import HelpModal from './HelpModal';
 import Icon from './Icon';
 
-function EmailVerificationBanner({ onResend }) {
-  const { t } = useTranslation();
-  const [sent, setSent]     = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleResend = async () => {
-    setLoading(true);
-    try { await onResend(); setSent(true); } catch { setSent(true); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <div className="shrink-0 bg-amber-900/80 border-b border-amber-700/60 px-4 py-2 flex items-center justify-between gap-3 text-xs text-amber-200">
-      <span>{t('headerVerifyBanner')}</span>
-      {sent ? (
-        <span className="text-amber-300 font-medium">{t('headerVerifyResent')}</span>
-      ) : (
-        <button
-          onClick={handleResend}
-          disabled={loading}
-          className="shrink-0 px-3 py-1 rounded-lg bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white font-medium transition-colors"
-        >
-          {loading ? '...' : t('headerVerifyResend')}
-        </button>
-      )}
-    </div>
-  );
-}
-
 /** Top navigation bar with title, language toggle and autosave indicator. */
 export default function Header({ autosaveStatus }) {
   const { t, i18n } = useTranslation();
-  const { isAuthenticated, emailVerified, logout, resendVerificationEmail } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
 
@@ -51,9 +22,6 @@ export default function Header({ autosaveStatus }) {
   return (
     <>
     {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
-    {isAuthenticated && !emailVerified && (
-      <EmailVerificationBanner onResend={resendVerificationEmail} />
-    )}
     <header className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-700 shrink-0">
       <Link to={isAuthenticated ? '/stories' : '/login'} className="text-white font-bold text-lg tracking-tight">
         {t('appTitle')}

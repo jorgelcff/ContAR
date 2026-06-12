@@ -369,13 +369,16 @@ padrões de rig suportados.
 \subsubsection{LipSyncController --- Sincronização Labial Multi-modo}
 
 O LipSyncController opera em dois modos: (1)~\textbf{modo timeline}, que consome
-uma sequência de visemas Azure (IDs~0--21 mapeados para códigos Rhubarb~A--X)
-com timestamps de precisão de 100\,ns, aplicados com crossfade configurável; e
-(2)~\textbf{modo heurístico}, que estima o movimento labial em tempo real a partir
-da análise de amplitude e frequência do sinal de áudio via Web Audio API ---
-utilizado quando não há timeline de visemas disponível (arquivos importados, Web
-Speech API). O controlador descobre automaticamente os blend shapes de fala do
-avatar por padrões de expressão regular sobre os nomes dos morph targets.
+uma sequência de cues de visema com marcação temporal, aplicados com crossfade
+configurável --- obtida diretamente do Azure Neural TTS (IDs~0--21 mapeados para
+códigos Rhubarb~A--X\,ns) ou estimada localmente a partir do
+texto da fala, quando o áudio é gerado pela Web Speech API ou fornecido pelo
+próprio usuário (gravação ou upload); e (2)~\textbf{modo heurístico}, que estima o
+movimento labial em tempo real a partir da análise de amplitude e frequência do
+sinal de áudio via Web Audio API, empregado como alternativa para áudio importado
+sem texto correspondente. O controlador descobre automaticamente os blend shapes
+de fala do avatar por padrões de expressão regular sobre os nomes dos morph
+targets.
 
 \subsubsection{AnimationController --- Poses e Animações Procedurais}
 

@@ -308,14 +308,14 @@ export default function LeftPanel({
               <button
                 onClick={() => { closeAllAvatarPanels(); setModalCreator('characterstudio'); }}
                 className="py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
-                title="CharacterStudio — editor VRM open-source"
+                title={t('lpCharacterStudioTitle')}
               >
                 <Icon name="palette" className="w-3.5 h-3.5" /> Studio
               </button>
               <button
                 onClick={() => { closeAllAvatarPanels(); setModalCreator('gallery'); }}
                 className="py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
-                title="Galeria de avatares gratuitos (CC0)"
+                title={t('lpAvatarGalleryTitle')}
               >
                 <Icon name="folder" className="w-3.5 h-3.5" /> Galeria
               </button>
@@ -323,7 +323,7 @@ export default function LeftPanel({
                 href="https://hub.vroid.com/en/models"
                 target="_blank"
                 rel="noreferrer"
-                title="VRoid Hub — avatares anime VRM gratuitos"
+                title={t('lpVroidHubTitle')}
                 className="py-2 rounded-xl bg-pink-700 hover:bg-pink-600 text-white text-xs font-medium transition-colors flex items-center justify-center"
               >
                 VRoid
@@ -397,7 +397,7 @@ export default function LeftPanel({
             {onLoadVrma && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-1">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Animação VRM</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('lpVrmAnimation')}</p>
                   <TooltipIcon text="Carregue um arquivo .vrma do VRoid Hub para animar avatares VRM (VRoid, CharacterStudio). Não compatível com avatares Avaturn." />
                 </div>
                 <div className="flex gap-2">
@@ -411,7 +411,7 @@ export default function LeftPanel({
                     <button
                       onClick={handleClearVrma}
                       className="px-3 py-2 rounded-xl bg-gray-600 hover:bg-gray-500 text-white text-xs transition-colors"
-                      title="Remover animação VRM"
+                      title={t('lpRemoveVrmAnim')}
                     >
                       <Icon name="close" className="w-3.5 h-3.5" />
                     </button>
@@ -474,9 +474,9 @@ export default function LeftPanel({
             {/* Animation speed + loop */}
             {['idle','walk','walk_circle','slow_run','run','dance','speaker'].includes(posePreset) && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Animação</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('lpAnimation')}</p>
                 <div className="flex items-center gap-3">
-                  <label className="text-xs text-gray-400 w-16 shrink-0">Velocidade</label>
+                  <label className="text-xs text-gray-400 w-16 shrink-0">{t('lpSpeed')}</label>
                   <input
                     type="range"
                     min="0.1" max="3" step="0.05"
@@ -493,14 +493,14 @@ export default function LeftPanel({
                     onChange={(e) => setAnimLoopOnce(e.target.checked)}
                     className="accent-cyan-400"
                   />
-                  <span className="text-xs text-gray-300">Tocar uma vez (sem loop)</span>
+                  <span className="text-xs text-gray-300">{t('lpPlayOnce')}</span>
                 </label>
               </div>
             )}
 
             {/* VRM Expressions */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Expressão (VRM)</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('lpExpressionVrm')}</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { value: '',          label: 'Neutro' },
@@ -523,7 +523,7 @@ export default function LeftPanel({
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-500">Só funciona com modelos VRM (VRoid, CharacterStudio).</p>
+              <p className="text-[10px] text-gray-500">{t('lpVrmOnly')}</p>
             </div>
 
             {/* Advanced controls toggle */}
@@ -571,12 +571,12 @@ export default function LeftPanel({
 
               {/* Text display mode toggle */}
               <div className="flex flex-col gap-1.5">
-                <p className="text-xs font-medium text-gray-400">Exibir texto como</p>
+                <p className="text-xs font-medium text-gray-400">{t('lpShowTextAs')}</p>
                 <div className="grid grid-cols-3 gap-1">
                   {[
-                    { value: 'bubble',   label: 'Balão' },
-                    { value: 'subtitle', label: 'Legenda' },
-                    { value: 'none',     label: 'Nenhum' },
+                    { value: 'bubble',   label: t('displayBubble') },
+                    { value: 'subtitle', label: t('displaySubtitle') },
+                    { value: 'none',     label: t('displayNone') },
                   ].map(({ value, label }) => (
                     <button
                       key={value}
@@ -603,7 +603,7 @@ export default function LeftPanel({
                     >
                       {tts.isGenerating
                         ? 'Gerando voz...'
-                        : <span className="flex items-center justify-center gap-1.5"><Icon name="microphone" className="w-4 h-4" /> Gerar Voz (TTS)</span>
+                        : <span className="flex items-center justify-center gap-1.5"><Icon name="microphone" className="w-4 h-4" /> {t('lpGenerateVoice')}</span>
                       }
                     </button>
                     <TooltipIcon text="Converte o texto acima em áudio com voz sintética e sincroniza os lábios do avatar automaticamente." />
@@ -617,13 +617,13 @@ export default function LeftPanel({
                 const amp = audio.lipSyncConfig?.amplitudeMultiplier ?? 18;
                 // Map amplitudeMultiplier [6..33] → slider [1..10]
                 const sliderVal = Math.min(10, Math.max(1, Math.round((amp - 6) / 3) + 1));
-                const label = sliderVal <= 3 ? 'Suave' : sliderVal <= 7 ? 'Normal' : 'Intensa';
+                const label = sliderVal <= 3 ? t('lpIntensitySoft') : sliderVal <= 7 ? t('lpIntensityNormal') : t('lpIntensityIntense');
                 const labelColor = sliderVal <= 3 ? 'text-blue-400' : sliderVal <= 7 ? 'text-cyan-400' : 'text-orange-400';
                 return (
                   <div className="flex flex-col gap-1.5 pt-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
-                        <span className="text-xs font-medium text-gray-400 flex items-center gap-1"><Icon name="volume" className="w-3.5 h-3.5" /> Intensidade da fala</span>
+                        <span className="text-xs font-medium text-gray-400 flex items-center gap-1"><Icon name="volume" className="w-3.5 h-3.5" /> {t('lpSpeechIntensity')}</span>
                         <TooltipIcon text="Controla o quanto a boca do avatar se move. Aumente se os lábios parecerem parados." />
                       </div>
                       <span className={`text-xs font-semibold ${labelColor}`}>{label}</span>
@@ -638,7 +638,7 @@ export default function LeftPanel({
                       className="w-full accent-cyan-400 cursor-pointer"
                     />
                     <div className="flex justify-between text-[10px] text-gray-600 select-none">
-                      <span>Suave</span><span>Normal</span><span>Intensa</span>
+                      <span>{t('lpIntensitySoft')}</span><span>{t('lpIntensityNormal')}</span><span>{t('lpIntensityIntense')}</span>
                     </div>
                   </div>
                 );
@@ -705,7 +705,7 @@ export default function LeftPanel({
 
             {currentSceneId && (
               <div className="rounded-xl bg-gray-700/50 border border-gray-600 px-3 py-2">
-                <p className="text-[10px] text-gray-400 mb-0.5">ID da cena</p>
+                <p className="text-[10px] text-gray-400 mb-0.5">{t('lpSceneIdLabel')}</p>
                 <p className="text-xs text-cyan-300 font-mono break-all">{currentSceneId}</p>
               </div>
             )}
@@ -761,8 +761,8 @@ export default function LeftPanel({
                   <button onClick={copyStoryLink}
                     className="py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors flex items-center justify-center gap-1.5">
                     {copiedStory
-                      ? <><Icon name="check" className="w-4 h-4 text-emerald-400" /> Copiado!</>
-                      : <><Icon name="link" className="w-4 h-4" /> Copiar link</>
+                      ? <><Icon name="check" className="w-4 h-4 text-emerald-400" /> {t('lpCopied')}</>
+                      : <><Icon name="link" className="w-4 h-4" /> {t('lpCopyLink')}</>
                     }
                   </button>
                   <button onClick={() => setShowStoryQr(true)}

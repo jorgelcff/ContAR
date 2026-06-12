@@ -136,7 +136,7 @@ export default function AudioPanel({
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Gerando…
               </>
-            ) : <span className="flex items-center gap-1.5"><Icon name="sparkles" className="w-4 h-4" /> Gerar fala</span>}
+            ) : <span className="flex items-center gap-1.5"><Icon name="sparkles" className="w-4 h-4" /> {t('apGenerateSpeech')}</span>}
           </button>
         )}
 
@@ -154,7 +154,7 @@ export default function AudioPanel({
               disabled={!hasSpeechText}
               className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
             >
-              <span className="flex items-center justify-center gap-1.5"><Icon name="volume" className="w-4 h-4" /> Falar agora</span>
+              <span className="flex items-center justify-center gap-1.5"><Icon name="volume" className="w-4 h-4" /> {t('apSpeakNow')}</span>
             </button>
           )
         )}
@@ -166,7 +166,7 @@ export default function AudioPanel({
           </p>
         )}
         {provider === 'webspeech' && !isSpeaking && (
-          <p className="text-xs text-gray-500">Lip sync aproximado pelo texto — sem salvar áudio</p>
+          <p className="text-xs text-gray-500">{t('apLipsyncApprox')}</p>
         )}
       </div>
 
@@ -197,7 +197,7 @@ export default function AudioPanel({
       )}
 
       {/* ── Upload / Record ───────────────────────────────────── */}
-      <p className="text-xs text-gray-500 -mb-1">Ou use áudio próprio:</p>
+      <p className="text-xs text-gray-500 -mb-1">{t('apUseOwnAudio')}</p>
       <div className="flex gap-2">
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -222,14 +222,14 @@ export default function AudioPanel({
         className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors py-1"
       >
         <span className={`transition-transform text-[10px] ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
-        Configurações avançadas
+        {t('arAdvancedSettings')}
       </button>
 
       {showAdvanced && (
         <div className="flex flex-col gap-3">
           {/* Audio monitor */}
           <div className="rounded-md border border-cyan-700/50 bg-cyan-950/30 p-2 text-xs text-cyan-100">
-            <p className="mb-1 font-semibold uppercase tracking-wide">Monitor</p>
+            <p className="mb-1 font-semibold uppercase tracking-wide">{t('apMonitor')}</p>
             <div className="h-2 rounded bg-cyan-950/80 overflow-hidden">
               <div className="h-full bg-cyan-400 transition-all" style={{ width: `${Math.min(100, Math.round((audioMetrics?.level || 0) * 100))}%` }} />
             </div>
@@ -245,16 +245,16 @@ export default function AudioPanel({
               Importar Viseme JSON
             </button>
             {!!visemeTimeline?.length && (
-              <button onClick={onClearVisemeTimeline} className="px-2.5 py-1.5 rounded-lg bg-gray-600 hover:bg-gray-500 text-white text-xs transition-colors">Limpar</button>
+              <button onClick={onClearVisemeTimeline} className="px-2.5 py-1.5 rounded-lg bg-gray-600 hover:bg-gray-500 text-white text-xs transition-colors">{t('apClear')}</button>
             )}
           </div>
           <input ref={visemeInputRef} type="file" accept=".json" onChange={(e) => { const f = e.target.files?.[0]; if (f) onLoadVisemeFile(f); e.target.value = ''; }} className="hidden" />
 
           {/* Manual text→viseme */}
           <div className="rounded-md border border-indigo-700/40 bg-indigo-950/20 p-2 text-xs">
-            <p className="mb-1 font-semibold text-indigo-200 uppercase tracking-wide">Viseme por texto (fallback)</p>
+            <p className="mb-1 font-semibold text-indigo-200 uppercase tracking-wide">{t('apVisemeByText')}</p>
             <textarea rows={2} value={visemeTextInput} onChange={(e) => setVisemeTextInput(e.target.value)}
-              placeholder="Timing estimado, sem API" className="mb-1.5 w-full rounded border border-indigo-700 bg-indigo-950/60 px-2 py-1 text-xs text-indigo-100 placeholder-indigo-400/60" />
+              placeholder={t('apEstimatedTiming')} className="mb-1.5 w-full rounded border border-indigo-700 bg-indigo-950/60 px-2 py-1 text-xs text-indigo-100 placeholder-indigo-400/60" />
             <button onClick={() => onGenerateVisemeFromText(visemeTextInput)} className="w-full rounded bg-indigo-700 px-2 py-1.5 text-xs font-medium text-white hover:bg-indigo-600">
               Gerar timeline local
             </button>
@@ -265,11 +265,11 @@ export default function AudioPanel({
             <p className="mb-2 font-semibold uppercase tracking-wide text-gray-300">Lip Sync</p>
             <label className="block mb-1">Crossfade: {Math.round(Number(lipSyncConfig?.timelineCrossfadeSec || 0.08) * 1000)} ms</label>
             <input type="range" min="0.02" max="0.18" step="0.005" value={lipSyncConfig?.timelineCrossfadeSec || 0.08} onChange={(e) => onLipSyncConfigChange({ timelineCrossfadeSec: Number(e.target.value) })} className="w-full mb-2" />
-            <label className="block mb-1">Viseme mode</label>
+            <label className="block mb-1">{t('apVisemeMode')}</label>
             <select value={lipSyncConfig?.visemeMode || 'heuristic'} onChange={(e) => onLipSyncConfigChange({ visemeMode: e.target.value })} className="w-full rounded bg-gray-800 border border-gray-700 px-2 py-1 text-xs">
-              <option value="timeline">Timeline (sincronizado)</option>
-              <option value="heuristic">Heurístico (amplitude)</option>
-              <option value="amplitude">Só amplitude</option>
+              <option value="timeline">{t('apTimelineSync')}</option>
+              <option value="heuristic">{t('apHeuristic')}</option>
+              <option value="amplitude">{t('apAmplitudeOnly')}</option>
             </select>
           </div>
         </div>

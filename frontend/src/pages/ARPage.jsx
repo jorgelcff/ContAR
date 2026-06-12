@@ -65,6 +65,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [hitTestUnsupported, setHitTestUnsupported] = useState(false);
+  const [controlsMin, setControlsMin] = useState(false);
   const scaleLabel = `${Math.round(scale * 100)}%`;
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const story = useARStory(storyId);
@@ -566,48 +567,63 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         </div>
       )}
 
-      <div className="absolute bottom-4 left-4 right-4 z-20 rounded-2xl border border-white/10 bg-black/80 p-4 backdrop-blur-sm md:left-1/2 md:right-auto md:w-130 md:-translate-x-1/2">
-        <div className="grid grid-cols-2 gap-2 md:flex md:flex-row md:items-center">
-          <button onClick={onBack}
-            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
-            ← {t('back')}
-          </button>
+      <div className="absolute bottom-4 left-4 right-4 z-30 rounded-2xl border border-white/10 bg-black/80 p-3 backdrop-blur-sm md:left-1/2 md:right-auto md:w-130 md:-translate-x-1/2">
+        {/* Header: minimize toggle so the panel doesn't cover the narration */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-cyan-300">{t('arControls')}</span>
           <button
-            onClick={() => {
-              placedRef.current = false;
-              setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
-              if (modelRootRef.current) modelRootRef.current.visible = false;
-            }}
-            className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
-            {t('reset')}
+            onClick={() => setControlsMin((m) => !m)}
+            title={controlsMin ? t('arExpand') : t('arMinimize')}
+            className="rounded-lg border border-white/10 bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700">
+            {controlsMin ? '▴' : '▾'}
           </button>
-          <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
-            <input type="checkbox" checked={lockPlacement} onChange={(e) => setLockPlacement(e.target.checked)} className="w-5 h-5 accent-cyan-400 cursor-pointer" />
-            <span>{lockPlacement ? 'Posição fixada' : 'Mover avatar'}</span>
-          </label>
-          {!storyId && narrativeAudioUrl && (
-            <button
-              onClick={toggleSpeech}
-              className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
-              {speechPlaying ? '⏸ Pausar fala' : '▶ Tocar fala'}
-            </button>
-          )}
         </div>
 
-        <label className="mt-3 flex items-center gap-3 text-sm text-gray-200">
-          <span className="shrink-0 w-14 text-right text-xs text-gray-400">{scaleLabel}</span>
-          <input type="range" min="0.2" max="2.0" step="0.01" value={scale}
-            onChange={(e) => setScale(Number(e.target.value))}
-            className="flex-1 accent-cyan-400 cursor-pointer" />
-          <span className="shrink-0 text-xs text-gray-400">{t('scale')}</span>
-        </label>
+        {!controlsMin && (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-2 md:flex md:flex-row md:items-center">
+              <button onClick={onBack}
+                className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
+                ← {t('back')}
+              </button>
+              <button
+                onClick={() => {
+                  placedRef.current = false;
+                  setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
+                  if (modelRootRef.current) modelRootRef.current.visible = false;
+                }}
+                className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
+                {t('reset')}
+              </button>
+              <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
+                <input type="checkbox" checked={lockPlacement} onChange={(e) => setLockPlacement(e.target.checked)} className="w-5 h-5 accent-cyan-400 cursor-pointer" />
+                <span>{lockPlacement ? 'Posição fixada' : 'Mover avatar'}</span>
+              </label>
+              {!storyId && narrativeAudioUrl && (
+                <button
+                  onClick={toggleSpeech}
+                  className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                  {speechPlaying ? '⏸ Pausar fala' : '▶ Tocar fala'}
+                </button>
+              )}
+            </div>
 
-        {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
-        {hitTestUnsupported && (
-          <Link to={pseudoHref}
-            className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
-            {t('openPseudoAr')} →
-          </Link>
+            <label className="mt-3 flex items-center gap-3 text-sm text-gray-200">
+              <span className="shrink-0 w-14 text-right text-xs text-gray-400">{scaleLabel}</span>
+              <input type="range" min="0.2" max="2.0" step="0.01" value={scale}
+                onChange={(e) => setScale(Number(e.target.value))}
+                className="flex-1 accent-cyan-400 cursor-pointer" />
+              <span className="shrink-0 text-xs text-gray-400">{t('scale')}</span>
+            </label>
+
+            {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+            {hitTestUnsupported && (
+              <Link to={pseudoHref}
+                className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                {t('openPseudoAr')} →
+              </Link>
+            )}
+          </>
         )}
 
         <button

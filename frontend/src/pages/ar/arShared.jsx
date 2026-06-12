@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -347,20 +348,21 @@ export function useARStory(storyId) {
 
 // ── Story player overlay (shared UI across modes) ─────────────────────────────
 export function StoryOverlay({ story, storyId, compact = false, onStart }) {
+  const { t } = useTranslation();
   if (!storyId || !story.story) return null;
 
   if (!story.hasStarted) {
     return (
       <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/65 backdrop-blur-sm">
         <div className="mx-6 w-full max-w-sm rounded-2xl border border-white/10 bg-black/90 p-6 text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300 mb-2">História em AR</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300 mb-2">{t('arStoryInAr')}</p>
           <h2 className="text-xl font-bold text-white mb-1">{story.story?.metadata?.title}</h2>
-          <p className="text-sm text-gray-400 mb-5">{story.scenes.length} cenas</p>
+          <p className="text-sm text-gray-400 mb-5">{t('arScenesCount', { count: story.scenes.length })}</p>
           <button
             onClick={onStart}
             className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-[0.98] text-white font-semibold transition-all"
           >
-            ▶ Iniciar história
+            ▶ {t('arStartStory')}
           </button>
         </div>
       </div>

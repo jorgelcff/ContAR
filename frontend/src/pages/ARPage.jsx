@@ -172,12 +172,12 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
     } catch (err) {
       console.error('Failed to start AR session', err);
       if (err?.name === 'NotAllowedError') {
-        setError('Permissão de câmera negada. Toque no ícone de cadeado/informações na barra de endereço, ative "Câmera" para este site e tente novamente.');
+        setError(t('arCameraDenied'));
       } else if (err?.name === 'NotSupportedError') {
         setHitTestUnsupported(true);
         setError('Este dispositivo não suporta sessões de Realidade Aumentada (WebXR). Use a AR Imersiva, que funciona neste aparelho.');
       } else {
-        setError(`Não foi possível iniciar a sessão AR: ${err?.message || err?.name || 'erro desconhecido'}`);
+        setError(t('arSessionFailed', { error: err?.message || err?.name || '—' }));
       }
     } finally {
       setStarting(false);
@@ -296,7 +296,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       if (noHitTestRef.current) {
         placeInFrontOfCamera();
         placedRef.current = true;
-        setStatus('Avatar posicionado à sua frente. Toque para reposicionar.');
+        setStatus(t('arPlacedInFront'));
         return;
       }
 
@@ -309,7 +309,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       target.quaternion.setFromRotationMatrix(reticleMesh.matrix);
       target.scale.setScalar(scaleRef.current);
       placedRef.current = true;
-      setStatus('Modelo fixado na superfície.');
+      setStatus(t('arPlacedSurface'));
     });
     scene.add(controller);
     controllerRef.current = controller;
@@ -323,9 +323,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       xrSessionRef.current = session;
       placedRef.current = false;
       setArActive(true);
-      setStatus(noHitTestRef.current
-        ? 'Toque na tela para posicionar o avatar à sua frente.'
-        : 'Mova o celular para detectar superfície, depois toque para posicionar.');
+      setStatus(noHitTestRef.current ? t('arTapToPlaceFront') : t('arMoveToDetect'));
 
       session.addEventListener('end', () => {
         hitTestSourceRequested = false;
@@ -344,7 +342,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
           });
         }).catch((err) => {
           console.error('AR hit-test source request failed', err);
-          setError('Não foi possível ativar a detecção de superfície (hit-test).');
+          setError(t('arHitTestFailed'));
         });
       }
 
@@ -487,7 +485,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
           .catch(() => {});
 
         setLoadingModel(false);
-        setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
+        setStatus(t('arMoveToDetect'));
       },
       undefined,
       (err) => {
@@ -560,7 +558,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
           {loadingModel && (
             <div className="mt-2 flex items-center gap-2">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent shrink-0" />
-              <p className="text-xs text-cyan-300">Carregando personagem...</p>
+              <p className="text-xs text-cyan-300">{t('arLoadingChar')}</p>
             </div>
           )}
           {!loadingModel && error && <p className="mt-1 text-xs text-red-400">{error}</p>}
@@ -589,7 +587,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
               <button
                 onClick={() => {
                   placedRef.current = false;
-                  setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
+                  setStatus(t('arMoveToDetect'));
                   if (modelRootRef.current) modelRootRef.current.visible = false;
                 }}
                 className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
@@ -597,13 +595,13 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
               </button>
               <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
                 <input type="checkbox" checked={lockPlacement} onChange={(e) => setLockPlacement(e.target.checked)} className="w-5 h-5 accent-cyan-400 cursor-pointer" />
-                <span>{lockPlacement ? 'Posição fixada' : 'Mover avatar'}</span>
+                <span>{lockPlacement ? t('arPositionLocked') : t('arMoveAvatar')}</span>
               </label>
               {!storyId && narrativeAudioUrl && (
                 <button
                   onClick={toggleSpeech}
                   className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                  {speechPlaying ? '⏸ Pausar fala' : '▶ Tocar fala'}
+                  {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
                 </button>
               )}
             </div>
@@ -630,7 +628,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
           onClick={arActive ? stopArSession : startArSession}
           disabled={starting}
           className="mt-3 w-full min-h-12 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 px-4 py-3 text-sm font-semibold text-white transition-colors disabled:opacity-60">
-          {starting ? 'Iniciando AR…' : arActive ? 'Encerrar AR' : 'Iniciar AR'}
+          {starting ? t('arStarting') : arActive ? t('arEndSession') : t('arStartSession')}
         </button>
       </div>
     </div>
@@ -654,9 +652,9 @@ function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId }
       <Header />
       <div className="border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold">{storyId ? story.story?.metadata?.title || 'Carregando…' : t('markerUrl')}</h2>
+          <h2 className="font-semibold">{storyId ? story.story?.metadata?.title || t('arLoadingShort') : t('markerUrl')}</h2>
           <p className="text-xs text-gray-400">
-            {storyId ? `${story.scenes.length} cenas` : 'Use um arquivo de padrão personalizado e um modelo .glb.'}
+            {storyId ? t('arScenesCount', { count: story.scenes.length }) : t('arMarkerCustomHint')}
           </p>
         </div>
         <Link to="/ar" className="rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600">
@@ -830,9 +828,9 @@ export default function ARPage() {
             <div className="rounded-2xl border border-amber-600/50 bg-amber-950/40 px-4 py-3 flex gap-3 items-start">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-amber-400 mt-0.5"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
               <div>
-                <p className="text-sm font-semibold text-amber-300">HTTPS necessário para AR</p>
+                <p className="text-sm font-semibold text-amber-300">{t('arHttpsTitle')}</p>
                 <p className="text-xs text-amber-200/70 mt-0.5">
-                  O WebXR e o acesso à câmera exigem HTTPS em produção. Acesse via <strong>https://</strong> ou teste localmente em <strong>localhost</strong>.
+                  {t('arHttpsDesc')}
                 </p>
               </div>
             </div>
@@ -840,7 +838,7 @@ export default function ARPage() {
 
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">{t('arTitle')}</p>
-            <h1 className="mt-2 text-2xl font-bold md:text-3xl">Experimente o avatar em Realidade Aumentada</h1>
+            <h1 className="mt-2 text-2xl font-bold md:text-3xl">{t('arMenuHeading')}</h1>
           </div>
 
           {/* Avatar source banner */}
@@ -848,37 +846,37 @@ export default function ARPage() {
             <div className="rounded-2xl border border-emerald-600/30 bg-emerald-950/30 px-4 py-3 flex items-center gap-3">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-emerald-400"><path d="M20 6 9 17l-5-5"/></svg>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-emerald-300">Usando seu avatar salvo</p>
+                <p className="text-sm font-semibold text-emerald-300">{t('arUsingSavedAvatar')}</p>
                 <p className="text-xs text-emerald-200/60 mt-0.5 truncate">{storedAvatarUrl}</p>
               </div>
               <Link to="/editor" className="shrink-0 text-xs text-emerald-400 hover:text-emerald-300 underline">
-                Trocar
+                {t('arChangeAvatar')}
               </Link>
             </div>
           ) : isBlobOnly ? (
             <div className="rounded-2xl border border-amber-600/40 bg-amber-950/30 px-4 py-3 flex items-center gap-3">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-amber-400"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-300">Avatar local detectado</p>
+                <p className="text-sm font-semibold text-amber-300">{t('arLocalAvatarTitle')}</p>
                 <p className="text-xs text-amber-200/60 mt-0.5">
-                  Seu avatar foi carregado localmente e não pode ser usado no AR. Salve a cena no editor para gerar uma URL permanente.
+                  {t('arLocalAvatarDesc')}
                 </p>
               </div>
               <Link to="/editor" className="shrink-0 text-xs text-amber-400 hover:text-amber-300 underline">
-                Editor
+                {t('arOpenEditor')}
               </Link>
             </div>
           ) : (
             <div className="rounded-2xl border border-white/8 bg-white/3 px-4 py-3 flex items-center gap-3">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-blue-400"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
               <div className="flex-1">
-                <p className="text-sm text-gray-300">Usando avatar padrão de demonstração</p>
+                <p className="text-sm text-gray-300">{t('arDefaultAvatarTitle')}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Configure um avatar no editor e salve a cena para usá-lo aqui automaticamente.
+                  {t('arDefaultAvatarDesc')}
                 </p>
               </div>
               <Link to="/editor" className="shrink-0 text-xs text-cyan-400 hover:text-cyan-300 underline">
-                Abrir editor
+                {t('arOpenEditor')}
               </Link>
             </div>
           )}
@@ -889,16 +887,16 @@ export default function ARPage() {
             {/* Surface AR */}
             <div className="rounded-2xl border border-cyan-500/20 bg-cyan-950/20 p-5 flex flex-col gap-4">
               <div>
-                <h2 className="text-lg font-bold text-cyan-200">AR de Superfície</h2>
+                <h2 className="text-lg font-bold text-cyan-200">{t('arSurfaceTitle')}</h2>
                 <p className="mt-1 text-sm text-gray-300">
-                  Ancora o avatar em uma mesa, chão ou parede usando WebXR. Toque para posicionar.
+                  {t('arSurfaceDesc')}
                 </p>
               </div>
               <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
-                <p className="font-semibold text-gray-300 mb-1">Requisitos:</p>
-                <p>Android com <strong className="text-white">Chrome 81+</strong> e ARCore</p>
-                <p>Página em <strong className="text-white">HTTPS</strong> (ou localhost)</p>
-                <p className="text-amber-400">iPhone/iPad: não suportado (use o AR Imersiva ao lado)</p>
+                <p className="font-semibold text-gray-300 mb-1">{t('arRequirements')}</p>
+                <p>{t('arSurfaceReqDevice')}</p>
+                <p>{t('arReqHttps')}</p>
+                <p className="text-amber-400">{t('arSurfaceReqIos')}</p>
               </div>
               {surfaceArSupported === false ? (
                 <div className="mt-auto rounded-xl border border-amber-600/30 bg-amber-950/20 px-4 py-3 text-center text-sm font-medium text-amber-300">
@@ -915,16 +913,16 @@ export default function ARPage() {
             {/* Pseudo AR (markerless, camera + gyroscope) */}
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-950/20 p-5 flex flex-col gap-4">
               <div>
-                <h2 className="text-lg font-bold text-emerald-200">AR Imersiva</h2>
+                <h2 className="text-lg font-bold text-emerald-200">{t('arImmersiveTitle')}</h2>
                 <p className="mt-1 text-sm text-gray-300">
                   {t('pseudoArDescription')}
                 </p>
               </div>
               <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
-                <p className="font-semibold text-gray-300 mb-1">Requisitos:</p>
-                <p><strong className="text-white">iPhone ou Android</strong> com câmera</p>
-                <p>Sensores de movimento (giroscópio)</p>
-                <p>Página em <strong className="text-white">HTTPS</strong> (ou localhost)</p>
+                <p className="font-semibold text-gray-300 mb-1">{t('arRequirements')}</p>
+                <p>{t('arImmersiveReqDevice')}</p>
+                <p>{t('arImmersiveReqMotion')}</p>
+                <p>{t('arReqHttps')}</p>
               </div>
               <Link to={pseudoHref}
                 className="mt-auto inline-flex items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
@@ -935,25 +933,25 @@ export default function ARPage() {
             {/* Marker AR */}
             <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-950/20 p-5 flex flex-col gap-4">
               <div>
-                <h2 className="text-lg font-bold text-fuchsia-200">AR de Marcador</h2>
+                <h2 className="text-lg font-bold text-fuchsia-200">{t('arMarkerTitle')}</h2>
                 <p className="mt-1 text-sm text-gray-300">
-                  Aponte a câmera para um marcador impresso — o avatar aparece ancorado sobre ele.
+                  {t('arMarkerDesc')}
                 </p>
               </div>
               <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
-                <p className="font-semibold text-gray-300 mb-1">Requisitos:</p>
-                <p><strong className="text-white">Qualquer celular</strong> com câmera</p>
-                <p>Chrome, Safari, Firefox</p>
-                <p>Marcador impresso (ou na tela)</p>
+                <p className="font-semibold text-gray-300 mb-1">{t('arRequirements')}</p>
+                <p>{t('arMarkerReqDevice')}</p>
+                <p>{t('arMarkerReqBrowsers')}</p>
+                <p>{t('arMarkerReqMarker')}</p>
               </div>
               <div className="mt-auto flex flex-col gap-2">
                 <Link to={hiroHref}
                   className="inline-flex items-center justify-center rounded-xl bg-fuchsia-700 hover:bg-fuchsia-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                  ▶ Demo com Marcador Hiro
+                  {t('arMarkerDemoBtn')}
                 </Link>
                 <Link to={markerHref}
                   className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-gray-800 hover:bg-gray-700 px-4 py-2 text-xs font-medium text-gray-300 transition-colors">
-                  Usar marcador personalizado
+                  {t('arMarkerCustomBtn')}
                 </Link>
               </div>
             </div>
@@ -961,32 +959,32 @@ export default function ARPage() {
 
           {/* Demo instructions */}
           <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
-            <p className="text-sm font-semibold text-white mb-3">Como testar o Demo Hiro agora</p>
+            <p className="text-sm font-semibold text-white mb-3">{t('arHiroHowTitle')}</p>
             <ol className="space-y-2 text-sm text-gray-300">
-              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">1.</span> Abra esta página no celular</li>
-              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">2.</span> Imprima ou exiba na tela outro dispositivo o marcador Hiro:
+              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">1.</span> {t('arHiroStep1')}</li>
+              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">2.</span> {t('arHiroStep2')}
                 <a href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
                   target="_blank" rel="noreferrer"
                   className="text-cyan-400 hover:text-cyan-300 underline ml-1">
-                  ver marcador Hiro ↗
+                  {t('arHiroStep2Link')}
                 </a>
               </li>
-              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">3.</span> Clique em "Demo com Marcador Hiro" e aponte a câmera para o marcador</li>
-              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">4.</span> O avatar aparece sobre o papel!</li>
+              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">3.</span> {t('arHiroStep3')}</li>
+              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">4.</span> {t('arHiroStep4')}</li>
             </ol>
           </div>
 
           {/* Scale pre-config + URL inputs */}
           <details className="rounded-2xl border border-white/5 bg-white/3">
             <summary className="px-5 py-4 text-sm font-medium text-gray-300 cursor-pointer hover:text-white">
-              Configurações avançadas
+              {t('arAdvancedSettings')}
             </summary>
             <div className="px-5 pb-5 pt-2 flex flex-col gap-4">
 
               {/* Scale slider */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-200">Tamanho inicial do avatar</span>
+                  <span className="text-sm font-medium text-gray-200">{t('arAvatarInitialSize')}</span>
                   <span className="text-sm font-bold text-cyan-300 tabular-nums w-14 text-right">
                     {Math.round(initialScale * 100)}%
                   </span>
@@ -1006,32 +1004,32 @@ export default function ARPage() {
                   <span>300%</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Valor salvo automaticamente — aplicado ao abrir qualquer modo AR.
+                  {t('arScaleAutoSaved')}
                 </p>
               </div>
 
               {/* Story selector */}
               <div className="border-t border-white/5 pt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-200">História para reproduzir em AR</span>
+                  <span className="text-sm font-medium text-gray-200">{t('arStoryForAr')}</span>
                   <Link to="/stories" className="text-xs text-cyan-400 hover:text-cyan-300">
-                    Ver minhas histórias ↗
+                    {t('arViewMyStories')}
                   </Link>
                 </div>
                 <input
                   type="text"
                   value={storyId}
                   onChange={(e) => setStoryId(e.target.value.trim())}
-                  placeholder="Cole aqui o ID da história (ex: 6abc...)"
+                  placeholder={t('arStoryIdPlaceholder')}
                   className="w-full rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                 />
                 {storyId && (
                   <p className="text-xs text-emerald-400 mt-1.5">
-                    História configurada — os botões acima já incluem o ID.
+                    {t('arStoryConfigured')}
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  Na página de histórias, copie o ID da URL: /story/<strong>ID</strong>
+                  {t('arCopyIdHint')}
                 </p>
               </div>
 
@@ -1163,12 +1161,12 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
         <div>
           <div className="flex items-center gap-2">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0 text-amber-400"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
-            <h2 className="font-semibold text-amber-300">AR não disponível neste dispositivo</h2>
+            <h2 className="font-semibold text-amber-300">{t('arNotAvailableTitle')}</h2>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">AR de superfície (WebXR) requer Android com Chrome+ARCore — o iOS Safari não suporta esse modo. Mostrando 3D normal.</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t('arNotAvailableDesc')}</p>
           {!storyId && (
             <p className="text-xs text-gray-500 mt-1">
-              Tente o <a href={hiroHref} className="text-fuchsia-400 hover:underline">Demo com Marcador Hiro</a> — funciona em qualquer celular.
+              {t('arTryHiroPre')} <a href={hiroHref} className="text-fuchsia-400 hover:underline">{t('arHiroDemoName')}</a> {t('arTryHiroPost')}
             </p>
           )}
         </div>
@@ -1181,12 +1179,12 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
       {storyId && !hasStarted && storyMeta && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="mx-6 w-full max-w-sm rounded-2xl border border-white/10 bg-black/90 p-6 text-center">
-            <p className="text-xs uppercase tracking-widest text-cyan-300 mb-2">História</p>
+            <p className="text-xs uppercase tracking-widest text-cyan-300 mb-2">{t('arStoryInAr')}</p>
             <h2 className="text-xl font-bold text-white mb-1">{storyMeta?.metadata?.title}</h2>
-            <p className="text-sm text-gray-400 mb-5">{scenes.length} cenas</p>
+            <p className="text-sm text-gray-400 mb-5">{t('arScenesCount', { count: scenes.length })}</p>
             <button onClick={handleStart}
               className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold">
-              ▶ Iniciar história
+              ▶ {t('arStartStory')}
             </button>
           </div>
         </div>
@@ -1234,7 +1232,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
           <button
             onClick={toggleNarration}
             className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold text-white transition-colors">
-            {audio.isPlaying ? '⏸ Pausar fala' : '▶ Tocar fala'}
+            {audio.isPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
           </button>
         </div>
       )}

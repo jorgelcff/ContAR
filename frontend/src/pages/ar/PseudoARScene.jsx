@@ -176,7 +176,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
       if (err?.name === 'NotAllowedError') {
         setError(t('pseudoArCameraError'));
       } else {
-        setError(`Não foi possível acessar a câmera: ${err?.message || err?.name || 'erro desconhecido'}`);
+        setError(t('arCameraAccessError', { error: err?.message || err?.name || '—' }));
       }
     } finally {
       setStarting(false);
@@ -398,7 +398,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
           {loadingModel && (
             <div className="mt-2 flex items-center gap-2">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent shrink-0" />
-              <p className="text-xs text-cyan-300">Carregando personagem...</p>
+              <p className="text-xs text-cyan-300">{t('arLoadingChar')}</p>
             </div>
           )}
           {!loadingModel && error && <p className="mt-1 text-xs text-red-400">{error}</p>}
@@ -437,7 +437,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
                 <button
                   onClick={toggleSpeech}
                   className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                  {speechPlaying ? '⏸ Pausar fala' : '▶ Tocar fala'}
+                  {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
                 </button>
               )}
             </div>

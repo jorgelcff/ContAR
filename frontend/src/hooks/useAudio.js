@@ -472,6 +472,22 @@ export default function useAudio() {
     setAudioCurrentTime(0);
   }
 
+  // Fully clear any loaded audio, viseme timeline and playback state. Call this
+  // when switching to a different scene so the previous scene's generated
+  // audio/lipsync doesn't leak into the newly loaded one.
+  function reset() {
+    stopWebSpeech();
+    teardownSource();
+    revokeCurrentUrl();
+    audioUrlRef.current = '';
+    setAudioUrl('');
+    setIsPlaying(false);
+    setAudioCurrentTime(0);
+    setAudioDuration(0);
+    setVisemeTimeline([]);
+    setError('');
+  }
+
   useEffect(() => {
     if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
     setVisemeTimeline((prev) => normalizeVisemeTimelineToDuration(prev, audioDuration));
@@ -558,6 +574,7 @@ export default function useAudio() {
     play,
     pause,
     stop,
+    reset,
     startRecording,
     stopRecording,
     updateAudioProcessing,

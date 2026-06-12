@@ -145,6 +145,11 @@ export default function EditorPage() {
     if (loadedSceneIdRef.current === sceneId) return; // already loaded this scene
     loadedSceneIdRef.current = sceneId;
 
+    // Stop and clear any audio/viseme timeline left over from the previous
+    // scene — otherwise its generated narration keeps playing/lip-syncing
+    // after switching to a different scene for editing.
+    audio.reset();
+
     // Clear the store before fetching so autosave doesn't fire stale data from
     // the previous session while waiting for the network response.
     useSceneStore.setState({
@@ -184,6 +189,17 @@ export default function EditorPage() {
           narrativeAudioUrl: narrative.audioUrl || '',
           textDisplayMode: narrative.displayMode || 'bubble',
         });
+
+        // Load this scene's previously generated narration audio (if any) so
+        // playback and lip sync reflect THIS scene, not whatever was loaded
+        // before. The precise provider viseme timeline isn't persisted, so
+        // fall back to the text-derived heuristic for lip sync.
+        if (narrative.audioUrl) {
+          audio.loadUrl(narrative.audioUrl);
+          if (narrative.text) {
+            audio.generateVisemeTimelineFromText(narrative.text);
+          }
+        }
       })
       .catch(() => addToast(t('epSceneNotFound'), 'error'))
       .finally(() => setSceneLoading(false));

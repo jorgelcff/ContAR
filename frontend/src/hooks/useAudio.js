@@ -253,6 +253,17 @@ export default function useAudio() {
     setVisemeTimeline([]);
   }
 
+  // Apply a precise viseme timeline supplied by a TTS provider (Azure/ElevenLabs)
+  // as { start, end, value }[]. Set raw — the audioDuration effect re-normalizes
+  // it once the freshly loaded clip's duration is known. Returns false if empty
+  // so callers can fall back to the text heuristic.
+  function applyVisemeTimeline(timeline) {
+    if (!Array.isArray(timeline) || !timeline.length) return false;
+    setVisemeTimeline(timeline);
+    setLipSyncConfig((prev) => ({ ...prev, visemeMode: 'timeline' }));
+    return true;
+  }
+
   async function generateWithElevenLabs(text, voiceId) {
     const src = String(text || '').trim();
     if (!src) { setError('Escreva um texto antes de gerar a fala.'); return; }
@@ -539,6 +550,7 @@ export default function useAudio() {
     loadUrl,
     loadVisemeTimeline,
     clearVisemeTimeline,
+    applyVisemeTimeline,
     generateVisemeTimelineFromText,
     generateWithElevenLabs,
     speakWithWebSpeech,

@@ -58,6 +58,16 @@ export function fitModelToGround(model) {
   }
 }
 
+// When playing a story, each scene can specify its own avatar — falls back
+// to the page-level modelUrl (e.g. the user's saved avatar) outside of story
+// mode or once the story's scenes have no avatar override.
+export function resolveSceneAvatarUrl(story, storyId, fallbackUrl) {
+  if (storyId && story.currentScene?.content?.avatar?.modelUrl) {
+    return story.currentScene.content.avatar.modelUrl;
+  }
+  return fallbackUrl;
+}
+
 export function buildQueryUrl(path, params) {
   const url = new URL(path, window.location.origin);
   Object.entries(params).forEach(([key, value]) => {

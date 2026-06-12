@@ -10,6 +10,7 @@ import {
   disposeObject3D,
   fitModelToGround,
   normalizeAvatarUrl,
+  resolveSceneAvatarUrl,
   saveScale,
   useARStory,
 } from './arShared';
@@ -51,6 +52,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const story = useARStory(storyId);
 
   const cameraSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+  const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
   const initWebAudio = () => {
@@ -271,7 +273,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
 
   useEffect(() => {
     if (!loaderRef.current || !modelRootRef.current) return;
-    const normalizedUrl = normalizeAvatarUrl(modelUrl);
+    const normalizedUrl = normalizeAvatarUrl(effectiveModelUrl);
     if (!normalizedUrl) {
       setError('');
       setLoadingModel(false);
@@ -313,7 +315,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
         setError(err?.message || 'Failed to load model');
       }
     );
-  }, [modelUrl]);
+  }, [effectiveModelUrl]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black text-white">

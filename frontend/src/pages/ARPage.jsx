@@ -17,6 +17,7 @@ import {
   fitModelToGround,
   normalizeAvatarUrl,
   readSavedScale,
+  resolveSceneAvatarUrl,
   saveScale,
   useARStory,
 } from './ar/arShared';
@@ -51,9 +52,15 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const [lockPlacement, setLockPlacement] = useState(true);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [hitTestUnsupported, setHitTestUnsupported] = useState(false);
   const scaleLabel = `${Math.round(scale * 100)}%`;
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const story = useARStory(storyId);
+  const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
+  const pseudoHref = useMemo(
+    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined }),
+    [modelUrl, initialScale, storyId]
+  );
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
   const initWebAudio = () => {
@@ -113,6 +120,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
     if (!renderer || !container || starting || arActive) return;
     setStarting(true);
     setError('');
+    setHitTestUnsupported(false);
     try {
       const session = await navigator.xr.requestSession('immersive-ar', {
         requiredFeatures: ['hit-test'],
@@ -125,6 +133,12 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       console.error('Failed to start AR session', err);
       if (err?.name === 'NotAllowedError') {
         setError('Permissão de câmera negada. Toque no ícone de cadeado/informações na barra de endereço, ative "Câmera" para este site e tente novamente.');
+      } else if (err?.name === 'NotSupportedError') {
+        // navigator.xr.isSessionSupported('immersive-ar') only checks the base
+        // session — it can return true even when this device's WebXR/ARCore
+        // implementation doesn't support the hit-test feature required here.
+        setHitTestUnsupported(true);
+        setError('Este dispositivo não suporta a detecção de superfície (hit-test) necessária para a AR de Superfície. Use a AR Imersiva, que funciona neste aparelho.');
       } else {
         setError(`Não foi possível iniciar a sessão AR: ${err?.message || err?.name || 'erro desconhecido'}`);
       }
@@ -335,7 +349,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
 
   useEffect(() => {
     if (!loaderRef.current || !modelRootRef.current) return;
-    const normalizedUrl = normalizeAvatarUrl(modelUrl);
+    const normalizedUrl = normalizeAvatarUrl(effectiveModelUrl);
     if (!normalizedUrl) {
       setError('');
       setLoadingModel(false);
@@ -382,7 +396,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         setError(err?.message || 'Failed to load model');
       }
     );
-  }, [modelUrl, t]);
+  }, [effectiveModelUrl, t]);
 
   if (supported === null) {
     return (
@@ -482,6 +496,12 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         </label>
 
         {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+        {hitTestUnsupported && (
+          <Link to={pseudoHref}
+            className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+            {t('openPseudoAr')} →
+          </Link>
+        )}
 
         <button
           onClick={arActive ? stopArSession : startArSession}

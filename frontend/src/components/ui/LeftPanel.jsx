@@ -213,7 +213,7 @@ export default function LeftPanel({
       if (/localhost|127\.0\.0\.1/.test(serverUrl)) {
         addToast('Avatar salvo localmente. Configure BACKEND_URL no servidor para persistência em produção.', 'warning', 8000);
       } else {
-        addToast('Avatar salvo! Atenção: em servidores gratuitos (Render free tier) o arquivo pode desaparecer após reinicialização. Para garantir persistência, use a URL de um serviço externo (ex: Avaturn, VRoid Hub).', 'success', 9000);
+        addToast(t('epAvatarSaved'), 'success');
       }
     } catch {
       addToast('Avatar carregado localmente. Será perdido ao recarregar a página.', 'warning', 6000);
@@ -317,7 +317,7 @@ export default function LeftPanel({
                 className="py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
                 title={t('lpAvatarGalleryTitle')}
               >
-                <Icon name="folder" className="w-3.5 h-3.5" /> Galeria
+                <Icon name="folder" className="w-3.5 h-3.5" /> {t('lpGalleryBtn')}
               </button>
               <a
                 href="https://hub.vroid.com/en/models"
@@ -330,7 +330,7 @@ export default function LeftPanel({
               </a>
             </div>
             <p className="text-[10px] text-gray-500 -mt-2 text-center">
-              VRoid: baixe o .vrm no hub → carregue com "GLB / VRM"
+              {t('lpVroidHint')}
             </p>
 
             {/* File upload + my avatars row */}
@@ -398,14 +398,14 @@ export default function LeftPanel({
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-1">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('lpVrmAnimation')}</p>
-                  <TooltipIcon text="Carregue um arquivo .vrma do VRoid Hub para animar avatares VRM (VRoid, CharacterStudio). Não compatível com avatares Avaturn." />
+                  <TooltipIcon text={t('lpVrmaTooltip')} />
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => vrmaInputRef.current?.click()}
                     className="flex-1 py-2 rounded-xl bg-violet-700 hover:bg-violet-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
                   >
-                    <Icon name="upload" className="w-3.5 h-3.5" /> Carregar .vrma
+                    <Icon name="upload" className="w-3.5 h-3.5" /> {t('lpLoadVrma')}
                   </button>
                   {vrmaUrl && (
                     <button
@@ -426,11 +426,11 @@ export default function LeftPanel({
                 />
                 {vrmaUrl ? (
                   <p className="text-xs text-violet-300 flex items-center gap-1">
-                    <Icon name="check" className="w-3.5 h-3.5" /> Animação VRM aplicada
+                    <Icon name="check" className="w-3.5 h-3.5" /> {t('lpVrmAnimApplied')}
                   </p>
                 ) : (
                   <p className="text-[10px] text-gray-600">
-                    Baixe .vrma em{' '}
+                    {t('lpDownloadVrmaAt')}{' '}
                     <a href="https://hub.vroid.com" target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">hub.vroid.com</a>
                     {' '}→ Animations
                   </p>
@@ -503,12 +503,12 @@ export default function LeftPanel({
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('lpExpressionVrm')}</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
-                  { value: '',          label: 'Neutro' },
-                  { value: 'happy',     label: 'Feliz' },
-                  { value: 'sad',       label: 'Triste' },
-                  { value: 'angry',     label: 'Raiva' },
-                  { value: 'surprised', label: 'Surpreso' },
-                  { value: 'relaxed',   label: 'Relaxado' },
+                  { value: '',          label: t('lpExprNeutral') },
+                  { value: 'happy',     label: t('lpExprHappy') },
+                  { value: 'sad',       label: t('lpExprSad') },
+                  { value: 'angry',     label: t('lpExprAngry') },
+                  { value: 'surprised', label: t('lpExprSurprised') },
+                  { value: 'relaxed',   label: t('lpExprRelaxed') },
                 ].map(({ value, label }) => (
                   <button
                     key={value}
@@ -602,7 +602,7 @@ export default function LeftPanel({
                       className="flex-1 py-3 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white text-sm font-semibold transition-all shadow-md shadow-purple-900/30"
                     >
                       {tts.isGenerating
-                        ? 'Gerando voz...'
+                        ? t('lpGeneratingVoice')
                         : <span className="flex items-center justify-center gap-1.5"><Icon name="microphone" className="w-4 h-4" /> {t('lpGenerateVoice')}</span>
                       }
                     </button>

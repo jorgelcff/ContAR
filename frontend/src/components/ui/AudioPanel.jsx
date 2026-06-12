@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 
 const PROVIDERS = [
-  { id: 'azure',      label: 'Síntese com IA',       desc: 'Azure Neural — lip sync preciso' },
-  { id: 'webspeech',  label: 'Voz do navegador',      desc: 'Gratuito, sem API, funciona offline' },
+  { id: 'azure',      labelKey: 'apProviderAzureLabel' },
+  { id: 'webspeech',  labelKey: 'apProviderWebspeechLabel' },
 ];
 
 const AZURE_VOICES = [
@@ -79,7 +79,7 @@ export default function AudioPanel({
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            {p.label}
+            {t(p.labelKey)}
           </button>
         ))}
       </div>
@@ -94,7 +94,7 @@ export default function AudioPanel({
           </p>
         ) : (
           <p className="text-xs text-amber-400/80">
-            Escreva o texto no campo "Fala do narrador" primeiro.
+            {t('apWriteTextFirst')}
           </p>
         )}
 
@@ -134,7 +134,7 @@ export default function AudioPanel({
             {isTTSLoading ? (
               <>
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Gerando…
+                {t('apGenerating')}
               </>
             ) : <span className="flex items-center gap-1.5"><Icon name="sparkles" className="w-4 h-4" /> {t('apGenerateSpeech')}</span>}
           </button>
@@ -146,7 +146,7 @@ export default function AudioPanel({
               onClick={onStopWebSpeech}
               className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors"
             >
-              Parar fala
+              {t('apStopSpeech')}
             </button>
           ) : (
             <button
@@ -162,7 +162,7 @@ export default function AudioPanel({
         {/* Status feedback */}
         {!!visemeTimeline?.length && !isGenerating && provider === 'azure' && (
           <p className="text-xs text-emerald-400 flex items-center gap-1.5">
-            <Icon name="check" className="w-3.5 h-3.5" /> {visemeTimeline.length} visemes sincronizados
+            <Icon name="check" className="w-3.5 h-3.5" /> {t('apVisemesSynced', { count: visemeTimeline.length })}
           </p>
         )}
         {provider === 'webspeech' && !isSpeaking && (
@@ -235,14 +235,14 @@ export default function AudioPanel({
             </div>
             <div className="mt-1 grid grid-cols-2 gap-x-2 text-[11px]">
               <span>RMS: {(audioMetrics?.rms || 0).toFixed(3)}</span>
-              <span>{audioMetrics?.clipping ? 'Clipping!' : 'OK'}</span>
+              <span>{audioMetrics?.clipping ? t('apClipping') : 'OK'}</span>
             </div>
           </div>
 
           {/* Viseme JSON import */}
           <div className="flex gap-2">
             <button onClick={() => visemeInputRef.current?.click()} className="flex-1 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-medium transition-colors">
-              Importar Viseme JSON
+              {t('apImportVisemeJson')}
             </button>
             {!!visemeTimeline?.length && (
               <button onClick={onClearVisemeTimeline} className="px-2.5 py-1.5 rounded-lg bg-gray-600 hover:bg-gray-500 text-white text-xs transition-colors">{t('apClear')}</button>
@@ -256,13 +256,13 @@ export default function AudioPanel({
             <textarea rows={2} value={visemeTextInput} onChange={(e) => setVisemeTextInput(e.target.value)}
               placeholder={t('apEstimatedTiming')} className="mb-1.5 w-full rounded border border-indigo-700 bg-indigo-950/60 px-2 py-1 text-xs text-indigo-100 placeholder-indigo-400/60" />
             <button onClick={() => onGenerateVisemeFromText(visemeTextInput)} className="w-full rounded bg-indigo-700 px-2 py-1.5 text-xs font-medium text-white hover:bg-indigo-600">
-              Gerar timeline local
+              {t('apGenLocalTimeline')}
             </button>
           </div>
 
           {/* Lip sync tuning */}
           <div className="rounded-md border border-gray-700 bg-gray-900/60 p-2 text-xs text-gray-200">
-            <p className="mb-2 font-semibold uppercase tracking-wide text-gray-300">Lip Sync</p>
+            <p className="mb-2 font-semibold uppercase tracking-wide text-gray-300">{t('apLipSync')}</p>
             <label className="block mb-1">Crossfade: {Math.round(Number(lipSyncConfig?.timelineCrossfadeSec || 0.08) * 1000)} ms</label>
             <input type="range" min="0.02" max="0.18" step="0.005" value={lipSyncConfig?.timelineCrossfadeSec || 0.08} onChange={(e) => onLipSyncConfigChange({ timelineCrossfadeSec: Number(e.target.value) })} className="w-full mb-2" />
             <label className="block mb-1">{t('apVisemeMode')}</label>

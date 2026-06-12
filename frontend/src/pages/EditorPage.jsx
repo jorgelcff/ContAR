@@ -60,7 +60,7 @@ export default function EditorPage() {
   const tts = useTTS({
     onAudioReady: async (file) => {
       audio.loadFile(file);
-      addToast('Voz gerada! Clique em Play para ouvir.', 'success');
+      addToast(t('epVoiceGenerated'), 'success');
       try {
         const url = await uploadAudio(file);
         useSceneStore.getState().setNarrativeAudioUrl(url);
@@ -84,7 +84,7 @@ export default function EditorPage() {
 
   useEffect(() => {
     if (hadLocalAvatarOnInit()) {
-      addToast('Avatar local removido após atualização. Carregue o arquivo GLB novamente.', 'info', 5000);
+      addToast(t('epLocalAvatarRemoved'), 'info', 5000);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [isSaving, setIsSaving] = useState(false);
@@ -185,7 +185,7 @@ export default function EditorPage() {
           textDisplayMode: narrative.displayMode || 'bubble',
         });
       })
-      .catch(() => addToast('Cena não encontrada ou sem permissão de acesso.', 'error'))
+      .catch(() => addToast(t('epSceneNotFound'), 'error'))
       .finally(() => setSceneLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -250,7 +250,7 @@ export default function EditorPage() {
     try {
       const result = await saveScene(buildScenePayload(currentSceneId || undefined));
       if (result?.sceneId) setCurrentSceneId(result.sceneId);
-      addToast('Cena salva com sucesso!', 'success');
+      addToast(t('epSceneSaved'), 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro ao salvar: ${err.message}`, 'error');
@@ -272,7 +272,7 @@ export default function EditorPage() {
       // same name (which made it look like nothing new was created).
       setCurrentSceneId('');
       useSceneStore.getState().setSceneTitle('');
-      addToast('Cena adicionada à história! Mude o conteúdo (e o título) para criar a próxima cena.', 'success');
+      addToast(t('epSceneAddedToStory'), 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro: ${err.message}`, 'error');
@@ -291,13 +291,13 @@ export default function EditorPage() {
       return false;
     }
     addStoryScene(sceneId);
-    addToast('Cena adicionada!', 'success');
+    addToast(t('epSceneAdded'), 'success');
     return true;
   };
 
   const handleSaveStory = async () => {
     if (!storyScenes.length) {
-      addToast('Adicione pelo menos uma cena à história antes de salvar.', 'warning');
+      addToast(t('epAddSceneFirst'), 'warning');
       return;
     }
     setIsStorySaving(true);
@@ -321,7 +321,7 @@ export default function EditorPage() {
       const savedStoryId = result?.storyId || '';
       setPublishedStoryId(savedStoryId);
       if (savedStoryId && !currentStoryId) setCurrentStoryId(savedStoryId);
-      addToast('História salva! O link de compartilhamento está disponível.', 'success');
+      addToast(t('epStorySaved'), 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro ao salvar história: ${err.message}`, 'error');

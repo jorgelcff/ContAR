@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 
 const STUDIO_URL = 'https://studio.m3org.com/';
 
 export default function CharacterStudioEmbed({ onExport, onClose, fullHeight = false }) {
+  const { t } = useTranslation();
   const iframeRef  = useRef(null);
   const fileRef    = useRef(null);
   const [exported, setExported] = useState(false);
@@ -48,7 +50,7 @@ export default function CharacterStudioEmbed({ onExport, onClose, fullHeight = f
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-gray-200">CharacterStudio</p>
-            <p className="text-[10px] text-gray-500">M3-org · open-source · VRM/GLB</p>
+            <p className="text-[10px] text-gray-500">{t('csOpenSource')}</p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors"><Icon name="close" className="w-4 h-4" /></button>
         </div>
@@ -58,16 +60,16 @@ export default function CharacterStudioEmbed({ onExport, onClose, fullHeight = f
       <div className="flex gap-1 rounded-xl bg-gray-800 p-1 shrink-0">
         {[
           { id: 'studio', label: 'Editor' },
-          { id: 'upload', label: 'Importar arquivo' },
-        ].map((t) => (
+          { id: 'upload', label: t('csTabImport') },
+        ].map((item) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={item.id}
+            onClick={() => setTab(item.id)}
             className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-all ${
-              tab === t.id ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'
+              tab === item.id ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            {t.label}
+            {item.label}
           </button>
         ))}
       </div>
@@ -90,15 +92,15 @@ export default function CharacterStudioEmbed({ onExport, onClose, fullHeight = f
 
           {exported ? (
             <p className="text-xs text-emerald-400 text-center shrink-0 flex items-center justify-center gap-1">
-              <Icon name="check" className="w-3.5 h-3.5" /> Avatar exportado e carregado no editor!
+              <Icon name="check" className="w-3.5 h-3.5" /> {t('csExported')}
             </p>
           ) : (
             <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-200 shrink-0">
-              <p className="font-semibold mb-1">Como exportar:</p>
+              <p className="font-semibold mb-1">{t('csHowToExport')}</p>
               <ol className="space-y-0.5 text-amber-200/80">
-                <li>1. Personalize seu avatar no editor acima</li>
-                <li>2. Clique em <strong>Export</strong> no CharacterStudio</li>
-                <li>3. Se o arquivo baixar, use a aba <strong>"Importar arquivo"</strong> ao lado</li>
+                <li>1. {t('csStep1')}</li>
+                <li>2. {t('csStep2Pre')} <strong>Export</strong> {t('csStep2Post')}</li>
+                <li>3. {t('csStep3Pre')} <strong>{t('csStep3Tab')}</strong> {t('csStep3Post')}</li>
               </ol>
             </div>
           )}

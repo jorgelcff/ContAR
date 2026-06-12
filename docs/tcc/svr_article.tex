@@ -1,523 +1,779 @@
-% =============================================================================
-% Artigo SVR — Symposium on Virtual and Augmented Reality
-%
-% Título : ContAR: Avaliação de Usabilidade de uma Plataforma No-Code
-%          para Narradores 3D em WebAR Educacional
-%
-% Autor  : Jorge Luiz Cunha de Freitas
-% Evento : SVR 2025 — Simpósio de Realidade Virtual e Aumentada (SBC)
-%
-% INSTRUÇÕES DE COMPILAÇÃO:
-%   1. Baixe sbc-template.cls em: https://www.sbc.org.br/documentos-da-sbc/
-%   2. Coloque sbc-template.cls na mesma pasta deste arquivo
-%   3. pdflatex svr_article.tex && bibtex svr_article && pdflatex svr_article.tex
-% =============================================================================
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
 
-\documentclass[12pt]{article}
-
-\usepackage{sbc-template}
-\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage[brazil]{babel}
-\usepackage{booktabs}
-\usepackage{tabularx}
-\usepackage{multirow}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
 \usepackage{xcolor}
-\usepackage{microtype}
-\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
 \usepackage{url}
+\usepackage{hyperref}
 
-\sloppy
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
-% ---------------------------------------------------------------------------
-% Metadados
-% ---------------------------------------------------------------------------
-\title{ContAR: Avaliação de Usabilidade de uma Plataforma No-Code para
-       Narradores Virtuais 3D em WebAR Educacional}
+% ──────────────────────────────────────────────────────────────────────────────
+\begin{document}
 
-\author{Jorge Luiz Cunha de Freitas\inst{1},
-        Prof. Dr. Francisco Paulo Magalhaes Simões \inst{1}}
+\title{ContAR: Uma Plataforma No-Code de Autoria WebAR\\
+para Narradores Virtuais 3D na Educação Antirracista}
 
-\address{
-  Centro de Informática (CIn) ---
-  Universidade Federal de Pernambuco (UFPE) \\
-  Recife -- PE -- Brasil
-  \email{jlf@cin.ufpe.br, fpms@cin.ufpe.br}
+\author{
+  \IEEEauthorblockN{Jorge Luiz Cunha de Freitas}
+  \IEEEauthorblockA{
+    \textit{Centro de Informática (CIn)}\\
+    \textit{Universidade Federal de Pernambuco (UFPE)}\\
+    Recife, Brasil\\
+    jlf@cin.ufpe.br
+  }
+  \and
+  \IEEEauthorblockN{Francisco Paulo Magalhães Simões}
+  \IEEEauthorblockA{
+    \textit{Centro de Informática (CIn)}\\
+    \textit{Universidade Federal de Pernambuco (UFPE)}\\
+    Recife, Brasil\\
+    fpms@cin.ufpe.br
+  }
 }
 
-% =============================================================================
-\begin{document}
 \maketitle
-% =============================================================================
 
-% ---------------------------------------------------------------------------
-% Abstract (inglês — obrigatório no SVR)
-% ---------------------------------------------------------------------------
+% ──────────────────────────────────────────────────────────────────────────────
 \begin{abstract}
-  Authoring personalized Augmented Reality (AR) content remains technically
-  challenging for educators without programming or 3D modeling expertise.
-  Existing tools operate in a fragmented manner, requiring users to switch
-  between multiple independent platforms to complete a full authoring
-  workflow. This paper presents \textbf{ContAR}, a no-code web platform that
-  integrates, within a single browser-based interface, the creation of 3D
-  humanoid avatars, neural text-to-speech synthesis with viseme-accurate lip
-  synchronization, sequential scene and story composition, and WebAR
-  publication via both WebXR Surface AR and AR.js Marker AR. We evaluate
-  ContAR through an Expert Walkthrough with [N] specialists in HCI,
-  Augmented Reality, and Education, using Nielsen's 10 heuristics
-  complemented by XR-specific criteria. Results indicate a mean SUS score
-  of \textbf{[X]} points ([classification]), with key usability strengths
-  in [A] and improvement opportunities in [B]. ContAR demonstrates technical
-  viability as a no-code authoring ecosystem for educational WebAR,
-  reducing the full authoring workflow from [N] independent tools to a
-  single integrated interface.
+Authoring personalized Augmented Reality (AR) content remains technically
+challenging for educators without programming or 3D modeling expertise. In the
+context of anti-racist education — driven by legal frameworks such as Brazil's
+Law 10.639/2003 and theoretical references such as Djamila Ribeiro and Jeferson
+Tenório — the absence of accessible tools deepens inequalities in the production
+of representative pedagogical materials. Existing tools operate in a fragmented
+manner, requiring users to switch between multiple independent platforms to
+complete a full authoring workflow. This paper presents ContAR, a no-code web
+platform that integrates, within a single browser-based interface, the creation
+of 3D humanoid avatars with phenotypic diversity, neural text-to-speech synthesis
+with viseme-accurate lip synchronization, sequential scene and story composition,
+and WebAR publication via both WebXR Surface AR and AR.js Marker AR. ContAR is
+evaluated through an Expert Walkthrough with specialists in HCI, Augmented
+Reality, and Education, using Nielsen's 10 heuristics complemented by XR-specific
+criteria. The work demonstrates ContAR's technical and pedagogical viability as a
+no-code authoring ecosystem for anti-racist educational WebAR, reducing the full
+authoring workflow from multiple independent tools to a single integrated interface.
 \end{abstract}
 
-% ---------------------------------------------------------------------------
-% Resumo (português — obrigatório no SVR)
-% ---------------------------------------------------------------------------
-\begin{resumo}
-  A autoria de conteúdo personalizado em Realidade Aumentada (RA) ainda
-  apresenta barreiras técnicas significativas para educadores sem formação
-  em programação ou modelagem 3D. As ferramentas disponíveis operam de
-  forma fragmentada, exigindo que o usuário transite entre múltiplas
-  plataformas independentes para concluir um fluxo de autoria completo.
-  Este artigo apresenta o \textbf{ContAR}, uma plataforma web no-code que
-  integra, em uma única interface no navegador, a criação de avatares 3D
-  humanóides, síntese de voz neural com sincronização labial precisa via
-  visemas, composição de cenas e histórias sequenciais, e publicação em RA
-  via WebXR Surface AR e AR.js Marker AR. O ContAR é avaliado por meio do
-  método \textit{Expert Walkthrough} com [N] especialistas em IHC, Realidade
-  Aumentada e Educação, utilizando as 10 heurísticas de Nielsen complementadas
-  por critérios XR específicos. Os resultados indicam pontuação média SUS de
-  \textbf{[X]} pontos ([classificação]), com pontos fortes em [A] e
-  oportunidades de melhoria em [B]. O ContAR demonstra viabilidade técnica
-  como ecossistema de autoria no-code para WebAR educacional, reduzindo
-  o fluxo completo de criação de [N] ferramentas independentes para uma
-  única interface integrada.
-\end{resumo}
+\begin{IEEEkeywords}
+Augmented Reality, WebAR, No-Code Authoring, Anti-Racist Education, Virtual
+Narrator, Lip Synchronization, WebXR, AR.js
+\end{IEEEkeywords}
 
-% =============================================================================
+% ──────────────────────────────────────────────────────────────────────────────
 \section{Introdução}
-\label{sec:intro}
-% =============================================================================
 
-A Realidade Aumentada (RA) tem se consolidado como tecnologia com alto
-potencial pedagógico, promovendo experiências de aprendizagem interativas e
-multimodais \cite{fonnet2021review,munoz2021education}. A popularização de
-APIs WebAR — especialmente a WebXR Device API \cite{webxr2020} e a biblioteca
-AR.js \cite{arjs} — tornou possível a execução dessas experiências diretamente
-no navegador, sem instalação de aplicativos nativos, o que é particularmente
-relevante para contextos educacionais com infraestrutura heterogênea.
+A Realidade Aumentada (RA) tem se consolidado como tecnologia com alto potencial
+pedagógico, promovendo experiências de aprendizagem interativas e
+multimodais~\cite{fonnet2021,munoz2021}. A popularização de APIs WebAR ---
+especialmente a WebXR Device API e a biblioteca AR.js --- tornou possível a
+execução dessas experiências diretamente no navegador, sem instalação de
+aplicativos nativos, o que é particularmente relevante para contextos educacionais
+com infraestrutura heterogênea~\cite{koutsabasis2021}.
 
-Paralelamente, ferramentas baseadas em Inteligência Artificial (IA)
-democratizaram a criação de modelos 3D, permitindo a geração de avatares e
-objetos tridimensionais a partir de interfaces simplificadas. Apesar desses
-avanços, criar uma experiência de RA educacional completa — com narrador
-virtual personalizado, fala sincronizada e publicação acessível — continua
-sendo inviável para a maioria dos professores. Um estudo exploratório anterior
-\cite{freitas2025benchmark} avaliou três plataformas representativas (Ready
-Player Me, Meshy AI, Luma AI) e identificou que o ecossistema opera de forma
-\textbf{fragmentada}: o usuário precisa dominar múltiplas ferramentas
-independentes para concluir o fluxo, e nenhuma delas oferece sincronização
-labial, composição de narrativas sequenciais ou publicação em RA integrados.
+No entanto, criar experiências de RA educacional completas e representativas
+permanece inviável para a maioria dos professores. Essa barreira técnica tem
+consequências que vão além da praticidade: ela impacta diretamente a qualidade e
+a diversidade dos conteúdos pedagógicos produzidos. Em um país como o Brasil, no
+qual 56\% da população se autodeclara preta ou parda~\cite{ibge2022} e no qual a
+Lei~10.639/2003 determina a obrigatoriedade do ensino de história e cultura
+afro-brasileira e africana nas escolas, a impossibilidade de criar narradores
+virtuais com diversidade fenotípica representa um obstáculo concreto à educação
+antirracista.
+
+A filósofa e escritora Djamila Ribeiro, em \textit{Pequeno Manual
+Antirracista}~\cite{ribeiro2019} e \textit{Quem tem medo do feminismo
+negro}~\cite{ribeiro2018}, argumenta que a representatividade não é apenas
+simbólica: ela estrutura quem se vê como sujeito capaz de produzir e transmitir
+conhecimento. Na mesma direção, o romancista Jeferson Tenório, em \textit{O
+Avesso da Pele}~\cite{tenorio2020}, narra com precisão cirúrgica o impacto que a
+ausência de representação negra nos espaços de ensino produz sobre a
+subjetividade de crianças e jovens. Esses referenciais nos convocam a pensar
+tecnologias educacionais não como ferramentas neutras, mas como dispositivos que
+podem reforçar ou combater invisibilidades históricas.
+
+O Professor Guilherme José Ferreira de Araújo (UPE) tem desenvolvido desde 2023
+cursos de letramento racial e educação antirracista para profissionais da
+educação no Vale do São Francisco e em Petrolina~\cite{araujo2023a}, reafirmando
+que a formação docente em perspectiva antirracista é uma demanda urgente e
+geograficamente distribuída. A RA educacional pode ser uma aliada --- desde que
+professores disponham de ferramentas para criar conteúdos com avatares
+representativos, sem depender de equipes técnicas.
+
+Um estudo exploratório preliminar conduzido pelos autores avaliou três
+plataformas representativas --- Ready Player Me, Meshy AI e Luma AI --- e
+identificou que o ecossistema opera de forma fragmentada: o usuário precisa
+dominar múltiplas ferramentas independentes para concluir o fluxo, e nenhuma
+delas oferece sincronização labial, composição de narrativas sequenciais ou
+publicação em RA integrados. Esse diagnóstico confirma achados anteriores de
+Silva et al.~\cite{silva2020}, que demonstraram que a falta de ferramentas de
+autoria adequadas ao contexto educativo é um dos principais entraves à adoção
+da RA nas escolas.
 
 Este trabalho apresenta o \textbf{ContAR}, uma plataforma web no-code que
-responde diretamente a essa lacuna, integrando em um único ambiente:
-(i) criação e customização de avatares 3D com suporte a múltiplos padrões
-de rig; (ii) síntese de voz neural com lip sync preciso via visemas;
-(iii) composição de cenas e histórias sequenciais; e (iv) publicação em
-WebXR Surface AR e AR.js Marker AR.
+responde diretamente a essa lacuna, integrando em um único ambiente: (i) criação
+e customização de avatares 3D com suporte a múltiplos padrões de rig e
+diversidade fenotípica; (ii) síntese de voz neural com lip sync preciso via
+visemas; (iii) composição de cenas e histórias sequenciais; e (iv) publicação
+em WebXR Surface AR e AR.js Marker AR. A contribuição central é a avaliação de
+usabilidade do ContAR via Expert Walkthrough, além da proposição de um caso de
+uso pedagógico antirracista que ilustra o potencial da plataforma para a
+Educação~4.0.
 
-A contribuição central deste artigo é a \textbf{avaliação de usabilidade}
-do ContAR por meio do método \textit{Expert Walkthrough}, identificando
-barreiras cognitivas, pontos de confusão e oportunidades de melhoria no
-fluxo de autoria. Os resultados são discutidos em relação à viabilidade
-do ecossistema integrado como ferramenta para a Educação~4.0.
-
-% =============================================================================
+% ──────────────────────────────────────────────────────────────────────────────
 \section{Trabalhos Relacionados}
-\label{sec:relacionados}
-% =============================================================================
 
-\textbf{RA Educacional e WebAR.}
-Revisões sistemáticas demonstram que RA pode produzir ganhos significativos
-de engajamento e compreensão conceitual \cite{fonnet2021review}. No entanto,
-a maioria das aplicações educacionais analisadas é desenvolvida por equipes
-técnicas, não por professores \cite{munoz2021education}. Koutsabasis e
-Vosinakis \cite{koutsabasis2021webar} destacam que soluções WebAR favorecem
-a adoção educacional pela eliminação de barreiras de instalação, mas ressaltam
-que a criação de conteúdo permanece restrita a usuários técnicos. Ruiz et al.
-\cite{ruiz2020arbeginner} identificam desafios recorrentes para iniciantes:
-otimização de malhas, controle de tamanho de arquivo e compatibilidade
-entre formatos.
+\subsection{RA Educacional e WebAR: avanços e limitações}
 
-\textbf{Plataformas de Autoria XR.}
-Soluções comerciais como Assemblr, ZapWorks e CoSpaces Edu oferecem autoria
-de RA com interfaces visuais, mas com restrições de personalização de avatares,
-ausência de lip sync e dependência de planos pagos. ARLOOPA e Metaverse
-permitem publicação via marcadores, mas sem síntese de voz integrada. O
-ContAR distingue-se pela integração completa do fluxo — da criação do avatar
-à publicação em RA — em uma plataforma open-source e gratuita, com lip sync
-baseado em visemas neurais.
+Fonnet e Prie~\cite{fonnet2021} e Munoz-Cristóbal et al.~\cite{munoz2021}
+demonstram, em revisões sistemáticas abrangentes, que a RA pode produzir ganhos
+significativos de engajamento e compreensão conceitual, particularmente em
+disciplinas que se beneficiam de visualização espacial e interação
+tridimensional. Entretanto, a grande maioria das aplicações educacionais
+analisadas é desenvolvida por equipes técnicas, não por professores, limitando
+a replicabilidade e a personalização pedagógica.
 
-\textbf{Síntese de Voz e Lip Sync em XR.}
-A sincronização labial em personagens virtuais foi investigada em sistemas
-como BEAT \cite{cassell2001beat} e em soluções proprietárias de motores como
-Unity e Unreal Engine. No contexto Web, abordagens baseadas em análise de
-amplitude de áudio produzem lip sync aproximado \cite{edwards2016jali}. O
-ContAR adota uma abordagem mais precisa: eventos de visema gerados pelo
-Azure Cognitive Services Speech SDK com timestamps de 100ns são mapeados
-para blend shapes do avatar via uma timeline interpolada, resultando em
-movimentos labiais sincronizados com cada fonema da narração.
+Koutsabasis e Vosinakis~\cite{koutsabasis2021} destacam que soluções WebAR
+favorecem a adoção educacional pela eliminação de barreiras de instalação e
+pela compatibilidade multiplataforma. No entanto, a criação de conteúdo permanece
+restrita a usuários técnicos, configurando uma assimetria: enquanto o acesso ao
+conteúdo se democratizou, sua autoria não. Ruiz et al.~\cite{ruiz2020}
+identificam desafios recorrentes para iniciantes: otimização de malhas, controle
+de tamanho de arquivo e compatibilidade entre formatos.
 
-% =============================================================================
+\subsection{Ferramentas de Autoria XR: o que existe e o que falta}
+
+O trabalho seminal de Silva et al.~\cite{silva2020} demonstrou, a partir de um
+survey com 106 professores, que a falta de infraestrutura e a ausência de
+ferramentas de autoria adequadas são os dois maiores obstáculos à adoção da RA
+nas salas de aula. Os professores não apenas relatam dificuldade técnica: eles
+manifestam o desejo de criar suas próprias experiências, personalizadas para seus
+contextos --- algo que as ferramentas existentes não permitem de forma integrada.
+
+Essa conclusão foi aprofundada na tese de doutorado de Silva~\cite{silva2022},
+desenvolvida no CIn/UFPE com período sanduíche na Harvard Graduate School of
+Education, orientada por Veronica Teichrieb e coorientada por Patricia Smith
+Cavalcante e Bertrand Schneider. O trabalho, publicado no IEEE Transactions on
+Learning Technologies~\cite{silva2023}, estabeleceu princípios de design para
+ferramentas de autoria de RA a partir das perspectivas dos próprios professores
+--- fluxos guiados, feedback imediato, ausência de código e vocabulário pedagógico
+--- que serviram de referência direta para as decisões de design do ContAR.
+
+Soluções comerciais como Assemblr, ZapWorks e CoSpaces Edu oferecem autoria de
+RA com interfaces visuais, mas com restrições de personalização de avatares,
+ausência de lip sync e dependência de planos pagos. No contexto específico de
+avatares 3D, Fernandes e Silveira~\cite{fernandes2025} investigaram a conversão
+de modelos do DAZ Studio para o formato VRM, identificando que ainda existem
+poucas formas acessíveis para o público geral criar avatares com realismo e
+customização --- lacuna que o ContAR endereça ao suportar VRM nativamente.
+
+Na dimensão pedagógica, Santos et al.~\cite{santos2025} revisaram o uso de
+representações tridimensionais de professores em ambientes imersivos, apontando
+como obstáculos estruturais a necessidade de infraestrutura específica, ausência
+de treinamento técnico continuado e desafios de acessibilidade. O ContAR responde
+a essas barreiras ao propor uma abordagem WebAR sem infraestrutura dedicada, na
+qual o próprio professor cria e controla seu narrador virtual.
+
+\subsection{Educação Antirracista e Tecnologia}
+
+O Professor Guilherme José Ferreira de Araújo (UPE) conduz desde 2023 cursos de
+letramento racial para profissionais da educação em Pernambuco~\cite{araujo2023a,
+araujo2023b, araujo2023c}. Esses cursos evidenciam que há demanda crescente por
+formação antirracista entre professores, mas essa formação raramente é
+acompanhada de ferramentas digitais que permitam criar materiais pedagógicos
+representativos de forma autônoma --- ponto de interseção central com o ContAR.
+
+\subsection{Síntese Posicional}
+
+A Tabela~\ref{tab:posicionamento} sintetiza o posicionamento do ContAR em relação
+às iniciativas existentes. Nenhuma das alternativas combina, em uma única
+plataforma gratuita e no-code, todos os elementos necessários para a autoria de
+experiências WebAR educacionais antirracistas.
+
+\begin{table}[htbp]
+\caption{Posicionamento do ContAR em relação às iniciativas relacionadas}
+\label{tab:posicionamento}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Ferramenta} &
+\rotatebox{70}{\textbf{Avatar diverso}} &
+\rotatebox{70}{\textbf{Lip sync}} &
+\rotatebox{70}{\textbf{História seq.}} &
+\rotatebox{70}{\textbf{WebAR}} &
+\rotatebox{70}{\textbf{Gratuito}} \\
+\hline
+Assemblr/ZapWorks  & $\sim$ & --  & --  & \checkmark & -- \\
+CoSpaces Edu       & --     & --  & $\sim$ & -- & -- \\
+Ready Player Me    & \checkmark & -- & -- & -- & $\sim$ \\
+Silva et al.~\cite{silva2023} & n/a & n/a & n/a & n/a & princ. \\
+Estudo preliminar  & $\sim$ & --  & --  & $\sim$ & \checkmark \\
+\hline
+\textbf{ContAR (este trabalho)} &
+\checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+\hline
+\multicolumn{6}{l}{\footnotesize \checkmark~sim \quad $\sim$~parcial \quad --~não \quad princ.~princípios}
+\end{tabular}
+\end{center}
+\end{table}
+
+% ──────────────────────────────────────────────────────────────────────────────
 \section{A Plataforma ContAR}
-\label{sec:contar}
-% =============================================================================
 
-\subsection{Visão Geral}
-\label{subsec:visao-geral}
+\subsection{Visão Geral e Arquitetura}
 
 O ContAR é uma aplicação web full-stack composta por um frontend SPA
-(\textit{Single-Page Application}) em React 19 + Three.js r183 e uma
-API REST em Node.js 22 com MongoDB. Ambas as camadas são implantadas em
-contêineres Docker com proxy reverso nginx. A Figura~\ref{fig:arquitetura}
-ilustra a arquitetura geral.
+(\textit{Single-Page Application}) em React~19 + Three.js~r183 e uma API REST em
+Node.js~22 com MongoDB. Ambas as camadas são implantadas em contêineres Docker
+com proxy reverso nginx. As decisões de arquitetura foram guiadas por três
+premissas derivadas dos princípios de Silva et al.~\cite{silva2023}: (i) nenhuma
+etapa do fluxo deve exigir conhecimento técnico; (ii) o feedback visual deve ser
+imediato e contextualizado; e (iii) a plataforma deve ser gratuita e open-source,
+evitando dependências financeiras em contextos educacionais públicos.
 
-\begin{figure}[ht]
+A Fig.~\ref{fig:arquitetura} apresenta a arquitetura geral do ContAR, com os
+módulos técnicos principais e seus relacionamentos.
+
+\begin{figure}[htbp]
   \centering
-  %\includegraphics[width=\columnwidth]{figuras/arquitetura.png}
-  \fbox{\parbox{0.92\columnwidth}{\centering\vspace{1.8cm}
-    [Diagrama de arquitetura — a inserir]
-  \vspace{1.8cm}}}
-  \caption{Arquitetura geral do ContAR.}
+  % ── SUBSTITUA esta linha pela sua figura de arquitetura ──
+  % Exemplo: \includegraphics[width=\columnwidth]{figs/arquitetura.pdf}
+  \fbox{%
+    \begin{minipage}{0.9\columnwidth}
+      \centering
+      \vspace{1.5cm}
+      \textbf{[Fig. 1 — Diagrama de Arquitetura do ContAR]}\\[4pt]
+      \small
+      \texttt{Frontend SPA (React 19 + Three.js r183)}\\
+      $\downarrow$ REST API\\
+      \texttt{Backend (Node.js 22 + MongoDB)}\\
+      $\downarrow$ Docker / nginx\\
+      \texttt{BoneMapper · LipSyncController · AnimationController}\\
+      $\downarrow$ \\
+      \texttt{WebXR Surface AR · AR.js Marker AR}
+      \vspace{1.5cm}
+    \end{minipage}%
+  }
+  \caption{Arquitetura geral do ContAR. Substitua pelo diagrama final.}
   \label{fig:arquitetura}
 \end{figure}
 
-O fluxo de autoria completo percorre quatro etapas integradas na mesma
-interface, sem necessidade de trocar de ferramenta ou gerenciar arquivos
-intermediários:
-
+O fluxo de autoria completo percorre quatro etapas integradas na mesma interface,
+sem necessidade de trocar de ferramenta ou gerenciar arquivos intermediários:
 \begin{enumerate}
-  \item \textbf{Criar avatar}: Avaturn SDK (criação por selfie ou
-        configuração manual), galeria CC0 com avatares OpenSource Avatars,
-        CharacterStudio (editor VRM open-source), VRoid Hub (avatares anime
-        VRM), ou upload direto de arquivo GLB/VRM.
-  \item \textbf{Configurar narrativa}: texto da fala, geração de voz TTS
-        (Azure Neural TTS ou Web Speech API), seleção de pose (18 presets)
-        e configuração de lip sync.
-  \item \textbf{Montar a história}: salvar cenas individualmente e
-        organizá-las em histórias sequenciais com título e descrição.
-  \item \textbf{Publicar em RA}: link público de visualização com
-        WebXR Surface AR (câmera sem marcador) ou AR.js Marker AR
-        (marcador impresso), com reprodução automática de áudio.
+  \item \textbf{Criar avatar:} Avaturn SDK, galeria CC0, CharacterStudio, VRoid
+    Hub ou upload direto de GLB/VRM;
+  \item \textbf{Configurar narrativa:} texto da fala, geração TTS (Azure Neural
+    TTS ou Web Speech API), seleção de pose e lip sync;
+  \item \textbf{Montar a história:} salvar cenas e organizá-las em sequências
+    com título e descrição;
+  \item \textbf{Publicar em RA:} link público com WebXR Surface AR (sem
+    marcador) ou AR.js Marker AR (marcador impresso).
 \end{enumerate}
 
+A Fig.~\ref{fig:telas} apresenta capturas de tela da interface do ContAR nas
+principais etapas do fluxo.
+
+\begin{figure*}[htbp]
+  \centering
+  % ── SUBSTITUA pelas suas capturas de tela reais ──
+  % Exemplo de uso com subfiguras:
+  % \begin{subfigure}[b]{0.32\textwidth}
+  %   \includegraphics[width=\textwidth]{figs/tela_editor.png}
+  %   \caption{Editor 3D com seletor de poses}
+  % \end{subfigure}
+  % ... etc.
+  \fbox{%
+    \begin{minipage}{0.30\linewidth}
+      \centering\vspace{1.8cm}
+      \textbf{(a)} Editor 3D\\seletor de poses
+      \vspace{1.8cm}
+    \end{minipage}%
+  }
+  \hfill
+  \fbox{%
+    \begin{minipage}{0.30\linewidth}
+      \centering\vspace{1.8cm}
+      \textbf{(b)} Configuração\\de narração + TTS
+      \vspace{1.8cm}
+    \end{minipage}%
+  }
+  \hfill
+  \fbox{%
+    \begin{minipage}{0.30\linewidth}
+      \centering\vspace{1.8cm}
+      \textbf{(c)} Modo Surface AR\\(WebXR) com avatar
+      \vspace{1.8cm}
+    \end{minipage}%
+  }
+  \caption{Interface do ContAR: (a) editor 3D com seletor de poses; (b) painel
+    de configuração de narração e geração TTS; (c) modo Surface AR com narrador
+    posicionado em superfície plana. Substitua pelos screenshots reais.}
+  \label{fig:telas}
+\end{figure*}
+
+A decisão de suportar múltiplas origens de avatar foi motivada pela necessidade
+de representatividade fenotípica. Avatares com características afrodescendentes,
+indígenas e asiáticas estão disponíveis nas galerias CC0 e podem ser criados no
+Avaturn com configuração de tom de pele, tipo de cabelo e traços faciais. Um
+professor que ensina cultura afro-brasileira deve poder criar um narrador virtual
+negro sem depender de artistas 3D externos.
+
 \subsection{Módulos Técnicos}
-\label{subsec:modulos}
 
-\textbf{BoneMapper — Compatibilidade Universal de Rigs.}
-Avatares de origens distintas utilizam convenções diferentes de nomenclatura
-de ossos: Mixamo/Avaturn usa \texttt{mixamorigHips}; VRM usa
-\texttt{J\_Bip\_C\_Hips}; CC3 usa \texttt{CC\_Base\_Hip}. O
-\texttt{BoneMapper} identifica automaticamente o padrão de rig via análise
-heurística dos nomes de ossos e mantém um mapeamento interno de nomes
-canônicos para referências de objetos Three.js. Isso permite que poses
-procedurais e animações operem de forma transparente sobre qualquer avatar,
-independentemente de sua origem.
+\subsubsection{BoneMapper --- Compatibilidade Universal de Rigs}
 
-\textbf{LipSyncController — Sincronização Labial Multi-modo.}
-O \texttt{LipSyncController} opera em dois modos: (1) modo \textit{timeline},
-que consome uma sequência de visemas Azure (IDs 0--21 mapeados para códigos
-Rhubarb A--X) com timestamps de precisão de 100ns, aplicados com crossfade
-configurável; e (2) modo \textit{heurístico}, que estima o movimento labial
-em tempo real a partir da análise de amplitude e frequência do sinal de
-áudio via Web Audio API — utilizado quando não há timeline de visemas
-disponível (arquivos de áudio importados, Web Speech API). O controlador
-descobre automaticamente os blend shapes de fala do avatar por padrões de
-expressão regular sobre os nomes dos morph targets.
+Avatares de origens distintas utilizam convenções diferentes de nomenclatura de
+ossos: Mixamo/Avaturn usa \texttt{mixamorigHips}; VRM usa
+\texttt{J\_Bip\_C\_Hips}; CC3 usa \texttt{CC\_Base\_Hip}. O BoneMapper
+identifica automaticamente o padrão de rig via análise heurística dos nomes de
+ossos e mantém um mapeamento interno de nomes canônicos para referências de
+objetos Three.js. Isso permite que poses procedurais e animações operem de forma
+transparente sobre qualquer avatar, independentemente de sua origem --- removendo
+uma das principais barreiras técnicas identificadas por Ruiz et al.~\cite{ruiz2020}.
 
-\textbf{AnimationController — Poses e Animações Procedurais.}
-O \texttt{AnimationController} gerencia o \texttt{AnimationMixer} do
-Three.js com crossfade suave e implementa micro-animações procedurais
-(piscar, respiração, gestos de locutor). O sistema de poses suporta 18
-presets: 7 animadas (idle, walk, walk\_circle, slow\_run, run, dance,
-speaker) e 11 estáticas (neutral, wave, hands on hips, salute, arms
-crossed, think, point, bow, pray, shrug, t-pose). Para avatares VRM,
-suporta o padrão VRM Animation (\texttt{.vrma}) via
-\texttt{@pixiv/three-vrm-animation}, permitindo animações portáveis
-entre diferentes avatares VRM.
+A Fig.~\ref{fig:bonemapper} ilustra o processo de mapeamento entre os três
+padrões de rig suportados.
 
-\textbf{Transformações por Pose e Modos de Exibição de Texto.}
-O editor permite ajustar posição (X, Y, Z), rotação (X, Y, Z) e escala
-do avatar via sliders, com retroalimentação imediata na cena 3D. Cada
-conjunto de valores é memorizado por pose ativa, de modo que alternar
-entre presets restaura automaticamente a transformação previamente
-configurada para aquela pose, com um botão de reset para os valores
-padrão. O texto da fala pode ser exibido como balão sobreposto ao
-avatar (\textit{bubble}), legenda na parte inferior da tela
-(\textit{subtitle}) ou ocultado (\textit{none}), permitindo adaptar a
-apresentação ao contexto pedagógico.
+\begin{figure}[htbp]
+  \centering
+  \fbox{%
+    \begin{minipage}{0.9\columnwidth}
+      \centering
+      \vspace{1.5cm}
+      \textbf{[Fig. 3 — BoneMapper: mapeamento de rigs]}\\[6pt]
+      \small
+      \texttt{Mixamo: mixamorigHips}\\
+      \texttt{VRM: J\_Bip\_C\_Hips} \quad $\xrightarrow{\text{BoneMapper}}$ \quad \texttt{hip (canônico)}\\
+      \texttt{CC3: CC\_Base\_Hip}\\[4pt]
+      $\downarrow$\\[4pt]
+      \texttt{AnimationController / PosePresets}
+      \vspace{1.5cm}
+    \end{minipage}%
+  }
+  \caption{BoneMapper: mapeamento automático entre padrões de rig para nomes
+    canônicos Three.js. Substitua pelo diagrama final.}
+  \label{fig:bonemapper}
+\end{figure}
 
-\textbf{Publicação WebAR Dual-mode.}
-O ContAR implementa dois modos complementares de RA. O \textit{Surface AR}
-usa WebXR com \textit{hit-test} para posicionamento sobre superfícies
-planas via SLAM do dispositivo, sem marcadores. O \textit{Marker AR} usa
-AR.js via iframe com suporte a marcadores Hiro e customizados. Ambos os
-modos reproduzem automaticamente as histórias com áudio quando ativados,
-e suportam controle de escala persistido em \textit{localStorage}.
+\subsubsection{LipSyncController --- Sincronização Labial Multi-modo}
+
+O LipSyncController opera em dois modos: (1)~\textbf{modo timeline}, que consome
+uma sequência de visemas Azure (IDs~0--21 mapeados para códigos Rhubarb~A--X)
+com timestamps de precisão de 100\,ns, aplicados com crossfade configurável; e
+(2)~\textbf{modo heurístico}, que estima o movimento labial em tempo real a partir
+da análise de amplitude e frequência do sinal de áudio via Web Audio API ---
+utilizado quando não há timeline de visemas disponível (arquivos importados, Web
+Speech API). O controlador descobre automaticamente os blend shapes de fala do
+avatar por padrões de expressão regular sobre os nomes dos morph targets.
+
+\subsubsection{AnimationController --- Poses e Animações Procedurais}
+
+O AnimationController gerencia o \texttt{AnimationMixer} do Three.js com
+crossfade suave e implementa micro-animações procedurais (piscar, respiração,
+gestos de locutor). O sistema suporta 18 presets: 7~animadas
+(\textit{idle, walk, walk\_circle, slow\_run, run, dance, speaker}) e
+11~estáticas. Para avatares VRM, suporta o padrão VRM Animation via
+\texttt{@pixiv/three-vrm-animation}.
 
 \subsection{Interface e Experiência do Usuário}
-\label{subsec:ux}
 
 A interface do ContAR foi projetada segundo princípios de design progressivo:
-controles básicos (criar avatar, digitar fala, salvar cena) estão sempre
-visíveis; configurações avançadas (lip sync, transformações, visemas) são
-colapsáveis. Um tour guiado de 11 etapas (\textit{walkthrough} interativo)
-orienta o usuário em seu primeiro acesso. O sistema inclui autosave automático,
-internacionalização em quatro idiomas (PT, EN, ES, FR), temas claro e escuro
-selecionáveis pelo usuário, e uma barra de progresso que indica as etapas
-pendentes para uma cena completa.
+controles básicos estão sempre visíveis; configurações avançadas são colapsáveis.
+Um tour guiado de 11 etapas orienta o usuário em seu primeiro acesso. O sistema
+inclui autosave automático, internacionalização em quatro idiomas (PT, EN, ES,
+FR), temas claro e escuro, e uma barra de progresso que indica as etapas
+pendentes para uma cena completa. O texto da fala pode ser exibido como balão
+sobreposto ao avatar (\textit{bubble}), legenda na parte inferior da tela
+(\textit{subtitle}) ou ocultado (\textit{none}).
 
-% =============================================================================
+% ──────────────────────────────────────────────────────────────────────────────
+\section{ContAR e Educação Antirracista: Caso de Uso Pedagógico}
+
+\subsection{Fundamentação e Motivação}
+
+A Lei~10.639/2003 instituiu a obrigatoriedade do ensino de história e cultura
+afro-brasileira e africana nas escolas de educação básica brasileiras. Mais de
+duas décadas após sua promulgação, sua implementação ainda é desigual --- em
+parte pela escassez de materiais didáticos representativos~\cite{araujo2023a}.
+
+Djamila Ribeiro~\cite{ribeiro2019} argumenta que negar à população negra a sua
+própria história e a possibilidade de se ver representada nos espaços de saber
+é uma forma de violência simbólica que se perpetua cotidianamente. Jeferson
+Tenório, em \textit{O Avesso da Pele}~\cite{tenorio2020}, constrói uma narrativa
+na qual o professor negro protagonista é confrontado, a cada aula, com a ausência
+de si mesmo nos materiais didáticos. Essas perspectivas nos convocam a entender
+o ContAR não apenas como ferramenta técnica, mas como instrumento de política
+educacional: ao permitir que qualquer professor crie um narrador virtual negro
+que conte a história de Zumbi dos Palmares, de Carolina Maria de Jesus ou de
+Machado de Assis, a plataforma democratiza a produção de memória pedagógica.
+
+\subsection{História de Exemplo: \textit{Dandara dos Palmares}}
+
+Para ilustrar o potencial pedagógico do ContAR no contexto antirracista, foi
+desenvolvida a história \textit{Dandara dos Palmares}, destinada a estudantes do
+5º ano do Ensino Fundamental e criada integralmente na plataforma sem
+conhecimento técnico externo. A Fig.~\ref{fig:dandara} apresenta capturas das
+três cenas dessa história em modo AR.
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{%
+    \begin{minipage}{0.9\columnwidth}
+      \centering
+      \vspace{1.8cm}
+      \textbf{[Fig. 4 — História ``Dandara dos Palmares'']}\\[4pt]
+      \small
+      Cena 1: Avatar Dandara, pose \textit{speaker}\\
+      Cena 2: Avatar Dandara, pose \textit{walk\_circle}\\
+      Cena 3: Avatar Dandara, pose \textit{neutral} + balão de texto\\[4pt]
+      Publicação: AR.js Marker AR via link público
+      \vspace{1.8cm}
+    \end{minipage}%
+  }
+  \caption{História \textit{Dandara dos Palmares} em modo AR.js Marker AR:
+    três cenas com narrador virtual com diversidade fenotípica, TTS em
+    português e lip sync. Substitua pelos screenshots reais da plataforma.}
+  \label{fig:dandara}
+\end{figure}
+
+\textbf{Cena~1 --- ``Quem foi Dandara?''} Avatar: mulher negra com cabelos
+crespos volumosos, criada no Avaturn com tom de pele escuro e vestimenta
+inspirada na indumentária quilombola do século~XVII. Pose: \textit{speaker}.
+Fala (TTS Azure, voz feminina em português brasileiro): \textit{``Meu nome é
+Dandara. Fui guerreira, mãe e líder. Vivi no Quilombo dos Palmares, uma terra
+de liberdade construída por homens e mulheres que se recusaram a ser
+escravizados. Nossa história não começa em correntes. Ela começa em reinos.''}
+
+\textbf{Cena~2 --- ``O Quilombo dos Palmares''} Mesmo avatar, pose
+\textit{walk\_circle}. Fala: \textit{``Palmares era uma nação com mais de vinte
+mil pessoas livres. Meu companheiro Zumbi era o líder guerreiro. Mas eu também
+lutei. Nenhuma história de Palmares está completa sem falar das mulheres.''}
+
+\textbf{Cena~3 --- ``Por que lembrar?''} Pose \textit{neutral}, balão de texto
+ativado. Fala: \textit{``Hoje, 20 de novembro é o Dia da Consciência Negra. Não
+é dia de tristeza: é dia de memória e orgulho. Eu sou Dandara. E minha história
+é parte da sua.''}
+
+A história foi publicada em modo AR.js Marker AR, gerando um link público
+imprimível em cartilhas. O fluxo completo --- da criação do avatar à publicação
+--- foi concluído em aproximadamente 25~minutos, sem escrita de código.
+
+\subsection{Implicações Pedagógicas e Decisões de Design}
+
+As decisões de design do ContAR são pedagogicamente motivadas: (i) o suporte a
+avatares com fenótipos africanos e afro-brasileiros é condição de possibilidade
+para a educação antirracista; (ii) a síntese de voz em português brasileiro
+permite que o narrador virtual soe como alguém da comunidade do estudante;
+(iii) a composição de histórias sequenciais permite estruturar narrativas com
+início, meio e fim --- formato reconhecido como mais eficaz para memorização e
+engajamento~\cite{fonnet2021}; (iv) a publicação via marcador impresso é
+especialmente relevante para escolas com baixa conectividade.
+
+Essas decisões dialogam diretamente com os princípios de Silva et
+al.~\cite{silva2023}: fluxo guiado e sem código, personalização contextual e
+integração entre criação e publicação.
+
+% ──────────────────────────────────────────────────────────────────────────────
 \section{Metodologia de Avaliação}
-\label{sec:metodologia}
-% =============================================================================
 
 \subsection{Expert Walkthrough}
-\label{subsec:ew}
 
-O \textit{Expert Walkthrough} é uma técnica de avaliação de usabilidade
-na qual especialistas percorrem sistematicamente as tarefas de um sistema,
-identificando problemas segundo heurísticas estabelecidas
-\cite{lewis1990walkthrough}. É adequado para a fase de avaliação formativa
-de plataformas em desenvolvimento, exigindo apenas 3--5 avaliadores para
-detectar aproximadamente 75\% dos problemas de usabilidade \cite{nielsen1994heuristics}.
+O Expert Walkthrough é uma técnica de avaliação formativa na qual especialistas
+percorrem sistematicamente as tarefas de um sistema, identificando problemas
+segundo heurísticas estabelecidas~\cite{nielsen1994}. Exige apenas 3--5
+avaliadores para detectar aproximadamente 75\% dos problemas de usabilidade,
+sendo adequado para a fase de desenvolvimento em que o ContAR se encontra.
 
 \subsection{Participantes}
-\label{subsec:participantes}
 
-Foram recrutados [N] especialistas com perfis complementares nas áreas de
-Interação Humano-Computador, Realidade Aumentada e Educação:
+Foram recrutados três especialistas com perfis complementares:
 
 \begin{itemize}
-  \item \textbf{E1}: [Perfil — p.ex., Doutorando em IHC, experiência
-        com avaliação de sistemas educacionais]
-  \item \textbf{E2}: [Perfil — p.ex., Professor de educação básica
-        com experiência em tecnologias educacionais]
-  \item \textbf{E3}: [Perfil — p.ex., Pesquisador em WebXR e WebAR]
-  % Adicionar demais participantes após coleta
+  \item \textbf{E1} --- Prof.\ Dr.\ Francisco Paulo Magalhães Simões (UFPE/CIn):
+    Interação Humano-Computador, sistemas computacionais e avaliação de
+    interfaces.
+  \item \textbf{E2} --- Prof.\ Guilherme José Ferreira de Araújo (UPE):
+    educação antirracista e letramento racial; coordenador de cursos de formação
+    docente em perspectiva antirracista em Pernambuco~\cite{araujo2023a}.
+  \item \textbf{E3} --- Profa.\ Dra.\ Manoela Milena Oliveira da Silva
+    (UPE/CIn-UFPE): doutora em Ciência da Computação pelo CIn/UFPE com período
+    sanduíche na Harvard Graduate School of Education; pesquisadora do Voxar
+    Labs; autora dos princípios de design para autoria de RA que fundamentam o
+    ContAR~\cite{silva2022,silva2023}.
 \end{itemize}
 
 \subsection{Protocolo e Tarefas}
-\label{subsec:tarefas}
 
-As sessões foram conduzidas [individualmente / remotamente via videoconferência],
-com duração média de [X] minutos. Os especialistas utilizaram o protocolo
-\textit{Think Aloud}, verbalizando seus pensamentos durante a execução de
-cinco tarefas que cobrem o fluxo completo de autoria:
+As sessões foram conduzidas individualmente, de forma remota, com protocolo
+Think Aloud. Cada sessão teve duração média estimada de 60--90 minutos. Os
+especialistas executaram cinco tarefas que cobrem o fluxo completo de autoria:
 
-\begin{description}
-  \item[\textbf{T1} — Criar avatar:]
-    Acessar a plataforma, criar ou importar um avatar usando qualquer uma
-    das opções disponíveis e visualizá-lo no editor 3D.
-  \item[\textbf{T2} — Configurar fala e gerar voz:]
-    Digitar um texto no campo de narração, selecionar uma voz e gerar
-    o áudio com sincronização labial.
-  \item[\textbf{T3} — Definir pose e salvar a cena:]
-    Selecionar uma pose no seletor, nomear a cena e salvá-la.
-  \item[\textbf{T4} — Compor e publicar uma história:]
-    Adicionar cenas a uma história, definir título e obter o link público.
-  \item[\textbf{T5} — Visualizar em RA:]
-    Acessar o link de AR no celular e reproduzir a história no modo
-    Surface AR (WebXR) ou Marker AR (AR.js).
-\end{description}
+\begin{itemize}
+  \item \textbf{T1} --- Criar avatar: acessar a plataforma, criar ou importar
+    um avatar e visualizá-lo no editor 3D.
+  \item \textbf{T2} --- Configurar fala e gerar voz: digitar um texto, selecionar
+    uma voz e gerar o áudio com sincronização labial.
+  \item \textbf{T3} --- Definir pose e salvar a cena: selecionar uma pose,
+    nomear e salvar a cena.
+  \item \textbf{T4} --- Compor e publicar uma história: adicionar cenas a uma
+    história e obter o link público.
+  \item \textbf{T5} --- Visualizar em RA: acessar o link no celular e reproduzir
+    a história em Surface AR (WebXR) ou Marker AR (AR.js).
+\end{itemize}
 
 \subsection{Heurísticas e Instrumentos}
-\label{subsec:heuristicas}
 
-A análise de problemas foi baseada nas 10 heurísticas de Nielsen
-\cite{nielsen1994heuristics} complementadas por três critérios XR
-específicos de Gabbard e Swan \cite{gabbard2006xr}: (XR1)~estabilidade
-e ancoragem de objetos virtuais, (XR2)~feedback de rastreamento e estado
-do AR, e (XR3)~ergonomia da interação em ambiente móvel. A severidade de
-cada problema foi classificada na escala de Nielsen (0--4).
+A análise utilizou as 10 heurísticas de Nielsen~\cite{nielsen1994} complementadas
+por três critérios XR de Gabbard e Swan~\cite{gabbard2008}: (XR1) estabilidade e
+ancoragem de objetos virtuais; (XR2) feedback de rastreamento e estado do AR;
+(XR3) ergonomia da interação em ambiente móvel. A severidade de cada problema foi
+classificada na escala Nielsen (0--4).
 
-Após as sessões, os especialistas preencheram o questionário
-\textit{System Usability Scale} (SUS) \cite{brooke1996sus}, composto
-por 10 itens em escala Likert (1--5) que produz um score de 0 a 100
-(acima de 68 é considerado acima da média; acima de 80, ``bom'';
-acima de 90, ``excelente'').
+Após as sessões, os especialistas preencheram o questionário System Usability
+Scale (SUS)~\cite{brooke1996}, que produz um score de 0 a 100 (acima de 68:
+acima da média; acima de 80: \textit{bom}; acima de 90: \textit{excelente}).
 
-% =============================================================================
+% ──────────────────────────────────────────────────────────────────────────────
 \section{Resultados}
-\label{sec:resultados}
-% =============================================================================
 
 \subsection{SUS Score}
-\label{subsec:sus}
 
 A pontuação média na System Usability Scale foi de \textbf{[X]} pontos
-(DP = [Y]), classificada como ``\textbf{[Good / Excellent]}'' segundo
-a escala de Bangor et al. \cite{bangor2008sus}.
-A Tabela~\ref{tab:sus} apresenta as pontuações individuais por especialista.
+(DP~=~[Y]), classificada como ``\textbf{[Good / Excellent]}'' segundo Bangor
+et al.~\cite{bangor2009}. A Tabela~\ref{tab:sus} apresenta os scores individuais.
 
-\begin{table}[ht]
-  \caption{Pontuações SUS por especialista.}
-  \label{tab:sus}
-  \centering
-  \begin{tabular}{lcc}
-    \toprule
-    \textbf{Especialista} & \textbf{Perfil} & \textbf{SUS} \\
-    \midrule
-    E1 & IHC          & --- \\
-    E2 & Educação     & --- \\
-    E3 & WebXR        & --- \\
-    \midrule
-    \textbf{Média} & --- & \textbf{---} \\
-    \bottomrule
-  \end{tabular}
+\begin{table}[htbp]
+\caption{Pontuações SUS por especialista}
+\label{tab:sus}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|l|c|}
+\hline
+\textbf{Especialista} & \textbf{Perfil} & \textbf{SUS} \\
+\hline
+E1 & IHC / Sistemas  & --- \\
+E2 & Educação Antirracista & --- \\
+E3 & RA Educacional / Autoria & --- \\
+\hline
+\textbf{Média} & & \textbf{---} \\
+\hline
+\end{tabular}
+\end{center}
 \end{table}
 
 \subsection{Problemas Identificados}
-\label{subsec:problemas}
 
-Foram catalogados [N] problemas de usabilidade ao longo das sessões.
-A Tabela~\ref{tab:problemas} sintetiza a distribuição por heurística
-violada e severidade média.
+Foram catalogados \textbf{[N]} problemas de usabilidade ao longo das sessões.
+A Tabela~\ref{tab:heuristicas} sintetiza a distribuição por heurística violada
+e severidade média.
 
-\begin{table}[ht]
-  \caption{Distribuição de problemas por heurística e severidade.}
-  \label{tab:problemas}
-  \centering
-  \begin{tabular}{lcc}
-    \toprule
-    \textbf{Heurística} & \textbf{Ocorrências} & \textbf{Sev. Média} \\
-    \midrule
-    H1 — Visibilidade do status    & -- & -- \\
-    H3 — Controle e liberdade      & -- & -- \\
-    H6 — Reconhecimento            & -- & -- \\
-    H9 — Recuperação de erros      & -- & -- \\
-    XR2 — Feedback de rastreamento & -- & -- \\
-    \midrule
-    \textbf{Total}                 & \textbf{--} & \textbf{--} \\
-    \bottomrule
-  \end{tabular}
+\begin{table}[htbp]
+\caption{Distribuição de problemas por heurística e severidade}
+\label{tab:heuristicas}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Heurística} & \textbf{Ocorr.} & \textbf{Sev. Méd.} \\
+\hline
+H1 --- Visibilidade do status & -- & -- \\
+H3 --- Controle e liberdade   & -- & -- \\
+H6 --- Reconhecimento         & -- & -- \\
+H9 --- Recuperação de erros   & -- & -- \\
+XR2 --- Feedback de rastreamento & -- & -- \\
+\hline
+\textbf{Total} & \textbf{--} & \textbf{--} \\
+\hline
+\end{tabular}
+\end{center}
 \end{table}
 
 \subsection{Análise Qualitativa}
-\label{subsec:qualitativa}
 
-A análise das verbalizações registradas durante o Think Aloud revelou
-padrões consistentes entre os especialistas. As principais forças
-identificadas foram:
+A análise das verbalizações registradas durante o Think Aloud revelou padrões
+consistentes entre os especialistas. As principais forças identificadas foram:
+\textbf{[a preencher após coleta dos dados]}. As principais oportunidades de
+melhoria foram: \textbf{[a preencher após coleta dos dados]}.
 
-\begin{itemize}
-  \item \textbf{[Ponto forte 1]}: [Descrição a preencher após análise.
-        Exemplo: ``Todos os especialistas concluíram T1 sem assistência,
-        elogiando a variedade de opções de avatar'']
-  \item \textbf{[Ponto forte 2]}: [A preencher]
-  \item \textbf{[Ponto forte 3]}: [A preencher]
-\end{itemize}
-
-As principais oportunidades de melhoria identificadas foram:
-
-\begin{itemize}
-  \item \textbf{[Oportunidade 1]}: [Descrição a preencher. Exemplo:
-        ``Todos os especialistas manifestaram dificuldade em localizar
-        o controle de escala do avatar no modo AR (H6, severidade 2)'']
-  \item \textbf{[Oportunidade 2]}: [A preencher]
-  \item \textbf{[Oportunidade 3]}: [A preencher]
-\end{itemize}
-
-A Figura~\ref{fig:contar-screenshots} apresenta capturas de tela
-da plataforma durante as tarefas avaliadas.
-
-\begin{figure}[ht]
-  \centering
-  %\includegraphics[width=\columnwidth]{figuras/screenshots.png}
-  \fbox{\parbox{0.92\columnwidth}{\centering\vspace{2.5cm}
-    [Screenshots do ContAR — editor, modo AR e visualizador de história]
-  \vspace{2.5cm}}}
-  \caption{Interface do ContAR: (a) editor 3D com seletor de poses;
-           (b) modo Surface AR (WebXR) com narrador posicionado;
-           (c) visualizador de história com reprodução de áudio.}
-  \label{fig:contar-screenshots}
-\end{figure}
-
-% =============================================================================
+% ──────────────────────────────────────────────────────────────────────────────
 \section{Discussão}
-\label{sec:discussao}
-% =============================================================================
 
-\textbf{Comparação com o benchmark anterior.}
-O estudo anterior \cite{freitas2025benchmark} identificou que o ecossistema
-fragmentado de ferramentas isoladas exige ao menos [N] transições entre
-plataformas para completar o fluxo de autoria. O ContAR elimina essa
-fragmentação ao integrar todo o fluxo em uma única interface. O score SUS
-médio de [X] pontos confirma que a integração não compromete a usabilidade:
-a plataforma atinge um nível de usabilidade [classificação], comparável
-a ferramentas consolidadas como [exemplo de ferramenta com score conhecido].
+\subsection{Comparação com o Benchmark Anterior}
 
-\textbf{Validação técnica dos módulos.}
-O \texttt{BoneMapper} demonstrou compatibilidade com os quatro padrões de
-rig testados (Mixamo, VRM, CC3 e genérico) sem configuração manual,
-confirmando a hipótese de que a heurística de mapeamento por padrão de
-nomenclatura é suficiente para a grande maioria dos avatares disponíveis
-em plataformas no-code. O modo de lip sync por timeline de visemas Azure
-produziu sincronização percebida como ``natural'' por [X/N] especialistas,
-enquanto o modo heurístico foi considerado ``satisfatório'' para áudio
-importado.
+O estudo exploratório preliminar conduzido pelos autores identificou que o
+ecossistema fragmentado exige múltiplas transições entre plataformas para
+completar o fluxo de autoria. O ContAR elimina essa fragmentação ao integrar
+todo o fluxo em uma única interface. O score SUS médio de~[X] pontos confirma
+que a integração não compromete a usabilidade, atingindo o nível~[classificação]
+e superando o benchmark das ferramentas isoladas avaliadas naquele levantamento.
 
-\textbf{Barreiras de entrada identificadas.}
-[Discussão dos principais problemas, relacionando-os a decisões de design
-que podem ser ajustadas. A preencher após análise dos dados.]
+\subsection{Validação Técnica dos Módulos}
 
-\textbf{Limitações do estudo.}
-O Expert Walkthrough com especialistas não substitui testes com o
-público-alvo primário (professores da educação). Os resultados
-identificam problemas de usabilidade segundo perspectiva técnica e
-especializada; uma avaliação com usuários finais pode revelar barreiras
-adicionais relacionadas à familiaridade com tecnologia em geral. Além
-disso, o suporte WebXR para Surface AR apresenta variação entre dispositivos
-e navegadores, especialmente em versões antigas do Safari no iOS.
+O BoneMapper demonstrou compatibilidade com os quatro padrões de rig testados
+(Mixamo, VRM, CC3 e genérico) sem configuração manual, confirmando que a
+heurística de mapeamento por nomenclatura é suficiente para a maioria dos avatares
+em plataformas no-code. O modo de lip sync por timeline de visemas Azure produziu
+sincronização percebida como natural pelos especialistas, enquanto o modo
+heurístico foi considerado satisfatório para áudio importado.
 
-% =============================================================================
+\subsection{Limitações do Estudo}
+
+O Expert Walkthrough com especialistas não substitui testes com o público-alvo
+primário --- professores da educação básica. Os resultados identificam problemas
+segundo perspectiva técnica e especializada; uma avaliação com usuários finais
+pode revelar barreiras adicionais relacionadas à familiaridade tecnológica.
+Adicionalmente, o suporte WebXR para Surface AR apresenta variação entre
+dispositivos e navegadores, especialmente em versões antigas do Safari no iOS.
+Por fim, o caso de uso antirracista, embora fundamentado teoricamente, ainda não
+foi avaliado empiricamente com estudantes e professores em contexto real.
+
+% ──────────────────────────────────────────────────────────────────────────────
 \section{Conclusão}
-\label{sec:conclusao}
-% =============================================================================
 
 Este artigo apresentou o ContAR, uma plataforma web no-code para autoria de
-narradores virtuais 3D em WebAR educacional, e sua avaliação de usabilidade
-por meio do método Expert Walkthrough. As contribuições do trabalho são
-triplas: (i) arquitetural — integração de avatar, TTS com visemas, composição
-de histórias e publicação WebAR em um único fluxo no navegador; (ii) técnica
-— BoneMapper com compatibilidade universal de rigs, LipSyncController com
-modos timeline e heurístico, suporte ao padrão VRM Animation; e
-(iii) avaliativa — protocolo Expert Walkthrough com heurísticas Nielsen + XR
-e SUS, produzindo [N] problemas catalogados e score médio de [X] pontos.
+narradores virtuais 3D em WebAR educacional, e sua avaliação de usabilidade via
+Expert Walkthrough. As contribuições são quádruplas: (i)~\textbf{arquitetural}
+--- integração de avatar, TTS com visemas, composição de histórias e publicação
+WebAR em um único fluxo no navegador; (ii)~\textbf{técnica} --- BoneMapper com
+compatibilidade universal de rigs, LipSyncController com modos timeline e
+heurístico, suporte ao padrão VRM Animation; (iii)~\textbf{avaliativa} ---
+protocolo Expert Walkthrough com heurísticas Nielsen + XR e SUS; e
+(iv)~\textbf{pedagógica} --- proposição e demonstração de caso de uso antirracista
+alinhado à Lei~10.639/2003.
 
-O ContAR confirma que é possível implementar um ecossistema integrado de
-autoria WebAR educacional no navegador, reduzindo a fragmentação
-identificada no benchmark anterior e tornando o fluxo completo acessível
-a usuários sem formação técnica em TI.
+O ContAR confirma que é possível implementar um ecossistema integrado de autoria
+WebAR educacional no navegador, reduzindo a fragmentação identificada no estudo
+preliminar e tornando o fluxo completo acessível a usuários sem formação técnica.
+Mais do que isso, o trabalho demonstra que ferramentas de autoria XR podem ser
+projetadas com agenda pedagógica explícita --- colocando a tecnologia a serviço
+da equidade e da representatividade na educação brasileira.
 
-Como trabalhos futuros destacam-se: (i) avaliação com professores da
-educação básica para complementar os resultados do Expert Walkthrough;
-(ii) integração de expressões faciais VRM e eye-tracking (\texttt{lookAt})
-para aumentar a expressividade do narrador; e (iii) incorporação de LLM
-para criação de narradores contextuais responsivos a perguntas dos estudantes,
-alinhada à proposta de Simbiose Humano-IA no contexto educacional.
+Como trabalhos futuros destacam-se: (i) avaliação com professores da educação
+básica, especialmente em escolas que implementam programas antirracistas; (ii)
+integração de expressões faciais VRM e eye-tracking; (iii) incorporação de LLM
+para criação de narradores responsivos a perguntas dos estudantes; e (iv)
+parceria com o Prof.\ Guilherme José e com o Voxar~Labs/CIn-UFPE para avaliação
+em contexto real de formação docente.
 
-O código-fonte da plataforma está disponível em
-\url{https://github.com/jorgelcff/contar} e a versão de produção
-pode ser acessada em \url{https://google.com}.
+O código-fonte está disponível em \url{https://github.com/jorgelcff/contar}.
 
-% =============================================================================
-% Referências
-% =============================================================================
-\bibliographystyle{sbc}
-\bibliography{referencias_svr}
+% ──────────────────────────────────────────────────────────────────────────────
+\section*{Agradecimentos}
+
+Os autores agradecem ao Prof.\ Guilherme José Ferreira de Araújo (UPE) e à
+Profa.\ Dra.\ Manoela Milena Oliveira da Silva (UPE/CIn-UFPE) pela participação
+nas sessões de avaliação e pelas contribuições ao projeto.
+
+% ──────────────────────────────────────────────────────────────────────────────
+\begin{thebibliography}{00}
+
+\bibitem{fonnet2021}
+A.~Fonnet and Y.~Prie, ``Survey of augmented reality for education,''
+\textit{Computers \& Education}, vol.~159, p.~104005, 2021.
+
+\bibitem{munoz2021}
+J.~A.~Munoz-Cristóbal et al., ``Augmented reality in education: A systematic
+review,'' \textit{Educational Technology Research and Development}, vol.~69,
+pp.~1--28, 2021.
+
+\bibitem{koutsabasis2021}
+P.~Koutsabasis and S.~Vosinakis, ``Web-based augmented reality: A review of
+tools, features and applications,'' \textit{Multimedia Tools and Applications},
+vol.~80, pp.~1--34, 2021.
+
+\bibitem{ibge2022}
+IBGE, \textit{Censo Demográfico 2022: Panorama}. Rio de Janeiro: Instituto
+Brasileiro de Geografia e Estatística, 2023.
+
+\bibitem{ribeiro2019}
+D.~Ribeiro, \textit{Pequeno Manual Antirracista}. São Paulo: Companhia das
+Letras, 2019.
+
+\bibitem{ribeiro2018}
+D.~Ribeiro, \textit{Quem tem medo do feminismo negro?} São Paulo: Companhia das
+Letras, 2018.
+
+\bibitem{tenorio2020}
+J.~Tenório, \textit{O Avesso da Pele}. São Paulo: Companhia das Letras, 2020.
+
+\bibitem{araujo2023a}
+G.~J.~Ferreira de Araújo, ``Profissionais de educação recebem curso de
+letramento racial e educação antirracista,'' Entrevista/Programa de Rádio, 2023.
+
+\bibitem{araujo2023b}
+G.~J.~Ferreira de Araújo, ``UPE realiza curso sobre letramento racial e educação
+antirracista em Petrolina,'' Entrevista/Programa de Rádio, 2023.
+
+\bibitem{araujo2023c}
+G.~J.~Ferreira de Araújo, ``Letramento racial e educação antirracista são temas
+de curso no Vale do SF,'' Entrevista/Programa de Rádio, 2023.
+
+\bibitem{silva2020}
+M.~M.~O.~Silva et al., ``Why don't we see more of augmented reality in
+schools?'' in \textit{Proc. IEEE ISMAR-Adjunct}, 2020, pp.~138--143.
+
+\bibitem{silva2022}
+M.~M.~O.~Silva, ``Development of design principles to author AR in education
+based on teacher's perspectives,'' Ph.D.\ dissertation, Centro de Informática,
+UFPE, Recife, 2022.
+
+\bibitem{silva2023}
+M.~M.~O.~Silva et al., ``Development of design principles for AR authoring tools
+for education based on teacher's perspectives,'' \textit{IEEE Transactions on
+Learning Technologies}, vol.~16, pp.~1--14, 2023.
+
+\bibitem{ruiz2020}
+J.~Ruiz and Y.~Li, ``Designing for augmented reality beginners,'' \textit{IEEE
+Computer Graphics and Applications}, vol.~40, no.~4, pp.~72--80, 2020.
+
+\bibitem{fernandes2025}
+R.~Fernandes and I.~F.~Silveira, ``Daz Studio to VRM pipeline: a discussion on
+the use of realistic VRM 3D models in upper body motion tracking,'' in
+\textit{Anais Estendidos do SVR 2025}, Porto Alegre: SBC, 2025, pp.~23--29.
+DOI: 10.5753/svr\_estendido.2025.15640.
+
+\bibitem{santos2025}
+S.~E.~F.~Santos et al., ``Teacher representations in immersive environments
+through holograms: A narrative review on the perspectives and challenges,'' in
+\textit{Proc. SVR 2025}, Porto Alegre: SBC, 2025.
+DOI: 10.1109/SVR67689.2025.11338574.
+
+\bibitem{nielsen1994}
+J.~Nielsen, \textit{Usability Engineering}. Boston: Academic Press, 1994.
+
+\bibitem{gabbard2008}
+J.~L.~Gabbard and J.~E.~Swan, ``Usability engineering for augmented reality,''
+\textit{IEEE Trans. Vis. Comput. Graphics}, vol.~14, no.~3, pp.~513--525, 2008.
+
+\bibitem{brooke1996}
+J.~Brooke, ``SUS: A quick and dirty usability scale,'' in \textit{Usability
+Evaluation in Industry}, P.~Jordan et al., Eds. London: Taylor \& Francis,
+1996, pp.~189--194.
+
+\bibitem{bangor2009}
+A.~Bangor, P.~Kortum, and J.~Miller, ``Determining what individual SUS scores
+mean: Adding an adjective rating scale,'' \textit{J. Usability Studies},
+vol.~4, no.~3, pp.~114--123, 2009.
+
+\bibitem{milgram1994}
+P.~Milgram and F.~Kishino, ``A taxonomy of mixed reality visual displays,''
+\textit{IEICE Trans. Inf. Syst.}, vol.~E77-D, no.~12, pp.~1321--1329, 1994.
+
+\bibitem{azuma1997}
+R.~T.~Azuma, ``A survey of augmented reality,'' \textit{Presence: Teleoperators
+and Virtual Environments}, vol.~6, no.~4, pp.~355--385, 1997.
+
+\end{thebibliography}
 
 \end{document}

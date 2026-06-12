@@ -10,19 +10,22 @@ import { getPublicStory, getScene } from '../api/sceneApi';
 import useAudio from '../hooks/useAudio';
 import PseudoARScene from './ar/PseudoARScene';
 import {
+  ARPoseRig,
   StoryOverlay,
   buildQueryUrl,
   createAvatarGLTFLoader,
   disposeObject3D,
   fitModelToGround,
+  loadAnimationManifest,
   normalizeAvatarUrl,
   readSavedScale,
   resolveSceneAvatarUrl,
+  resolveScenePosePreset,
   saveScale,
   useARStory,
 } from './ar/arShared';
 
-function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, onBack }) {
+function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
@@ -32,6 +35,10 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const modelRootRef = useRef(null);
   const loaderRef = useRef(null);
   const controllerRef = useRef(null);
+  // Pose / animation rig (matches the editor's poses & animation clips)
+  const poseRigRef = useRef(null);
+  const clockRef = useRef(new THREE.Clock());
+  const effectivePoseRef = useRef('idle');
   const hitTestSourceRef = useRef(null);
   const referenceSpaceRef = useRef(null);
   const xrSessionRef = useRef(null);
@@ -60,6 +67,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const [speechPlaying, setSpeechPlaying] = useState(false);
   const story = useARStory(storyId);
   const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
+  const effectivePosePreset = resolveScenePosePreset(story, storyId, posePreset);
+  effectivePoseRef.current = effectivePosePreset;
   const pseudoHref = useMemo(
     () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined }),
     [modelUrl, initialScale, storyId]
@@ -356,6 +365,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         placedRef.current = true;
       }
 
+      // Drive pose animations (idle/walk/dance/…) + blink/breathing each frame.
+      poseRigRef.current?.update(clockRef.current.getDelta());
+
       // Heuristic lip sync driven by audio analyser
       if (analyserRef.current && lipSyncRef.current?.hasTargets) {
         const binCount = analyserRef.current.frequencyBinCount;
@@ -403,6 +415,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         container.removeChild(renderer.domElement);
       }
       renderer.dispose();
+      poseRigRef.current?.dispose();
+      poseRigRef.current = null;
       disposeObject3D(modelRootRef.current);
       hitTestSourceRef.current?.cancel?.();
       hitTestSourceRef.current = null;
@@ -454,6 +468,17 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         // Init lip sync for this model
         if (lipSyncRef.current) lipSyncRef.current.dispose();
         lipSyncRef.current = new LipSyncController(model);
+
+        // Pose/animation rig — apply the scene's pose, then load shared
+        // animation clips and re-apply (so walk/dance/etc. animate).
+        poseRigRef.current?.dispose();
+        const rig = new ARPoseRig(gltf, model);
+        poseRigRef.current = rig;
+        rig.apply(effectivePoseRef.current);
+        loadAnimationManifest(loaderRef.current)
+          .then((clips) => { if (poseRigRef.current === rig) rig.setExternalClips(clips); })
+          .catch(() => {});
+
         setLoadingModel(false);
         setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
       },
@@ -465,6 +490,11 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       }
     );
   }, [effectiveModelUrl, t]);
+
+  // Re-apply the pose when the scene's pose changes without the model changing.
+  useEffect(() => {
+    poseRigRef.current?.apply(effectivePosePreset);
+  }, [effectivePosePreset]);
 
   if (supported === null) {
     return (
@@ -633,6 +663,7 @@ export default function ARPage() {
   const storedAvatarUrl = useSceneStore((s) => s.avatarUrl);
   const storedNarrativeAudioUrl = useSceneStore((s) => s.narrativeAudioUrl);
   const storedSpeechText = useSceneStore((s) => s.speechText);
+  const storedPosePreset = useSceneStore((s) => s.posePreset);
 
   // Resolve effective URL: query param → stored avatar (HTTP only) → default
   const resolveUrl = (param, stored) => {
@@ -711,6 +742,7 @@ export default function ARPage() {
         storyId={searchParams.get('storyId') || ''}
         narrativeAudioUrl={storedNarrativeAudioUrl}
         narrativeText={storedSpeechText}
+        posePreset={storedPosePreset}
         onBack={() => window.location.assign('/ar')}
       />
     );
@@ -725,6 +757,7 @@ export default function ARPage() {
         initialScale={startScale}
         storyId={searchParams.get('storyId') || ''}
         narrativeAudioUrl={storedNarrativeAudioUrl}
+        posePreset={storedPosePreset}
         onBack={() => window.location.assign('/ar')}
       />
     );

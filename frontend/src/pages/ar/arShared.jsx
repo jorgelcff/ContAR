@@ -5,6 +5,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { getPublicStory, getScene } from '../../api/sceneApi';
+import { BoneMapper } from '../../utils/BoneMapper';
+import { AnimationController } from '../../controllers/AnimationController';
+import { applyPosePreset } from '../../utils/posePresets';
 
 export const AR_SCALE_KEY = 'contar:ar-scale';
 export const AR_SCALE_DEFAULT = 1.0;
@@ -66,6 +69,105 @@ export function resolveSceneAvatarUrl(story, storyId, fallbackUrl) {
     return story.currentScene.content.avatar.modelUrl;
   }
   return fallbackUrl;
+}
+
+// Same idea for the pose: a story scene's pose preset overrides the page-level
+// pose (and defaults to "idle" so AR matches the editor's default).
+export function resolveScenePosePreset(story, storyId, fallback) {
+  if (storyId && story.currentScene?.content?.avatar?.posePreset) {
+    return story.currentScene.content.avatar.posePreset;
+  }
+  return fallback || 'idle';
+}
+
+// Loads the shared animation manifest (walk/dance/run/speaker… clips) once and
+// caches it across AR scenes. Mirrors SceneCanvas's manifest loading so AR
+// animated poses look identical to the editor. Returns { preset: AnimationClip }.
+let _arManifestPromise = null;
+export function loadAnimationManifest(gltfLoader) {
+  if (_arManifestPromise) return _arManifestPromise;
+  const PRESETS = ['idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'speaker'];
+  _arManifestPromise = fetch('/animations/manifest.json')
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)
+    .then((manifest) => {
+      if (!Array.isArray(manifest?.animations)) return {};
+      const external = {};
+      return Promise.all(
+        manifest.animations.map((anim) => new Promise((resolve) => {
+          if (!anim.file) return resolve();
+          gltfLoader.load(
+            `/animations/${anim.file}`,
+            (g) => {
+              const clip = g.animations?.[0];
+              if (!clip) return resolve();
+              const preset = anim.preset || anim.name || '';
+              clip.name = preset || clip.name || anim.file;
+              const tags = Array.isArray(anim.tags) ? anim.tags : [];
+              if (preset && !external[preset]) external[preset] = clip;
+              for (const p of PRESETS) {
+                if (!external[p] && tags.some((tag) => String(tag).toLowerCase().includes(p))) {
+                  external[p] = clip;
+                }
+              }
+              resolve();
+            },
+            undefined,
+            () => resolve(), // skip missing/broken files
+          );
+        }))
+      ).then(() => external);
+    });
+  return _arManifestPromise;
+}
+
+// Wraps an avatar's BoneMapper + AnimationController and applies pose presets,
+// so an AR scene can animate/pose the avatar exactly like the editor 3D view.
+// Host must call update(delta) each frame and dispose() on teardown.
+export class ARPoseRig {
+  constructor(gltf, model) {
+    this.model = model;
+    this.boneMapper = BoneMapper.fromGLTF(gltf);
+    this.avatarClips = Array.isArray(gltf.animations) ? [...gltf.animations] : [];
+    this.idleClip = this.avatarClips[0] || null;
+    this.externalClips = {};
+    this.controller = new AnimationController(model, this.avatarClips, this.boneMapper);
+    this.preset = 'idle';
+  }
+
+  apply(preset) {
+    this.preset = preset || 'idle';
+    applyPosePreset(
+      this.model,
+      this.controller,
+      this.idleClip,
+      this.avatarClips,
+      this.preset,
+      this.boneMapper,
+      this.externalClips,
+    );
+  }
+
+  // Merge manifest clips so animated presets (walk/dance/…) resolve, then
+  // re-apply the current pose in case it depended on a now-available clip.
+  setExternalClips(external) {
+    this.externalClips = external || {};
+    const clips = Object.values(this.externalClips);
+    for (const clip of clips) {
+      if (!this.avatarClips.some((c) => c.name === clip.name)) this.avatarClips.push(clip);
+    }
+    if (clips.length) this.controller.addClips(clips);
+    this.apply(this.preset);
+  }
+
+  update(delta) {
+    this.controller?.update(delta);
+  }
+
+  dispose() {
+    this.controller?.dispose?.();
+    this.controller = null;
+  }
 }
 
 export function buildQueryUrl(path, params) {

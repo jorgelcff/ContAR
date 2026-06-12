@@ -5,12 +5,15 @@ import Header from '../../components/ui/Header';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { useDeviceOrientation } from '../../hooks/useDeviceOrientation';
 import {
+  ARPoseRig,
   StoryOverlay,
   createAvatarGLTFLoader,
   disposeObject3D,
   fitModelToGround,
+  loadAnimationManifest,
   normalizeAvatarUrl,
   resolveSceneAvatarUrl,
+  resolveScenePosePreset,
   saveScale,
   useARStory,
 } from './arShared';
@@ -22,7 +25,7 @@ const CAMERA_HEIGHT = 1.6;
 // feed and drives the virtual camera's rotation from the device gyroscope, so
 // the avatar appears anchored as the user pans the phone. No marker and no
 // WebXR session required — works on iOS Safari and Android Chrome alike.
-export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, onBack }) {
+export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, posePreset, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -33,6 +36,10 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const loaderRef = useRef(null);
   const streamRef = useRef(null);
   const scaleRef = useRef(initialScale);
+  // Pose / animation rig (matches the editor's poses & animation clips)
+  const poseRigRef = useRef(null);
+  const clockRef = useRef(new THREE.Clock());
+  const effectivePoseRef = useRef('idle');
   // Lip sync
   const lipSyncRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -53,6 +60,8 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
 
   const cameraSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
+  const effectivePosePreset = resolveScenePosePreset(story, storyId, posePreset);
+  effectivePoseRef.current = effectivePosePreset;
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
   const initWebAudio = () => {
@@ -217,6 +226,9 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
     loaderRef.current = createAvatarGLTFLoader();
 
     renderer.setAnimationLoop(() => {
+      // Drive pose animations (idle/walk/dance/…) + blink/breathing each frame.
+      poseRigRef.current?.update(clockRef.current.getDelta());
+
       // Heuristic lip sync driven by audio analyser
       if (analyserRef.current && lipSyncRef.current?.hasTargets) {
         const binCount = analyserRef.current.frequencyBinCount;
@@ -262,6 +274,8 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
         container.removeChild(renderer.domElement);
       }
       renderer.dispose();
+      poseRigRef.current?.dispose();
+      poseRigRef.current = null;
       disposeObject3D(modelRootRef.current);
       sceneRef.current = null;
       cameraRef.current = null;
@@ -306,6 +320,17 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
         modelRootRef.current.scale.setScalar(scaleRef.current);
         if (lipSyncRef.current) lipSyncRef.current.dispose();
         lipSyncRef.current = new LipSyncController(model);
+
+        // Pose/animation rig — apply the scene's pose, then load shared
+        // animation clips and re-apply (so walk/dance/etc. animate).
+        poseRigRef.current?.dispose();
+        const rig = new ARPoseRig(gltf, model);
+        poseRigRef.current = rig;
+        rig.apply(effectivePoseRef.current);
+        loadAnimationManifest(loaderRef.current)
+          .then((clips) => { if (poseRigRef.current === rig) rig.setExternalClips(clips); })
+          .catch(() => {});
+
         setLoadingModel(false);
       },
       undefined,
@@ -316,6 +341,12 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
       }
     );
   }, [effectiveModelUrl]);
+
+  // Re-apply the pose when the scene's pose changes without the model changing
+  // (e.g. advancing to a story scene that reuses the same avatar).
+  useEffect(() => {
+    poseRigRef.current?.apply(effectivePosePreset);
+  }, [effectivePosePreset]);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black text-white">

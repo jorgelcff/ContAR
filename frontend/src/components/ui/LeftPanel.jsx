@@ -661,7 +661,7 @@ export default function LeftPanel({
                 lipSyncConfig={audio.lipSyncConfig}
                 visemeTimeline={audio.visemeTimeline}
                 isSpeaking={audio.isSpeaking}
-                onGenerateTTS={audio.generateWithElevenLabs}
+                onGenerateTTS={audio.generateWithAzure}
                 onSpeakWebSpeech={audio.speakWithWebSpeech}
                 onStopWebSpeech={audio.stopWebSpeech}
                 onLoadFile={audio.loadFile}

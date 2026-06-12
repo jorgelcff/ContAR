@@ -9,7 +9,7 @@ function base64ToBlob(base64, type = 'audio/mpeg') {
 }
 
 /**
- * useTTS — generates narration audio via the backend (which calls Azure/ElevenLabs
+ * useTTS — generates narration audio via the backend (which calls Azure
  * server-side, keeping the API keys off the client). Hands the MP3 File + text to
  * the caller for useAudio + viseme generation.
  *

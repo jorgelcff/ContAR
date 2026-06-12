@@ -3,7 +3,7 @@
  * avatar mesh for facial expression and lipsync control.
  *
  * This controller is intentionally decoupled from audio. External code (Web
- * Speech API, Azure TTS, ElevenLabs, etc.) is responsible for supplying viseme
+ * Speech API, Azure TTS, etc.) is responsible for supplying viseme
  * frames; this controller only applies them to the mesh.
  */
 import * as THREE from 'three';

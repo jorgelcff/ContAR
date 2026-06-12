@@ -253,7 +253,7 @@ export default function useAudio() {
     setVisemeTimeline([]);
   }
 
-  // Apply a precise viseme timeline supplied by a TTS provider (Azure/ElevenLabs)
+  // Apply a precise viseme timeline supplied by the TTS provider (Azure)
   // as { start, end, value }[]. Set raw — the audioDuration effect re-normalizes
   // it once the freshly loaded clip's duration is known. Returns false if empty
   // so callers can fall back to the text heuristic.
@@ -264,14 +264,14 @@ export default function useAudio() {
     return true;
   }
 
-  async function generateWithElevenLabs(text, voiceId) {
+  async function generateWithAzure(text, voiceId) {
     const src = String(text || '').trim();
     if (!src) { setError('Escreva um texto antes de gerar a fala.'); return; }
 
     setIsTTSLoading(true);
     setError('');
     try {
-      // Backend returns unified { audioBase64, visemeTimeline } for both Azure and ElevenLabs
+      // Backend returns { audioBase64, visemeTimeline } from Azure
       const { audioBase64, visemeTimeline: ttsTimeline } = await generateTTS(src, voiceId);
 
       // Base64 → Blob → object URL
@@ -552,7 +552,7 @@ export default function useAudio() {
     clearVisemeTimeline,
     applyVisemeTimeline,
     generateVisemeTimelineFromText,
-    generateWithElevenLabs,
+    generateWithAzure,
     speakWithWebSpeech,
     stopWebSpeech,
     play,

@@ -1,8 +1,5 @@
 const sdk = require('microsoft-cognitiveservices-speech-sdk');
 
-const ELEVENLABS_API_BASE = 'https://api.elevenlabs.io/v1';
-const ELEVENLABS_DEFAULT_VOICE = '21m00Tcm4TlvDq8ikWAM'; // Rachel
-
 // Azure viseme ID → Rhubarb mouth shape
 // https://learn.microsoft.com/azure/ai-services/speech-service/how-to-speech-synthesis-viseme
 const AZURE_VISEME_TO_RHUBARB = {
@@ -87,103 +84,23 @@ async function synthesizeWithAzure(text, voiceName) {
   });
 }
 
-async function synthesizeWithElevenLabs(text, voiceId) {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) throw new Error('ELEVENLABS_API_KEY not set');
-
-  const voice = String(voiceId || process.env.ELEVENLABS_VOICE_ID || ELEVENLABS_DEFAULT_VOICE).trim();
-
-  const upstream = await fetch(
-    `${ELEVENLABS_API_BASE}/text-to-speech/${voice}/with-timestamps`,
-    {
-      method: 'POST',
-      headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        text,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-      }),
-    }
-  );
-
-  if (!upstream.ok) {
-    const detail = await upstream.json().catch(() => ({}));
-    throw new Error(detail?.detail?.message || detail?.message || `ElevenLabs error ${upstream.status}`);
-  }
-
-  const data = await upstream.json();
-
-  // Convert ElevenLabs character alignment to { start, end, value } timeline
-  const { characters = [], character_start_times_seconds = [], character_end_times_seconds = [] } =
-    data.alignment || {};
-
-  const CHAR_TO_RHUBARB = (ch, next) => {
-    if (!ch) return null;
-    if (/\s|[,.!?;:]/.test(ch)) return 'X';
-    if (/[ae]/i.test(ch)) return 'A';
-    if (/[i]/i.test(ch)) return 'C';
-    if (/[o]/i.test(ch)) return 'E';
-    if (/[u]/i.test(ch)) return 'F';
-    if (/[bmp]/i.test(ch)) return 'B';
-    if (/[fv]/i.test(ch)) return 'G';
-    if (/[tdnlr]/i.test(ch)) return 'D';
-    if (/[szxj]/i.test(ch)) return 'H';
-    return 'D';
-  };
-
-  const visemeTimeline = characters
-    .map((ch, i) => {
-      const start = character_start_times_seconds[i];
-      const end   = character_end_times_seconds[i];
-      const value = CHAR_TO_RHUBARB(ch, characters[i + 1] || '');
-      if (!value || !Number.isFinite(start) || !Number.isFinite(end)) return null;
-      return { start, end, value };
-    })
-    .filter(Boolean);
-
-  return { audioBase64: data.audio_base64, visemeTimeline };
-}
-
 exports.generateTTS = async (req, res) => {
-  const { text, voiceId, provider } = req.body;
+  const { text, voiceId } = req.body;
   if (!text || !String(text).trim()) {
     return res.status(400).json({ error: 'text is required' });
   }
 
   const safeText = String(text).trim().slice(0, 2500);
 
-  const hasAzure      = !!process.env.AZURE_SPEECH_KEY;
-  const hasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
-
-  // Azure's SDK opens a websocket that can hang (slow/blocked); cap it so we can
-  // fall back instead of letting the request time out as a 504.
-  const tryAzure     = () => withTimeout(synthesizeWithAzure(safeText, voiceId), 22_000, 'Azure TTS timed out');
-  const tryElevenLabs = () => synthesizeWithElevenLabs(safeText, voiceId);
+  if (!process.env.AZURE_SPEECH_KEY) {
+    return res.status(503).json({ error: 'TTS not configured — set AZURE_SPEECH_KEY' });
+  }
 
   try {
-    // Explicit ElevenLabs request
-    if (provider === 'elevenlabs' && hasElevenLabs) {
-      return res.json(await tryElevenLabs());
-    }
-
-    // Default: Azure first (free tier), then fall back to ElevenLabs if it
-    // fails/times out — previously a transient Azure error returned a 500/504
-    // even though a working ElevenLabs key was configured.
-    if (hasAzure) {
-      try {
-        return res.json(await tryAzure());
-      } catch (azureErr) {
-        console.error('Azure TTS failed:', azureErr.message);
-        if (hasElevenLabs) return res.json(await tryElevenLabs());
-        throw azureErr;
-      }
-    }
-
-    if (hasElevenLabs) {
-      return res.json(await tryElevenLabs());
-    }
-
-    return res.status(503).json({ error: 'TTS not configured — set AZURE_SPEECH_KEY or ELEVENLABS_API_KEY' });
+    // Azure's SDK opens a websocket that can hang (slow/blocked); cap it so the
+    // request fails cleanly instead of timing out as a 504 at the gateway.
+    const result = await withTimeout(synthesizeWithAzure(safeText, voiceId), 22_000, 'Azure TTS timed out');
+    return res.json(result);
   } catch (err) {
     if (!res.headersSent) {
       res.status(502).json({ error: err.message || 'TTS generation failed' });

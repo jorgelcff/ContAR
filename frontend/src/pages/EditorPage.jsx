@@ -68,7 +68,7 @@ export default function EditorPage() {
         // Upload failure is non-critical — audio plays locally, just won't persist in the story viewer
       }
     },
-    // Prefer the provider's precise viseme timeline (Azure/ElevenLabs); fall
+    // Prefer the provider's precise viseme timeline (Azure); fall
     // back to the text heuristic only when it isn't available.
     onVisemeReady: (text, visemeTimeline) => {
       if (!visemeTimeline || !audio.applyVisemeTimeline(visemeTimeline)) {

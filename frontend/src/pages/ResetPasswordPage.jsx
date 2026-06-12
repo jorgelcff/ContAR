@@ -16,7 +16,7 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-gray-950 text-white flex items-center justify-center p-4">
         <div className="w-full max-w-md rounded-2xl border border-red-700/50 bg-gray-900 p-6 text-center flex flex-col gap-4">
           <p className="text-red-300 font-medium">{t('resetPwInvalidToken')}</p>
           <Link to="/login" className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors">
@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-gray-950 text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-6 flex flex-col gap-4">
 
         <div>

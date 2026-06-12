@@ -498,7 +498,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
 
   if (supported === null) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-black text-white flex-col gap-4">
+      <div className="flex h-dvh w-screen items-center justify-center bg-black text-white flex-col gap-4">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
         <p className="text-sm text-gray-300">Verificando suporte AR...</p>
       </div>
@@ -518,7 +518,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-black text-white">
+    <div className="relative h-dvh w-screen overflow-hidden bg-black text-white">
       {/* Hidden audio element for story playback */}
       <audio ref={story.audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
 
@@ -622,7 +622,7 @@ function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId }
   );
 
   return (
-    <div className="relative flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="relative flex flex-col h-dvh bg-gray-950 text-white overflow-hidden">
       {/* Hidden audio element — plays story narration from React (not inside iframe) */}
       <audio ref={audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
 
@@ -791,7 +791,7 @@ export default function ARPage() {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-linear-to-b from-gray-950 via-slate-950 to-black text-white overflow-hidden">
+    <div className="flex flex-col h-dvh bg-linear-to-b from-gray-950 via-slate-950 to-black text-white overflow-hidden">
       <Header />
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-3xl flex flex-col gap-5">
@@ -1128,7 +1128,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
   const transform = useMemo(() => ({ positionX: 0, positionY: 0, positionZ: 0, rotationY: 0, scale }), [scale]);
 
   return (
-    <div className="relative flex flex-col h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="relative flex flex-col h-dvh bg-gray-950 text-white overflow-hidden">
       <Header />
       <div className="shrink-0 border-b border-gray-800 bg-gray-900 px-4 py-3 flex items-start justify-between gap-3">
         <div>

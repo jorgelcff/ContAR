@@ -208,7 +208,7 @@ export default function StoriesPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
+    <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
       <Header />
 
       <div className="flex-1 overflow-y-auto">

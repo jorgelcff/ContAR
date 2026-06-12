@@ -26,7 +26,7 @@ export default function WelcomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="min-h-dvh bg-gray-950 text-white flex flex-col">
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <div className="flex flex-col items-center justify-center flex-1 px-6 pt-16 pb-8 text-center">

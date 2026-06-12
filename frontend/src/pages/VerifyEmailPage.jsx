@@ -29,7 +29,7 @@ export default function VerifyEmailPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-gray-950 text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-8 flex flex-col items-center gap-5 text-center">
 
         {status === 'verifying' && (

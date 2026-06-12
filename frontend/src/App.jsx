@@ -20,7 +20,7 @@ function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="min-h-screen bg-gray-950 text-gray-300 flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-dvh bg-gray-950 text-gray-300 flex items-center justify-center">Loading...</div>;
   }
 
   if (!isAuthenticated) {

@@ -179,7 +179,7 @@ export default function LandingPage() {
   const CASE_STEPS = getCaseSteps(t);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="min-h-dvh bg-gray-950 text-white flex flex-col">
 
       {/* ── Navbar ──────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-gray-950/80 backdrop-blur-md">

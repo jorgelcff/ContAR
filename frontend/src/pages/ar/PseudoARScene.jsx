@@ -138,6 +138,12 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
     if (starting || arActive) return;
     setStarting(true);
     setError('');
+    // iOS 13+: requestPermission() MUST be called synchronously inside the tap,
+    // before any await. Awaiting getUserMedia first consumes the user gesture,
+    // so the motion prompt never appears and the gyroscope stays dead — which
+    // makes the magic window (and "reposition") look broken on iPhone. Kick the
+    // permission request off first, then await its result after the camera.
+    const orientationPermission = deviceOrientation.requestPermission();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
       streamRef.current = stream;
@@ -146,7 +152,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
         await videoRef.current.play().catch(() => {});
       }
 
-      const permission = await deviceOrientation.requestPermission();
+      const permission = await orientationPermission;
       if (permission === 'granted') {
         deviceOrientation.start((quaternion) => {
           cameraRef.current?.quaternion.copy(quaternion);
@@ -349,7 +355,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   }, [effectivePosePreset]);
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-black text-white">
+    <div className="relative h-dvh w-screen overflow-hidden bg-black text-white">
       {/* Hidden audio element for story playback */}
       <audio ref={story.audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
 

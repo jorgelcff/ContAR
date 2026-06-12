@@ -61,7 +61,7 @@ export default function ViewerPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen bg-gray-900 text-white">
+      <div className="flex flex-col h-dvh bg-gray-900 text-white">
         <Header />
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
@@ -73,7 +73,7 @@ export default function ViewerPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col h-screen bg-gray-900 text-white">
+      <div className="flex flex-col h-dvh bg-gray-900 text-white">
         <Header />
         <div className="flex-1 flex items-center justify-center text-red-400">{error}</div>
       </div>
@@ -81,7 +81,7 @@ export default function ViewerPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
+    <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
       <Header />
       <div className="shrink-0 px-4 py-2 bg-gray-800 border-b border-gray-700 flex items-center justify-between gap-3">
         <h2 className="font-medium">{scene?.metadata?.title || t('viewerTitle')}</h2>

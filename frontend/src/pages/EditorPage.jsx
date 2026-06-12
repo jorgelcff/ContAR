@@ -327,7 +327,7 @@ export default function EditorPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
+    <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
       {showOnboarding && (
         <OnboardingOverlay onDone={() => setShowOnboarding(false)} />
       )}

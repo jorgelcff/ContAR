@@ -54,7 +54,7 @@ export default function ScenesPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white overflow-hidden">
+    <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
       <Header />
       <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6 max-w-4xl w-full mx-auto">
 

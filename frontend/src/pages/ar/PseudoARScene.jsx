@@ -362,7 +362,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   }, [effectivePosePreset]);
 
   return (
-    <div className="relative h-dvh w-screen overflow-hidden bg-black text-white">
+    <div className="ar-dark relative h-dvh w-screen overflow-hidden bg-black text-white">
       {/* Hidden audio element for story playback */}
       <audio ref={story.audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
 

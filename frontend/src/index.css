@@ -26,6 +26,22 @@ html[data-theme='light'] {
   --color-gray-500: oklch(37.3% 0.015 265.807);
   --color-gray-400: oklch(44.3% 0.017 265.754);
   --color-gray-300: oklch(27.9% 0.017 264.364);
+  /* gray-100/200 are only ever used as TEXT in this app (no bg-gray-100/200),
+   * so darken them too — otherwise light text on a light pill (e.g. the header
+   * nav) has almost no contrast. */
+  --color-gray-200: oklch(27.9% 0.017 264.364);
+  --color-gray-100: oklch(20.8% 0.042 266.058);
+
+  /* ── Slate isn't auto-derived from gray — mirror it so slate surfaces,
+   * gradients (via-slate-950) and slate text adapt to light mode too. ─── */
+  --color-slate-950: oklch(98.5% 0.002 247.839);
+  --color-slate-900: oklch(100%  0     0);
+  --color-slate-800: oklch(96.8% 0.007 247.896);
+  --color-slate-700: oklch(93%   0.013 255.508);
+  --color-slate-400: oklch(44.3% 0.017 265.754);
+  --color-slate-300: oklch(37.3% 0.015 265.807);
+  --color-slate-200: oklch(27.9% 0.017 264.364);
+  --color-slate-100: oklch(27.9% 0.017 264.364);
 
   /* ── Accent text (100–400 shades) → darker equivalents ──────────── *
    * These light shades fail WCAG AA on white; remap to their ~700     *
@@ -89,6 +105,27 @@ html[data-theme='light'] {
 html[data-theme='light'] .text-white {
   color: oklch(20.8% 0.042 266.058);
 }
+
+/* ── Always-dark surfaces (AR camera overlays) ─────────────────────── *
+ * The AR scenes render dark panels over a live camera feed, so they must
+ * stay dark regardless of the app theme. Re-assert the dark palette on the
+ * .ar-dark root so the light-mode remaps above don't turn its text/buttons
+ * dark-on-dark (invisible). */
+html[data-theme='light'] .ar-dark {
+  --color-gray-100: oklch(96.7% 0.001 286);
+  --color-gray-200: oklch(92%   0.004 286);
+  --color-gray-300: oklch(87%   0.006 286);
+  --color-gray-400: oklch(71%   0.013 286);
+  --color-gray-500: oklch(55%   0.02  286);
+  --color-gray-700: oklch(37%   0.03  259);
+  --color-gray-800: oklch(27.8% 0.03  256);
+  --color-gray-900: oklch(21%   0.035 256);
+  --color-cyan-300: oklch(79%   0.13  205);
+  --color-cyan-400: oklch(72%   0.14  205);
+  --color-amber-400: oklch(83%  0.13   84);
+  --color-red-400:  oklch(70%   0.19   23);
+}
+html[data-theme='light'] .ar-dark .text-white { color: oklch(100% 0 0); }
 
 /* Hairline dividers built with border-white/5 and border-white/10 become
  * invisible on a white background; flip them to black-tinted equivalents. */

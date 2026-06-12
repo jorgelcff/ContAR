@@ -505,9 +505,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
 
   if (supported === null) {
     return (
-      <div className="flex h-dvh w-screen items-center justify-center bg-black text-white flex-col gap-4">
+      <div className="ar-dark flex h-dvh w-screen items-center justify-center bg-black text-white flex-col gap-4">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-        <p className="text-sm text-gray-300">Verificando suporte AR...</p>
+        <p className="text-sm text-gray-300">{t('arCheckingSupport')}</p>
       </div>
     );
   }
@@ -525,7 +525,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   }
 
   return (
-    <div className="relative h-dvh w-screen overflow-hidden bg-black text-white">
+    <div className="ar-dark relative h-dvh w-screen overflow-hidden bg-black text-white">
       {/* Hidden audio element for story playback */}
       <audio ref={story.audioRef} crossOrigin="anonymous" preload="auto" className="hidden" />
 

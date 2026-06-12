@@ -63,16 +63,16 @@ export default function Header({ autosaveStatus }) {
         <select
           value={theme}
           onChange={(e) => setTheme(e.target.value)}
-          title="Tema"
+          title={t('themeTitle')}
           className="text-xs font-medium px-2 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors cursor-pointer border-0 outline-none"
         >
-          <option value="dark">Escuro</option>
-          <option value="light">Claro</option>
-          <option value="system">Sistema</option>
+          <option value="dark">{t('themeDark')}</option>
+          <option value="light">{t('themeLight')}</option>
+          <option value="system">{t('themeSystem')}</option>
         </select>
         <button
           onClick={() => setShowHelp(true)}
-          title="Ajuda"
+          title={t('helpTitle')}
           className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors"
         >
           <Icon name="sparkles" className="w-3.5 h-3.5 inline-block mr-1 align-middle" />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SCENE_TEMPLATES } from '../data/sceneTemplates';
 import { useSceneStore } from '../store/useSceneStore';
 import Icon from '../components/ui/Icon';
@@ -13,6 +14,7 @@ function applyTemplate(template, store) {
 }
 
 export default function WelcomePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [showTemplates, setShowTemplates] = useState(false);
 
@@ -50,13 +52,13 @@ export default function WelcomePage() {
             onClick={handleNewScene}
             className="flex-1 py-4 px-6 rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-lg font-semibold shadow-lg shadow-blue-900/40 transition-all duration-200 active:scale-95"
           >
-            <span className="inline-flex items-center gap-2"><Icon name="sparkles" className="w-5 h-5" /> Criar nova cena</span>
+            <span className="inline-flex items-center gap-2"><Icon name="sparkles" className="w-5 h-5" /> {t('welcomeCreateScene')}</span>
           </button>
           <button
             onClick={() => setShowTemplates((v) => !v)}
             className="flex-1 py-4 px-6 rounded-2xl border-2 border-gray-600 hover:border-gray-400 text-gray-200 hover:text-white text-lg font-semibold transition-all duration-200 active:scale-95"
           >
-            <span className="inline-flex items-center gap-2"><Icon name="folder" className="w-5 h-5" /> Usar template</span>
+            <span className="inline-flex items-center gap-2"><Icon name="folder" className="w-5 h-5" /> {t('welcomeUseTemplate')}</span>
           </button>
         </div>
 

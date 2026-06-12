@@ -398,7 +398,7 @@ export default function StoryViewerPage() {
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center bg-gray-900 gap-4 px-6 text-center">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14 text-gray-600"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 7a7 7 0 0 1 14 0"/></svg>
-                    <p className="text-gray-300 font-medium">Nenhum avatar configurado nesta cena</p>
+                    <p className="text-gray-300 font-medium">{t('noAvatarInScene')}</p>
                     <p className="text-xs text-gray-500 max-w-xs">
                       Abra esta cena no editor, selecione um avatar e salve novamente.
                     </p>

@@ -105,7 +105,7 @@ export default function TimelinePanel() {
             + Audio Track
           </button>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-400">Total Dur.</span>
+            <span className="text-[10px] text-gray-400">{t('timelineTotalDur')}</span>
             <input 
               type="number" min={5} max={180} 
               value={timelineDuration} 

@@ -39,6 +39,7 @@ function Counter({ target, suffix = '' }) {
 // ── Product preview mockup ─────────────────────────────────────────────────
 
 function ProductPreview() {
+  const { t } = useTranslation();
   return (
     <div className="relative w-full max-w-2xl mx-auto mt-12 px-4">
       <div className="absolute inset-0 rounded-3xl bg-cyan-500/10 blur-3xl scale-110 pointer-events-none" />
@@ -67,7 +68,7 @@ function ProductPreview() {
           </div>
           {/* Speech bubble */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-gray-900/90 border border-white/10 rounded-xl px-4 py-2 text-xs text-gray-200 shadow-lg max-w-52 text-center">
-            <span className="italic">"Bem-vindo à nossa aula interativa!"</span>
+            <span className="italic">{t('landingDemoQuote')}</span>
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-gray-900/90" />
           </div>
           {/* Controls bar */}

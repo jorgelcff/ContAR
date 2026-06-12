@@ -92,10 +92,11 @@ function Field({ type, value, onChange, placeholder, autoComplete, required, min
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
 function Spinner() {
+  const { t } = useTranslation();
   return (
     <span className="inline-flex items-center gap-2">
       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-      <span>Aguarde…</span>
+      <span>{t('pleaseWait')}</span>
     </span>
   );
 }

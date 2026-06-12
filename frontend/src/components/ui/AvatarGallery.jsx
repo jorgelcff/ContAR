@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Icon from './Icon';
+import { useTranslation } from 'react-i18next';
 
 const OSA_BASE = 'https://raw.githubusercontent.com/ToxSam/open-source-avatars/main/data';
 const COLLECTIONS_URL = `${OSA_BASE}/projects.json`;
@@ -16,6 +17,7 @@ function resolveAvatarFields(item) {
 }
 
 export default function AvatarGallery({ onSelect, onClose, fullHeight = false }) {
+  const { t } = useTranslation();
   const [avatars, setAvatars]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
@@ -83,8 +85,8 @@ export default function AvatarGallery({ onSelect, onClose, fullHeight = false })
       {!fullHeight && (
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-gray-200">Galeria de avatares</p>
-            <p className="text-[10px] text-gray-500">Open Source Avatars · licença CC0</p>
+            <p className="text-xs font-semibold text-gray-200">{t('galleryTitle')}</p>
+            <p className="text-[10px] text-gray-500">{t('gallerySubtitle')}</p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors"><Icon name="close" className="w-4 h-4" /></button>
         </div>

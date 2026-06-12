@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 
 // ── FAQ data ────────────────────────────────────────────────────────────────
 const FAQ = [
@@ -165,6 +166,7 @@ function GuideCard({ guide }) {
 
 // ── Main modal ───────────────────────────────────────────────────────────────
 export default function HelpModal({ onClose }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('faq');
 
   return createPortal(
@@ -173,7 +175,7 @@ export default function HelpModal({ onClose }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-          <h2 className="text-lg font-bold text-white">Central de Ajuda</h2>
+          <h2 className="text-lg font-bold text-white">{t('helpCenterTitle')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none transition-colors">×</button>
         </div>
 

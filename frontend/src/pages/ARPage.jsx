@@ -37,6 +37,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const xrSessionRef = useRef(null);
   const lockPlacementRef = useRef(true);
   const placedRef = useRef(false);
+  // True when the session started without hit-test: there's no surface reticle,
+  // so the avatar is anchored in front of the camera using the WebXR viewer pose.
+  const noHitTestRef = useRef(false);
   const scaleRef = useRef(initialScale);
   // Lip sync
   const lipSyncRef = useRef(null);
@@ -121,12 +124,33 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
     setStarting(true);
     setError('');
     setHitTestUnsupported(false);
-    try {
-      const session = await navigator.xr.requestSession('immersive-ar', {
-        requiredFeatures: ['hit-test'],
-        optionalFeatures: ['dom-overlay'],
+
+    const requestSession = (requireHitTest) =>
+      navigator.xr.requestSession('immersive-ar', {
+        ...(requireHitTest ? { requiredFeatures: ['hit-test'] } : {}),
+        optionalFeatures: ['hit-test', 'dom-overlay'],
         domOverlay: { root: container },
       });
+
+    try {
+      let session;
+      try {
+        session = await requestSession(true);
+        noHitTestRef.current = false;
+      } catch (e) {
+        // navigator.xr.isSessionSupported('immersive-ar') only checks the base
+        // session — it can return true even when this device's WebXR/ARCore
+        // build lacks the hit-test feature. Rather than failing, retry without
+        // requiring hit-test: we still get camera passthrough + 6DOF positional
+        // tracking and just anchor the avatar in front of the camera (no surface
+        // detection / reticle).
+        if (e?.name === 'NotSupportedError') {
+          session = await requestSession(false);
+          noHitTestRef.current = true;
+        } else {
+          throw e;
+        }
+      }
       renderer.xr.setReferenceSpaceType('local');
       await renderer.xr.setSession(session);
     } catch (err) {
@@ -134,11 +158,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       if (err?.name === 'NotAllowedError') {
         setError('Permissão de câmera negada. Toque no ícone de cadeado/informações na barra de endereço, ative "Câmera" para este site e tente novamente.');
       } else if (err?.name === 'NotSupportedError') {
-        // navigator.xr.isSessionSupported('immersive-ar') only checks the base
-        // session — it can return true even when this device's WebXR/ARCore
-        // implementation doesn't support the hit-test feature required here.
         setHitTestUnsupported(true);
-        setError('Este dispositivo não suporta a detecção de superfície (hit-test) necessária para a AR de Superfície. Use a AR Imersiva, que funciona neste aparelho.');
+        setError('Este dispositivo não suporta sessões de Realidade Aumentada (WebXR). Use a AR Imersiva, que funciona neste aparelho.');
       } else {
         setError(`Não foi possível iniciar a sessão AR: ${err?.message || err?.name || 'erro desconhecido'}`);
       }
@@ -149,6 +170,30 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
 
   const stopArSession = () => {
     xrSessionRef.current?.end?.().catch(() => {});
+  };
+
+  // No-hit-test fallback: anchor the avatar ~1.6m in front of the camera using
+  // the live WebXR viewer pose (camera.matrixWorld), facing the user, with its
+  // feet roughly at floor level (~1.6m below eye height).
+  const placeInFrontOfCamera = () => {
+    const camera = cameraRef.current;
+    const target = modelRootRef.current;
+    if (!camera || !target) return;
+    const camPos = new THREE.Vector3();
+    const camQuat = new THREE.Quaternion();
+    camera.matrixWorld.decompose(camPos, camQuat, new THREE.Vector3());
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camQuat);
+    forward.y = 0;
+    if (forward.lengthSq() < 1e-6) forward.set(0, 0, -1);
+    forward.normalize();
+    target.position.set(
+      camPos.x + forward.x * 1.6,
+      camPos.y - 1.6,
+      camPos.z + forward.z * 1.6
+    );
+    target.rotation.set(0, Math.atan2(camPos.x - target.position.x, camPos.z - target.position.z), 0);
+    target.scale.setScalar(scaleRef.current);
+    target.visible = true;
   };
 
   // Async WebXR support check — avoids false negatives on browsers
@@ -229,8 +274,18 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
     const controller = renderer.xr.getController(0);
     controller.addEventListener('select', () => {
       const target = modelRootRef.current;
+      if (!target) return;
+
+      // No-hit-test mode: each tap re-anchors the avatar in front of the camera.
+      if (noHitTestRef.current) {
+        placeInFrontOfCamera();
+        placedRef.current = true;
+        setStatus('Avatar posicionado à sua frente. Toque para reposicionar.');
+        return;
+      }
+
       const reticleMesh = reticleRef.current;
-      if (!target || !reticleMesh || !reticleMesh.visible) return;
+      if (!reticleMesh || !reticleMesh.visible) return;
       if (lockPlacementRef.current && placedRef.current) return;
 
       target.visible = true;
@@ -250,8 +305,11 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       if (!session || hitTestSourceRequested) return;
       hitTestSourceRequested = true;
       xrSessionRef.current = session;
+      placedRef.current = false;
       setArActive(true);
-      setStatus('Mova o celular para detectar superfície, depois toque para posicionar.');
+      setStatus(noHitTestRef.current
+        ? 'Toque na tela para posicionar o avatar à sua frente.'
+        : 'Mova o celular para detectar superfície, depois toque para posicionar.');
 
       session.addEventListener('end', () => {
         hitTestSourceRequested = false;
@@ -262,14 +320,17 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         setArActive(false);
       });
 
-      session.requestReferenceSpace('viewer').then((viewerSpace) => {
-        session.requestHitTestSource({ space: viewerSpace }).then((source) => {
-          hitTestSourceRef.current = source;
+      // Only the surface-detection path needs a hit-test source.
+      if (!noHitTestRef.current) {
+        session.requestReferenceSpace('viewer').then((viewerSpace) => {
+          session.requestHitTestSource({ space: viewerSpace }).then((source) => {
+            hitTestSourceRef.current = source;
+          });
+        }).catch((err) => {
+          console.error('AR hit-test source request failed', err);
+          setError('Não foi possível ativar a detecção de superfície (hit-test).');
         });
-      }).catch((err) => {
-        console.error('AR hit-test source request failed', err);
-        setError('Não foi possível ativar a detecção de superfície (hit-test).');
-      });
+      }
 
       session.requestReferenceSpace('local').then((space) => {
         referenceSpaceRef.current = space;
@@ -277,7 +338,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
     });
 
     renderer.setAnimationLoop((time, frame) => {
-      if (frame && hitTestSourceRef.current && referenceSpaceRef.current) {
+      if (frame && !noHitTestRef.current && hitTestSourceRef.current && referenceSpaceRef.current) {
         const hitTestResults = frame.getHitTestResults(hitTestSourceRef.current);
         if (hitTestResults.length > 0) {
           const pose = hitTestResults[0].getPose(referenceSpaceRef.current);
@@ -286,6 +347,13 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         } else {
           reticle.visible = false;
         }
+      }
+
+      // No-hit-test mode: auto-anchor in front of the camera on the first frame
+      // after the model has loaded, so the user sees the avatar without tapping.
+      if (noHitTestRef.current && !placedRef.current && modelRootRef.current?.children.length) {
+        placeInFrontOfCamera();
+        placedRef.current = true;
       }
 
       // Heuristic lip sync driven by audio analyser

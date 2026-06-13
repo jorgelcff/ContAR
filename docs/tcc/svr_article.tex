@@ -13,6 +13,8 @@
 \usepackage{array}
 \usepackage{url}
 \usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{positioning, fit, arrows.meta, backgrounds}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -32,6 +34,21 @@ para Narradores Virtuais 3D na Educação Antirracista}
     jlf@cin.ufpe.br
   }
   \and
+  \IEEEauthorblockN{Manoela Milena Oliveira da Silva}
+  \IEEEauthorblockA{
+    \textit{Centro de Informática (CIn)}\\
+    \textit{Universidade Federal de Pernambuco (UFPE)}\\
+    Recife, Brasil\\
+    mmos@cin.ufpe.br
+  }
+  \and
+  \IEEEauthorblockN{Guilherme José Ferreira de Araújo}
+  \IEEEauthorblockA{
+    \textit{Universidade de Pernambuco (UPE)}\\
+    Petrolina, Brasil\\
+    guilherme.jose@upe.br
+  }
+  \and
   \IEEEauthorblockN{Francisco Paulo Magalhães Simões}
   \IEEEauthorblockA{
     \textit{Centro de Informática (CIn)}\\
@@ -47,9 +64,9 @@ para Narradores Virtuais 3D na Educação Antirracista}
 \begin{abstract}
 Authoring personalized Augmented Reality (AR) content remains technically
 challenging for educators without programming or 3D modeling expertise. In the
-context of anti-racist education — driven by legal frameworks such as Brazil's
+context of anti-racist education (driven by legal frameworks such as Brazil's
 Law 10.639/2003 and theoretical references such as Djamila Ribeiro and Jeferson
-Tenório — the absence of accessible tools deepens inequalities in the production
+Tenório), the absence of accessible tools deepens inequalities in the production
 of representative pedagogical materials. Existing tools operate in a fragmented
 manner, requiring users to switch between multiple independent platforms to
 complete a full authoring workflow. This paper presents ContAR, a no-code web
@@ -74,8 +91,8 @@ Narrator, Lip Synchronization, WebXR, AR.js
 
 A Realidade Aumentada (RA) tem se consolidado como tecnologia com alto potencial
 pedagógico, promovendo experiências de aprendizagem interativas e
-multimodais~\cite{fonnet2021,munoz2021}. A popularização de APIs WebAR ---
-especialmente a WebXR Device API e a biblioteca AR.js --- tornou possível a
+multimodais~\cite{fonnet2021,munoz2021}. A popularização de APIs WebAR
+(especialmente a WebXR Device API e a biblioteca AR.js) tornou possível a
 execução dessas experiências diretamente no navegador, sem instalação de
 aplicativos nativos, o que é particularmente relevante para contextos educacionais
 com infraestrutura heterogênea~\cite{koutsabasis2021}.
@@ -105,12 +122,12 @@ O Professor Guilherme José Ferreira de Araújo (UPE) tem desenvolvido desde 202
 cursos de letramento racial e educação antirracista para profissionais da
 educação no Vale do São Francisco e em Petrolina~\cite{araujo2023a}, reafirmando
 que a formação docente em perspectiva antirracista é uma demanda urgente e
-geograficamente distribuída. A RA educacional pode ser uma aliada --- desde que
+geograficamente distribuída. A RA educacional pode ser uma aliada, desde que
 professores disponham de ferramentas para criar conteúdos com avatares
 representativos, sem depender de equipes técnicas.
 
 Um estudo exploratório preliminar conduzido pelos autores avaliou três
-plataformas representativas --- Ready Player Me, Meshy AI e Luma AI --- e
+plataformas representativas (Ready Player Me, Meshy AI e Luma AI) e
 identificou que o ecossistema opera de forma fragmentada: o usuário precisa
 dominar múltiplas ferramentas independentes para concluir o fluxo, e nenhuma
 delas oferece sincronização labial, composição de narrativas sequenciais ou
@@ -157,16 +174,16 @@ survey com 106 professores, que a falta de infraestrutura e a ausência de
 ferramentas de autoria adequadas são os dois maiores obstáculos à adoção da RA
 nas salas de aula. Os professores não apenas relatam dificuldade técnica: eles
 manifestam o desejo de criar suas próprias experiências, personalizadas para seus
-contextos --- algo que as ferramentas existentes não permitem de forma integrada.
+contextos, algo que as ferramentas existentes não permitem de forma integrada.
 
 Essa conclusão foi aprofundada na tese de doutorado de Silva~\cite{silva2022},
 desenvolvida no CIn/UFPE com período sanduíche na Harvard Graduate School of
 Education, orientada por Veronica Teichrieb e coorientada por Patricia Smith
 Cavalcante e Bertrand Schneider. O trabalho, publicado no IEEE Transactions on
 Learning Technologies~\cite{silva2023}, estabeleceu princípios de design para
-ferramentas de autoria de RA a partir das perspectivas dos próprios professores
---- fluxos guiados, feedback imediato, ausência de código e vocabulário pedagógico
---- que serviram de referência direta para as decisões de design do ContAR.
+ferramentas de autoria de RA a partir das perspectivas dos próprios professores:
+fluxos guiados, feedback imediato, ausência de código e vocabulário pedagógico,
+elementos que serviram de referência direta para as decisões de design do ContAR.
 
 Soluções comerciais como Assemblr, ZapWorks e CoSpaces Edu oferecem autoria de
 RA com interfaces visuais, mas com restrições de personalização de avatares,
@@ -174,7 +191,7 @@ ausência de lip sync e dependência de planos pagos. No contexto específico de
 avatares 3D, Fernandes e Silveira~\cite{fernandes2025} investigaram a conversão
 de modelos do DAZ Studio para o formato VRM, identificando que ainda existem
 poucas formas acessíveis para o público geral criar avatares com realismo e
-customização --- lacuna que o ContAR endereça ao suportar VRM nativamente.
+customização, lacuna que o ContAR endereça ao suportar VRM nativamente.
 
 Na dimensão pedagógica, Santos et al.~\cite{santos2025} revisaram o uso de
 representações tridimensionais de professores em ambientes imersivos, apontando
@@ -190,7 +207,7 @@ letramento racial para profissionais da educação em Pernambuco~\cite{araujo202
 araujo2023b, araujo2023c}. Esses cursos evidenciam que há demanda crescente por
 formação antirracista entre professores, mas essa formação raramente é
 acompanhada de ferramentas digitais que permitam criar materiais pedagógicos
-representativos de forma autônoma --- ponto de interseção central com o ContAR.
+representativos de forma autônoma, ponto de interseção central com o ContAR.
 
 \subsection{Síntese Posicional}
 
@@ -246,25 +263,52 @@ módulos técnicos principais e seus relacionamentos.
 
 \begin{figure}[htbp]
   \centering
-  % ── SUBSTITUA esta linha pela sua figura de arquitetura ──
-  % Exemplo: \includegraphics[width=\columnwidth]{figs/arquitetura.pdf}
-  \fbox{%
-    \begin{minipage}{0.9\columnwidth}
-      \centering
-      \vspace{1.5cm}
-      \textbf{[Fig. 1 — Diagrama de Arquitetura do ContAR]}\\[4pt]
-      \small
-      \texttt{Frontend SPA (React 19 + Three.js r183)}\\
-      $\downarrow$ REST API\\
-      \texttt{Backend (Node.js 22 + MongoDB)}\\
-      $\downarrow$ Docker / nginx\\
-      \texttt{BoneMapper · LipSyncController · AnimationController}\\
-      $\downarrow$ \\
-      \texttt{WebXR Surface AR · AR.js Marker AR}
-      \vspace{1.5cm}
-    \end{minipage}%
-  }
-  \caption{Arquitetura geral do ContAR. Substitua pelo diagrama final.}
+  \resizebox{\columnwidth}{!}{%
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      node distance=3mm and 3mm,
+      box/.style={draw, rounded corners, align=center, minimum height=8mm, inner sep=2pt, fill=blue!6},
+      ext/.style={draw, rounded corners, align=center, minimum height=8mm, inner sep=2pt, fill=orange!8},
+      grp/.style={draw, dashed, rounded corners, inner sep=3mm},
+      arr/.style={-{Latex[length=2mm]}, thick},
+    ]
+    % Camada cliente
+    \node[box] (ui) {Páginas/UI\\(Editor, AR, Story)};
+    \node[box, right=of ui] (engine) {Motor 3D\\BoneMapper\\LipSyncController\\AnimationController};
+    \node[box, right=of engine] (audio) {Áudio\\useAudio\\(Web Speech / Azure)};
+
+    \node[box, below=10mm of engine, minimum width=7.8cm] (ar)
+      {Saída AR: WebXR Surface AR · AR.js Marker AR};
+
+    \begin{scope}[on background layer]
+      \node[grp, fit=(ui)(engine)(audio)(ar),
+            label={[font=\footnotesize\bfseries]above:Cliente: Navegador (React 19 SPA + Three.js r183)}]
+            (client) {};
+    \end{scope}
+
+    % Camada servidor
+    \node[box, below=14mm of ar, minimum width=7.8cm] (server)
+      {Servidor: Node.js 22 + Express\\Controllers: scene · story · tts · media · auth};
+
+    % Serviços externos
+    \node[ext, below=10mm of server, xshift=-2.6cm] (mongo) {MongoDB\\(dados)};
+    \node[ext, below=10mm of server] (azure) {Azure Speech\\(Neural TTS\\+ visemas)};
+    \node[ext, below=10mm of server, xshift=2.6cm] (cloud) {Cloudinary\\(mídia)};
+
+    \begin{scope}[on background layer]
+      \node[grp, fit=(server)(mongo)(azure)(cloud),
+            label={[font=\footnotesize\bfseries]below:Docker / nginx (Render)}]
+            (deploy) {};
+    \end{scope}
+
+    % Conexões
+    \draw[arr] (client.south) -- (deploy.north)
+      node[midway, right, font=\scriptsize] {REST API\\(HTTPS/JSON)};
+    \draw[arr] (server.south) -- (mongo.north);
+    \draw[arr] (server.south) -- (azure.north);
+    \draw[arr] (server.south) -- (cloud.north);
+  \end{tikzpicture}}
+  \caption{Arquitetura geral do ContAR: SPA React no cliente concentra os módulos 3D (BoneMapper, LipSyncController, AnimationController) e de áudio, comunicando-se via REST API com o backend Node.js/Express, que integra MongoDB, Azure Speech e Cloudinary, todos executados em containers Docker/nginx.}
   \label{fig:arquitetura}
 \end{figure}
 
@@ -331,7 +375,7 @@ negro sem depender de artistas 3D externos.
 
 \subsection{Módulos Técnicos}
 
-\subsubsection{BoneMapper --- Compatibilidade Universal de Rigs}
+\subsubsection{BoneMapper: Compatibilidade Universal de Rigs}
 
 Avatares de origens distintas utilizam convenções diferentes de nomenclatura de
 ossos: Mixamo/Avaturn usa \texttt{mixamorigHips}; VRM usa
@@ -339,7 +383,7 @@ ossos: Mixamo/Avaturn usa \texttt{mixamorigHips}; VRM usa
 identifica automaticamente o padrão de rig via análise heurística dos nomes de
 ossos e mantém um mapeamento interno de nomes canônicos para referências de
 objetos Three.js. Isso permite que poses procedurais e animações operem de forma
-transparente sobre qualquer avatar, independentemente de sua origem --- removendo
+transparente sobre qualquer avatar, independentemente de sua origem, removendo
 uma das principais barreiras técnicas identificadas por Ruiz et al.~\cite{ruiz2020}.
 
 A Fig.~\ref{fig:bonemapper} ilustra o processo de mapeamento entre os três
@@ -351,7 +395,7 @@ padrões de rig suportados.
     \begin{minipage}{0.9\columnwidth}
       \centering
       \vspace{1.5cm}
-      \textbf{[Fig. 3 — BoneMapper: mapeamento de rigs]}\\[6pt]
+      \textbf{[Fig. 3. BoneMapper: mapeamento de rigs]}\\[6pt]
       \small
       \texttt{Mixamo: mixamorigHips}\\
       \texttt{VRM: J\_Bip\_C\_Hips} \quad $\xrightarrow{\text{BoneMapper}}$ \quad \texttt{hip (canônico)}\\
@@ -366,12 +410,12 @@ padrões de rig suportados.
   \label{fig:bonemapper}
 \end{figure}
 
-\subsubsection{LipSyncController --- Sincronização Labial Multi-modo}
+\subsubsection{LipSyncController: Sincronização Labial Multi-modo}
 
 O LipSyncController opera em dois modos: (1)~\textbf{modo timeline}, que consome
 uma sequência de cues de visema com marcação temporal, aplicados com crossfade
-configurável --- obtida diretamente do Azure Neural TTS (IDs~0--21 mapeados para
-códigos Rhubarb~A--X\,ns) ou estimada localmente a partir do
+configurável, obtida diretamente do Azure Neural TTS (IDs~0--21 mapeados para
+códigos Rhubarb~A--X, com precisão de 100\,ns) ou estimada localmente a partir do
 texto da fala, quando o áudio é gerado pela Web Speech API ou fornecido pelo
 próprio usuário (gravação ou upload); e (2)~\textbf{modo heurístico}, que estima o
 movimento labial em tempo real a partir da análise de amplitude e frequência do
@@ -380,7 +424,7 @@ sem texto correspondente. O controlador descobre automaticamente os blend shapes
 de fala do avatar por padrões de expressão regular sobre os nomes dos morph
 targets.
 
-\subsubsection{AnimationController --- Poses e Animações Procedurais}
+\subsubsection{AnimationController: Poses e Animações Procedurais}
 
 O AnimationController gerencia o \texttt{AnimationMixer} do Three.js com
 crossfade suave e implementa micro-animações procedurais (piscar, respiração,
@@ -407,7 +451,7 @@ sobreposto ao avatar (\textit{bubble}), legenda na parte inferior da tela
 
 A Lei~10.639/2003 instituiu a obrigatoriedade do ensino de história e cultura
 afro-brasileira e africana nas escolas de educação básica brasileiras. Mais de
-duas décadas após sua promulgação, sua implementação ainda é desigual --- em
+duas décadas após sua promulgação, sua implementação ainda é desigual, em
 parte pela escassez de materiais didáticos representativos~\cite{araujo2023a}.
 
 Djamila Ribeiro~\cite{ribeiro2019} argumenta que negar à população negra a sua
@@ -435,7 +479,7 @@ três cenas dessa história em modo AR.
     \begin{minipage}{0.9\columnwidth}
       \centering
       \vspace{1.8cm}
-      \textbf{[Fig. 4 — História ``Dandara dos Palmares'']}\\[4pt]
+      \textbf{[Fig. 4. História ``Dandara dos Palmares'']}\\[4pt]
       \small
       Cena 1: Avatar Dandara, pose \textit{speaker}\\
       Cena 2: Avatar Dandara, pose \textit{walk\_circle}\\
@@ -450,7 +494,7 @@ três cenas dessa história em modo AR.
   \label{fig:dandara}
 \end{figure}
 
-\textbf{Cena~1 --- ``Quem foi Dandara?''} Avatar: mulher negra com cabelos
+\textbf{Cena~1: ``Quem foi Dandara?''} Avatar: mulher negra com cabelos
 crespos volumosos, criada no Avaturn com tom de pele escuro e vestimenta
 inspirada na indumentária quilombola do século~XVII. Pose: \textit{speaker}.
 Fala (TTS Azure, voz feminina em português brasileiro): \textit{``Meu nome é
@@ -458,19 +502,19 @@ Dandara. Fui guerreira, mãe e líder. Vivi no Quilombo dos Palmares, uma terra
 de liberdade construída por homens e mulheres que se recusaram a ser
 escravizados. Nossa história não começa em correntes. Ela começa em reinos.''}
 
-\textbf{Cena~2 --- ``O Quilombo dos Palmares''} Mesmo avatar, pose
+\textbf{Cena~2: ``O Quilombo dos Palmares''} Mesmo avatar, pose
 \textit{walk\_circle}. Fala: \textit{``Palmares era uma nação com mais de vinte
 mil pessoas livres. Meu companheiro Zumbi era o líder guerreiro. Mas eu também
 lutei. Nenhuma história de Palmares está completa sem falar das mulheres.''}
 
-\textbf{Cena~3 --- ``Por que lembrar?''} Pose \textit{neutral}, balão de texto
+\textbf{Cena~3: ``Por que lembrar?''} Pose \textit{neutral}, balão de texto
 ativado. Fala: \textit{``Hoje, 20 de novembro é o Dia da Consciência Negra. Não
 é dia de tristeza: é dia de memória e orgulho. Eu sou Dandara. E minha história
 é parte da sua.''}
 
 A história foi publicada em modo AR.js Marker AR, gerando um link público
-imprimível em cartilhas. O fluxo completo --- da criação do avatar à publicação
---- foi concluído em aproximadamente 25~minutos, sem escrita de código.
+imprimível em cartilhas. O fluxo completo, da criação do avatar à publicação,
+foi concluído em aproximadamente 25~minutos, sem escrita de código.
 
 \subsection{Implicações Pedagógicas e Decisões de Design}
 
@@ -479,7 +523,7 @@ avatares com fenótipos africanos e afro-brasileiros é condição de possibilid
 para a educação antirracista; (ii) a síntese de voz em português brasileiro
 permite que o narrador virtual soe como alguém da comunidade do estudante;
 (iii) a composição de histórias sequenciais permite estruturar narrativas com
-início, meio e fim --- formato reconhecido como mais eficaz para memorização e
+início, meio e fim, formato reconhecido como mais eficaz para memorização e
 engajamento~\cite{fonnet2021}; (iv) a publicação via marcador impresso é
 especialmente relevante para escolas com baixa conectividade.
 
@@ -503,17 +547,15 @@ sendo adequado para a fase de desenvolvimento em que o ContAR se encontra.
 Foram recrutados três especialistas com perfis complementares:
 
 \begin{itemize}
-  \item \textbf{E1} --- Prof.\ Dr.\ Francisco Paulo Magalhães Simões (UFPE/CIn):
-    Interação Humano-Computador, sistemas computacionais e avaliação de
-    interfaces.
-  \item \textbf{E2} --- Prof.\ Guilherme José Ferreira de Araújo (UPE):
-    educação antirracista e letramento racial; coordenador de cursos de formação
-    docente em perspectiva antirracista em Pernambuco~\cite{araujo2023a}.
-  \item \textbf{E3} --- Profa.\ Dra.\ Manoela Milena Oliveira da Silva
-    (UPE/CIn-UFPE): doutora em Ciência da Computação pelo CIn/UFPE com período
-    sanduíche na Harvard Graduate School of Education; pesquisadora do Voxar
-    Labs; autora dos princípios de design para autoria de RA que fundamentam o
-    ContAR~\cite{silva2022,silva2023}.
+  \item \textbf{E1}: especialista em Interação Humano-Computador, Realidade
+    Aumentada e Virtual, com experiência em sistemas computacionais e
+    avaliação de interfaces.
+  \item \textbf{E2}: especialista em educação antirracista e letramento
+    racial, com atuação em cursos de formação docente em perspectiva
+    antirracista em Pernambuco~\cite{araujo2023a}.
+  \item \textbf{E3}: especialista em Realidade Aumentada educacional e
+    autoria de conteúdo, com publicações sobre princípios de design para
+    autoria de RA que fundamentam o ContAR~\cite{silva2022,silva2023}.
 \end{itemize}
 
 \subsection{Protocolo e Tarefas}
@@ -523,15 +565,15 @@ Think Aloud. Cada sessão teve duração média estimada de 60--90 minutos. Os
 especialistas executaram cinco tarefas que cobrem o fluxo completo de autoria:
 
 \begin{itemize}
-  \item \textbf{T1} --- Criar avatar: acessar a plataforma, criar ou importar
+  \item \textbf{T1. Criar avatar}: acessar a plataforma, criar ou importar
     um avatar e visualizá-lo no editor 3D.
-  \item \textbf{T2} --- Configurar fala e gerar voz: digitar um texto, selecionar
+  \item \textbf{T2. Configurar fala e gerar voz}: digitar um texto, selecionar
     uma voz e gerar o áudio com sincronização labial.
-  \item \textbf{T3} --- Definir pose e salvar a cena: selecionar uma pose,
+  \item \textbf{T3. Definir pose e salvar a cena}: selecionar uma pose,
     nomear e salvar a cena.
-  \item \textbf{T4} --- Compor e publicar uma história: adicionar cenas a uma
+  \item \textbf{T4. Compor e publicar uma história}: adicionar cenas a uma
     história e obter o link público.
-  \item \textbf{T5} --- Visualizar em RA: acessar o link no celular e reproduzir
+  \item \textbf{T5. Visualizar em RA}: acessar o link no celular e reproduzir
     a história em Surface AR (WebXR) ou Marker AR (AR.js).
 \end{itemize}
 
@@ -565,7 +607,7 @@ et al.~\cite{bangor2009}. A Tabela~\ref{tab:sus} apresenta os scores individuais
 \hline
 \textbf{Especialista} & \textbf{Perfil} & \textbf{SUS} \\
 \hline
-E1 & IHC / Sistemas  & --- \\
+E1 & IHC / RA e RV  & --- \\
 E2 & Educação Antirracista & --- \\
 E3 & RA Educacional / Autoria & --- \\
 \hline
@@ -590,11 +632,11 @@ e severidade média.
 \hline
 \textbf{Heurística} & \textbf{Ocorr.} & \textbf{Sev. Méd.} \\
 \hline
-H1 --- Visibilidade do status & -- & -- \\
-H3 --- Controle e liberdade   & -- & -- \\
-H6 --- Reconhecimento         & -- & -- \\
-H9 --- Recuperação de erros   & -- & -- \\
-XR2 --- Feedback de rastreamento & -- & -- \\
+H1. Visibilidade do status & -- & -- \\
+H3. Controle e liberdade   & -- & -- \\
+H6. Reconhecimento         & -- & -- \\
+H9. Recuperação de erros   & -- & -- \\
+XR2. Feedback de rastreamento & -- & -- \\
 \hline
 \textbf{Total} & \textbf{--} & \textbf{--} \\
 \hline
@@ -633,7 +675,7 @@ heurístico foi considerado satisfatório para áudio importado.
 \subsection{Limitações do Estudo}
 
 O Expert Walkthrough com especialistas não substitui testes com o público-alvo
-primário --- professores da educação básica. Os resultados identificam problemas
+primário, professores da educação básica. Os resultados identificam problemas
 segundo perspectiva técnica e especializada; uma avaliação com usuários finais
 pode revelar barreiras adicionais relacionadas à familiaridade tecnológica.
 Adicionalmente, o suporte WebXR para Surface AR apresenta variação entre
@@ -646,37 +688,30 @@ foi avaliado empiricamente com estudantes e professores em contexto real.
 
 Este artigo apresentou o ContAR, uma plataforma web no-code para autoria de
 narradores virtuais 3D em WebAR educacional, e sua avaliação de usabilidade via
-Expert Walkthrough. As contribuições são quádruplas: (i)~\textbf{arquitetural}
---- integração de avatar, TTS com visemas, composição de histórias e publicação
-WebAR em um único fluxo no navegador; (ii)~\textbf{técnica} --- BoneMapper com
+Expert Walkthrough. As contribuições são quádruplas: (i)~\textbf{arquitetural}:
+integração de avatar, TTS com visemas, composição de histórias e publicação
+WebAR em um único fluxo no navegador; (ii)~\textbf{técnica}: BoneMapper com
 compatibilidade universal de rigs, LipSyncController com modos timeline e
-heurístico, suporte ao padrão VRM Animation; (iii)~\textbf{avaliativa} ---
+heurístico, suporte ao padrão VRM Animation; (iii)~\textbf{avaliativa}:
 protocolo Expert Walkthrough com heurísticas Nielsen + XR e SUS; e
-(iv)~\textbf{pedagógica} --- proposição e demonstração de caso de uso antirracista
+(iv)~\textbf{pedagógica}: proposição e demonstração de caso de uso antirracista
 alinhado à Lei~10.639/2003.
 
 O ContAR confirma que é possível implementar um ecossistema integrado de autoria
 WebAR educacional no navegador, reduzindo a fragmentação identificada no estudo
 preliminar e tornando o fluxo completo acessível a usuários sem formação técnica.
 Mais do que isso, o trabalho demonstra que ferramentas de autoria XR podem ser
-projetadas com agenda pedagógica explícita --- colocando a tecnologia a serviço
+projetadas com agenda pedagógica explícita, colocando a tecnologia a serviço
 da equidade e da representatividade na educação brasileira.
 
 Como trabalhos futuros destacam-se: (i) avaliação com professores da educação
 básica, especialmente em escolas que implementam programas antirracistas; (ii)
 integração de expressões faciais VRM e eye-tracking; (iii) incorporação de LLM
 para criação de narradores responsivos a perguntas dos estudantes; e (iv)
-parceria com o Prof.\ Guilherme José e com o Voxar~Labs/CIn-UFPE para avaliação
-em contexto real de formação docente.
+aplicação em contexto real de formação docente, em parceria com o
+Voxar~Labs/CIn-UFPE.
 
 O código-fonte está disponível em \url{https://github.com/jorgelcff/contar}.
-
-% ──────────────────────────────────────────────────────────────────────────────
-\section*{Agradecimentos}
-
-Os autores agradecem ao Prof.\ Guilherme José Ferreira de Araújo (UPE) e à
-Profa.\ Dra.\ Manoela Milena Oliveira da Silva (UPE/CIn-UFPE) pela participação
-nas sessões de avaliação e pelas contribuições ao projeto.
 
 % ──────────────────────────────────────────────────────────────────────────────
 \begin{thebibliography}{00}

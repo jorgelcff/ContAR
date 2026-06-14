@@ -123,7 +123,7 @@ function extractAvaturnUserId(payload) {
  *   onExport(url) – called when Avaturn exports a GLB
  *   onClose()     – called when the user dismisses the panel
  */
-export default function AvaturnEmbed({ onExport, onClose }) {
+export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const sdkRef = useRef(null);
@@ -266,8 +266,11 @@ export default function AvaturnEmbed({ onExport, onClose }) {
   }, []);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="relative rounded-xl overflow-hidden border border-gray-600" style={{ height: 480 }}>
+    <div className={`flex flex-col gap-2 ${fullHeight ? 'h-full' : ''}`}>
+      <div
+        className={`relative rounded-xl overflow-hidden border border-gray-600 ${fullHeight ? 'flex-1' : ''}`}
+        style={fullHeight ? undefined : { height: 480 }}
+      >
         {!ready && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-400 text-sm">
             Carregando criador de avatares…
@@ -280,12 +283,14 @@ export default function AvaturnEmbed({ onExport, onClose }) {
         )}
         <div ref={containerRef} className="w-full h-full" />
       </div>
-      <button
-        onClick={onClose}
-        className="text-sm text-gray-400 hover:text-white transition-colors text-center"
-      >
-        {t('closeAvaturn')}
-      </button>
+      {!fullHeight && (
+        <button
+          onClick={onClose}
+          className="text-sm text-gray-400 hover:text-white transition-colors text-center"
+        >
+          {t('closeAvaturn')}
+        </button>
+      )}
     </div>
   );
 }

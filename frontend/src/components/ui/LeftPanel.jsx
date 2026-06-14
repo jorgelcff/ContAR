@@ -1,8 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import AvaturnEmbed from './AvaturnEmbed';
-import AvatarGallery from './AvatarGallery';
-import CharacterStudioEmbed from './CharacterStudioEmbed';
 import AvatarCreatorModal from './AvatarCreatorModal';
 import TransformControls from './TransformControls';
 import AudioPanel from './AudioPanel';
@@ -105,8 +102,6 @@ export default function LeftPanel({
   // Avatar tab state
   const [urlInput, setUrlInput] = useState(avatarUrl);
   const [showAvaturn, setShowAvaturn]             = useState(false);
-  // null | 'avaturn' | 'characterstudio' | 'gallery'
-  const [modalCreator, setModalCreator] = useState(null);
   const [savedAvatars, setSavedAvatars] = useState([]);
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(false);
   const [avatarListError, setAvatarListError] = useState('');
@@ -144,15 +139,10 @@ export default function LeftPanel({
   // ── Avatar handlers ────────────────────────────────────────
   const handleLoad = () => { if (urlInput.trim()) setAvatarUrl(urlInput.trim()); };
 
-  const closeAllAvatarPanels = () => {
-    setShowAvaturn(false);
-    setModalCreator(null);
-  };
-
   const handleAvaturnExport = (url) => {
     setUrlInput(url);
     setAvatarUrl(url);
-    closeAllAvatarPanels();
+    setShowAvaturn(false);
   };
 
   const handleLoadSavedAvatars = async () => {
@@ -300,41 +290,11 @@ export default function LeftPanel({
             {/* Primary creator — Avaturn */}
             <button
               data-tour="avatar-upload"
-              onClick={() => { closeAllAvatarPanels(); setShowAvaturn((v) => !v); }}
+              onClick={() => setShowAvaturn((v) => !v)}
               className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
             >
               {t('openAvaturn')}
             </button>
-
-            {/* Secondary creators row */}
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => { closeAllAvatarPanels(); setModalCreator('characterstudio'); }}
-                className="py-2 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
-                title={t('lpCharacterStudioTitle')}
-              >
-                <Icon name="palette" className="w-3.5 h-3.5" /> Studio
-              </button>
-              <button
-                onClick={() => { closeAllAvatarPanels(); setModalCreator('gallery'); }}
-                className="py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
-                title={t('lpAvatarGalleryTitle')}
-              >
-                <Icon name="folder" className="w-3.5 h-3.5" /> {t('lpGalleryBtn')}
-              </button>
-              <a
-                href="https://hub.vroid.com/en/models"
-                target="_blank"
-                rel="noreferrer"
-                title={t('lpVroidHubTitle')}
-                className="py-2 rounded-xl bg-pink-700 hover:bg-pink-600 text-white text-xs font-medium transition-colors flex items-center justify-center"
-              >
-                VRoid
-              </a>
-            </div>
-            <p className="text-[10px] text-gray-500 -mt-2 text-center">
-              {t('lpVroidHint')}
-            </p>
 
             {/* File upload + my avatars row */}
             <div className="flex gap-2">
@@ -372,15 +332,12 @@ export default function LeftPanel({
             )}
             {avatarListError && <p className="text-xs text-red-400">{avatarListError}</p>}
 
-            {/* Avaturn inline embed (SDK needs specific container) */}
-            {showAvaturn && <AvaturnEmbed onExport={handleAvaturnExport} onClose={() => setShowAvaturn(false)} />}
-
-            {/* Full-screen modal for CharacterStudio and Gallery */}
-            {modalCreator && (
+            {/* Avaturn opens in a full-screen modal (SDK needs a sizable container) */}
+            {showAvaturn && (
               <AvatarCreatorModal
-                creator={modalCreator}
-                onExport={(url) => { setUrlInput(url); setAvatarUrl(url); }}
-                onClose={() => setModalCreator(null)}
+                creator="avaturn"
+                onExport={handleAvaturnExport}
+                onClose={() => setShowAvaturn(false)}
               />
             )}
 

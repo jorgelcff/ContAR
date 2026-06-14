@@ -28,7 +28,7 @@ export default function AvatarCreatorModal({ creator, onExport, onClose }) {
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative flex flex-col w-full h-full sm:h-[92vh] sm:max-w-5xl bg-gray-900 sm:rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+      <div className="relative flex flex-col w-full h-full sm:h-[92vh] sm:max-w-7xl bg-gray-900 sm:rounded-2xl overflow-hidden shadow-2xl border border-white/10">
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 shrink-0">

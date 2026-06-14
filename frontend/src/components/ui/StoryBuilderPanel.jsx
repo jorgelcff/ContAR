@@ -50,13 +50,17 @@ export default function StoryBuilderPanel() {
           <p className="text-xs text-gray-500">{t('noStoryScenes')}</p>
         )}
 
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        {/* Right-edge fade hints that the row scrolls horizontally when the
+            cards overflow; cards keep their full width so they never get
+            cramped, and a scroll-snap makes the swipe feel intentional. */}
+        <div className="relative">
+          <div className="flex gap-4 overflow-x-auto pb-2 pr-6 snap-x snap-mandatory">
           {storyScenes.map((item, index) => {
             const isPendingDelete = confirmDeleteIndex === index;
             return (
               <div
                 key={`${item.sceneId}-${index}`}
-                className={`w-72 min-w-72 rounded-lg border p-2 flex flex-col gap-2 transition-colors ${
+                className={`w-72 min-w-72 snap-start rounded-lg border p-2 flex flex-col gap-2 transition-colors ${
                   isPendingDelete
                     ? 'border-red-600 bg-red-950/40'
                     : 'border-gray-700 bg-gray-900/50'
@@ -133,6 +137,10 @@ export default function StoryBuilderPanel() {
               </div>
             );
           })}
+          </div>
+          {storyScenes.length > 1 && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-gray-800/80 to-transparent rounded-r-lg" />
+          )}
         </div>
       </div>
     </section>

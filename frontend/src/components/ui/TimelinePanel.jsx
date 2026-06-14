@@ -83,7 +83,7 @@ export default function TimelinePanel() {
   };
 
   return (
-    <section className="shrink-0 border-t border-gray-700 bg-gray-900 flex flex-col"
+    <section className="shrink-0 border-t border-gray-700 bg-gray-900 hidden md:flex flex-col"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}

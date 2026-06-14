@@ -42,7 +42,7 @@ export default function StoryBuilderPanel() {
   const handleDeleteCancel = () => setConfirmDeleteIndex(null);
 
   return (
-    <section className="shrink-0 border-t border-gray-700 bg-gray-900/80 p-4">
+    <section className="shrink-0 border-t border-gray-700 bg-gray-900/80 p-4 hidden md:block">
       <div className="rounded-xl border border-gray-700 bg-gray-800/70 p-4 flex flex-col gap-3">
         <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{t('storyScenesTitle')}</p>
 

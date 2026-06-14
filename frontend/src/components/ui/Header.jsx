@@ -46,7 +46,7 @@ export default function Header({ autosaveStatus }) {
         )}
         <Link
           to="/ar"
-          className="text-xs font-medium px-3 py-1 rounded-full bg-cyan-700 hover:bg-cyan-600 text-white transition-colors"
+          className="text-xs font-medium px-3 py-1 rounded-full bg-cyan-700 hover:bg-cyan-600 text-white transition-colors hidden sm:inline-flex"
         >
           {t('ar')}
         </Link>

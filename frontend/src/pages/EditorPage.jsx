@@ -13,7 +13,7 @@ import { useSceneStore, hadLocalAvatarOnInit } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
 import useTTS from '../hooks/useTTS';
 import { useToast } from '../context/ToastContext';
-import { getScene, getStory, saveScene, saveStory, uploadAudio } from '../api/sceneApi';
+import { getScene, getStory, saveScene, saveStory, uploadAudio, deleteAudio } from '../api/sceneApi';
 
 const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
@@ -55,18 +55,29 @@ export default function EditorPage() {
     vrmExpression,
   } = useSceneStore();
 
-  const audio = useAudio();
+  // Persists newly generated/uploaded/recorded narration audio to Cloudinary,
+  // points the scene's narrativeAudioUrl at it, and removes the previous
+  // narration file (if any) so regenerating audio doesn't leave orphaned
+  // uploads behind.
+  const persistGeneratedAudio = async (blob) => {
+    const previousUrl = useSceneStore.getState().narrativeAudioUrl;
+    try {
+      const url = await uploadAudio(blob);
+      useSceneStore.getState().setNarrativeAudioUrl(url);
+      if (previousUrl && previousUrl !== url) {
+        deleteAudio(previousUrl).catch(() => {});
+      }
+    } catch {
+      addToast(t('epAudioUploadFailed'), 'error');
+    }
+  };
+
+  const audio = useAudio({ onAudioBlob: persistGeneratedAudio });
 
   const tts = useTTS({
-    onAudioReady: async (file) => {
+    onAudioReady: (file) => {
       audio.loadFile(file);
       addToast(t('epVoiceGenerated'), 'success');
-      try {
-        const url = await uploadAudio(file);
-        useSceneStore.getState().setNarrativeAudioUrl(url);
-      } catch {
-        // Upload failure is non-critical — audio plays locally, just won't persist in the story viewer
-      }
     },
     // Prefer the provider's precise viseme timeline (Azure); fall
     // back to the text heuristic only when it isn't available.

@@ -41,4 +41,13 @@ function uploadBuffer(buffer, { folder, resourceType = 'auto', publicId }) {
   });
 }
 
-module.exports = { cloudinary, cloudinaryConfigured, uploadBuffer };
+// Deletes a previously-uploaded asset given its delivery URL, e.g.
+// https://res.cloudinary.com/<cloud>/video/upload/v1234/contar/audio/<hash>.mp3
+// The public_id is the folder + filename without extension or version segment.
+function destroyByUrl(url, resourceType = 'video') {
+  const match = String(url || '').match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z0-9]+)?$/i);
+  if (!match) return Promise.resolve(null);
+  return cloudinary.uploader.destroy(match[1], { resource_type: resourceType });
+}
+
+module.exports = { cloudinary, cloudinaryConfigured, uploadBuffer, destroyByUrl };

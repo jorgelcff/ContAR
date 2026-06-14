@@ -5,7 +5,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { requireAuth } = require('../middleware/authMiddleware');
-const { cloudinaryConfigured, uploadBuffer } = require('../config/cloudinary');
+const { cloudinaryConfigured, uploadBuffer, destroyByUrl } = require('../config/cloudinary');
 
 // Resolve the public base URL for constructing LOCAL file URLs (disk fallback).
 // In production (Docker/Render) req.get('host') returns the internal container
@@ -95,6 +95,22 @@ router.post('/audio', audioLimiter, requireAuth, audioUpload.single('file'), asy
   } catch (err) {
     console.error('Audio upload failed', err);
     res.status(502).json({ error: 'Falha ao enviar o áudio para o armazenamento' });
+  }
+});
+
+// Removes a previously-generated narration audio file from Cloudinary when it
+// is replaced by a new one. No-op (besides the response) when Cloudinary isn't
+// configured, since disk-fallback files are harmless local leftovers.
+router.delete('/audio', audioLimiter, requireAuth, async (req, res) => {
+  const { url } = req.body || {};
+  if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL ausente' });
+  if (!cloudinaryConfigured) return res.json({ ok: true });
+  try {
+    await destroyByUrl(url, 'video');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Audio delete failed', err);
+    res.status(502).json({ error: 'Falha ao remover o áudio anterior' });
   }
 });
 

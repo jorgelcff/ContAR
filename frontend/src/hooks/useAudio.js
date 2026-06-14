@@ -44,7 +44,7 @@ export const DEFAULT_LIP_SYNC_CONFIG = {
  *   stopRecording  – () => void
  *   error          – error string or ''
  */
-export default function useAudio() {
+export default function useAudio({ onAudioBlob } = {}) {
   const [audioUrl, setAudioUrl] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -283,6 +283,7 @@ export default function useAudio() {
       setAudioCurrentTime(0);
       setAudioDuration(0);
       setUrl(URL.createObjectURL(blob));
+      onAudioBlob?.(blob);
 
       if (Array.isArray(ttsTimeline) && ttsTimeline.length) {
         setVisemeTimeline(ttsTimeline);
@@ -405,6 +406,7 @@ export default function useAudio() {
     setAudioDuration(0);
     setError('');
     setUrl(URL.createObjectURL(file));
+    onAudioBlob?.(file);
   }
 
   // Load audio directly from an external URL (no blob creation).
@@ -532,6 +534,7 @@ export default function useAudio() {
 
         setUrl(URL.createObjectURL(blob));
         setIsRecording(false);
+        onAudioBlob?.(blob);
       };
 
       recorder.start();

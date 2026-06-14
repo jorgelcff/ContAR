@@ -115,11 +115,17 @@ export async function listAvaturnAvatars(avaturnUserId) {
 
 export async function uploadAudio(blob) {
   const formData = new FormData();
-  formData.append('file', blob, 'tts-output.mp3');
+  const ext = { 'audio/webm': 'webm', 'audio/wav': 'wav', 'audio/ogg': 'ogg' }[blob.type] || 'mp3';
+  formData.append('file', blob, `narration.${ext}`);
   const { data } = await api.post('/media/audio', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data.url;
+}
+
+/** Remove a previously-uploaded narration audio file from Cloudinary. */
+export async function deleteAudio(url) {
+  await api.delete('/media/audio', { data: { url } });
 }
 
 export async function uploadModel(file) {

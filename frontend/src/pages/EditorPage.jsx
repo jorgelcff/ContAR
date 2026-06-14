@@ -81,6 +81,9 @@ export default function EditorPage() {
   const [showTour, setShowTour] = useState(shouldShowTour);
   const [mobilePanelTab, setMobilePanelTab] = useState(null);
   const [vrmaUrl, setVrmaUrl] = useState('');
+  // Names of animation clips embedded in the currently loaded avatar GLB,
+  // surfaced by SceneCanvas so the panel can offer them for direct selection.
+  const [avatarClips, setAvatarClips] = useState([]);
 
   useEffect(() => {
     if (hadLocalAvatarOnInit()) {
@@ -398,6 +401,7 @@ export default function EditorPage() {
           onTextDisplayModeChange={setTextDisplayMode}
           mobilePanelTab={mobilePanelTab}
           onMobilePanelClose={() => setMobilePanelTab(null)}
+          avatarClips={avatarClips}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950 gap-2">
@@ -442,6 +446,7 @@ export default function EditorPage() {
                 animLoopOnce={animLoopOnce}
                 vrmExpression={vrmExpression}
                 textDisplayMode={textDisplayMode}
+                onAvatarClips={setAvatarClips}
               />
             </Suspense>
           </div>

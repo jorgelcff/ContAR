@@ -146,6 +146,7 @@ export default function SceneCanvas({
   animLoopOnce,
   vrmExpression,
   textDisplayMode = "bubble",
+  onAvatarClips,
 }) {
   // Enable Three.js resource cache so reloading the same GLB/HDR skips a round-trip.
   THREE.Cache.enabled = true;
@@ -162,6 +163,10 @@ export default function SceneCanvas({
   const animFrameRef = useRef(null);
   const idleClipRef = useRef(null);
   const avatarClipsRef = useRef([]);
+  // Stable ref to the latest onAvatarClips callback so the avatarUrl-scoped
+  // load effect can emit the model's embedded clip names without depending on
+  // the callback identity (which would re-run the whole loader).
+  const onAvatarClipsRef = useRef(onAvatarClips);
   const posePresetRef = useRef(posePreset);
   const transformRef = useRef(transform);
   const loaderRef = useRef(null);
@@ -286,6 +291,10 @@ export default function SceneCanvas({
   useEffect(() => {
     posePresetRef.current = posePreset;
   }, [posePreset]);
+
+  useEffect(() => {
+    onAvatarClipsRef.current = onAvatarClips;
+  }, [onAvatarClips]);
 
   useEffect(() => {
     if (!avatarRef.current) return;
@@ -913,6 +922,7 @@ export default function SceneCanvas({
       avatarRef.current = null;
       vrmRef.current = null;
       avatarClipsRef.current = [];
+      onAvatarClipsRef.current?.([]);
       jawBonesRef.current = [];
       boneMapperRef.current = null;
       baseBoneMapperRef.current = null;
@@ -1008,6 +1018,13 @@ export default function SceneCanvas({
         avatarClipsRef.current = Array.isArray(gltf.animations)
           ? gltf.animations
           : [];
+        // Surface the model's own embedded clip names (NOT the Mixamo extras
+        // merged in below) so the editor can offer them for direct selection.
+        onAvatarClipsRef.current?.(
+          (Array.isArray(gltf.animations) ? gltf.animations : [])
+            .map((c) => String(c?.name || "").trim())
+            .filter(Boolean),
+        );
         if (!idleClipRef.current && gltf.animations?.length) {
           idleClipRef.current = gltf.animations[0];
         }

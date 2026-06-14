@@ -12,7 +12,33 @@ export function applyPosePreset(
   boneMapper = null,
   externalClips = {},
 ) {
-  const normalized = String(posePreset || "idle").toLowerCase();
+  const raw = String(posePreset || "idle");
+
+  // Direct selection of an animation embedded in the model: "clip:<exact name>".
+  // Names are matched case-sensitively (they can contain dots/parens, e.g.
+  // "IdleV4.2(maya_head)"), bypassing the keyword heuristic below.
+  if (raw.startsWith("clip:")) {
+    const clipName = raw.slice(5);
+    if (animationController) {
+      animationController.setProceduralMode("default");
+      animationController.stopAll();
+    }
+    ensureRestPoseSnapshot(model);
+    resetToRestPose(model);
+    const clips = Array.isArray(avatarClips) ? avatarClips : [];
+    const clip = clips.find((c) => String(c?.name || "") === clipName);
+    if (animationController && clip) {
+      animationController.play(clip, 0.35);
+    } else if (animationController) {
+      // Clip not found (e.g. avatar changed) — fall back to idle, never T-pose.
+      const fallbackIdle = externalClips.idle || idleClip;
+      if (fallbackIdle) animationController.play(fallbackIdle, 0.35);
+    }
+    model.updateMatrixWorld(true);
+    return;
+  }
+
+  const normalized = raw.toLowerCase();
 
   if (animationController) {
     animationController.setProceduralMode(

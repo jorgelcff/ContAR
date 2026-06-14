@@ -114,6 +114,28 @@ const createStorySlice = (set, get) => ({
   setCurrentStoryId: (id) => set({ currentStoryId: id }),
   setPublishedStoryId: (id) => set({ publishedStoryId: id }),
 
+  // Clears the avatar/speech/scene fields left over from whatever was being
+  // edited before, so "new scene" / "new story" entry points start from a
+  // blank scene instead of inheriting the previous one (avatar, narration
+  // text and audio, transform, etc). Story-level fields (title, description,
+  // scene list) are intentionally left alone — callers reset those too when
+  // starting a brand-new story.
+  resetSceneForNew: () => set({
+    avatarUrl: '',
+    transform: { positionX: 0, positionY: 0, positionZ: 0, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1 },
+    posePreset: 'idle',
+    animSpeed: 1,
+    animLoopOnce: false,
+    vrmExpression: '',
+    speechText: '',
+    narrativeAudioUrl: '',
+    textDisplayMode: 'bubble',
+    sceneTitle: '',
+    currentSceneId: '',
+    timelineBlocks: [],
+    timelineDuration: 10,
+  }),
+
   buildScenePayload: (existingId) => {
     const { sceneTitle, avatarUrl, posePreset, transform, speechText, narrativeAudioUrl, textDisplayMode, timelineBlocks, timelineDuration } = get();
     return {

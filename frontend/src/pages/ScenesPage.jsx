@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
 import { listScenes, deleteScene } from '../api/sceneApi';
+import { useSceneStore } from '../store/useSceneStore';
 import { useTranslation } from 'react-i18next';
 
 function timeAgo(dateStr) {
@@ -36,6 +37,11 @@ export default function ScenesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleNewScene = () => {
+    useSceneStore.getState().resetSceneForNew();
+    navigate('/editor');
   };
 
   const handleDelete = async (sceneId, scene) => {
@@ -72,7 +78,7 @@ export default function ScenesPage() {
               {t('scenesRefresh')}
             </button>
             <button
-              onClick={() => navigate('/editor')}
+              onClick={handleNewScene}
               className="px-4 py-1.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-semibold transition-colors"
             >
               {t('scenesNewBtn')}
@@ -97,7 +103,7 @@ export default function ScenesPage() {
             <p className="text-gray-300 font-medium">{t('scenesEmptyTitle')}</p>
             <p className="text-sm text-gray-500">{t('scenesEmptyDesc')}</p>
             <button
-              onClick={() => navigate('/editor')}
+              onClick={handleNewScene}
               className="mt-2 px-5 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors"
             >
               {t('scenesEmptyBtn')}

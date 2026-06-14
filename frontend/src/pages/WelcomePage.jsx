@@ -19,10 +19,12 @@ export default function WelcomePage() {
   const [showTemplates, setShowTemplates] = useState(false);
 
   const handleNewScene = () => {
+    useSceneStore.getState().resetSceneForNew();
     navigate('/editor');
   };
 
   const handleUseTemplate = (template) => {
+    useSceneStore.getState().resetSceneForNew();
     applyTemplate(template, useSceneStore.getState());
     navigate('/editor');
   };

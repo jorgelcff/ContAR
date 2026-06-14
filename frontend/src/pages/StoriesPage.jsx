@@ -4,6 +4,7 @@ import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
 import StoryQrModal from '../components/ui/StoryQrModal';
 import { listStories, saveStory, deleteStory } from '../api/sceneApi';
+import { useSceneStore } from '../store/useSceneStore';
 import { useTranslation } from 'react-i18next';
 
 function timeAgo(dateStr) {
@@ -186,6 +187,7 @@ export default function StoriesPage() {
         },
         scenes: [],
       });
+      useSceneStore.getState().resetSceneForNew();
       navigate(`/editor?storyId=${encodeURIComponent(result.storyId)}`);
     } catch (err) {
       setError(err?.response?.data?.error || t('storiesErrorCreate'));

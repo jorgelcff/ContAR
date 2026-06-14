@@ -24,6 +24,9 @@ const BONE_LABELS = {
 
 const DEFAULT_LIP_SYNC_CONFIG = {
   amplitudeMultiplier: 18,
+  // Global ceiling on how wide the mouth opens (0–1). 1.0 = full ARKit gape
+  // (looked exaggerated on TTS); ~0.7 keeps speech natural without going slack.
+  mouthOpenScale: 0.7,
   noiseGate: 0.008,
   adaptiveNoiseGate: true,
   noiseFloorMultiplier: 2.2,
@@ -713,12 +716,14 @@ export default function SceneCanvas({
               1,
             );
             const isAudioActive = audioPresence > 0.04;
-            // When audio is playing, guarantee at least 40% of the viseme shows.
-            const ttsFloor = isAudioActive ? 0.4 : 0;
+            // When audio is playing, guarantee a visible (but not gaping)
+            // portion of the viseme shows.
+            const ttsFloor = isAudioActive ? 0.3 : 0;
+            const mouthScale = effectiveConfig.mouthOpenScale ?? 1;
 
             timelineBlend.forEach(({ cue, weight }) => {
               const cueIntensity = THREE.MathUtils.clamp(
-                (ttsFloor + audioPresence * 0.6) * weight,
+                (ttsFloor + audioPresence * 0.6) * weight * mouthScale,
                 0,
                 1,
               );
@@ -740,21 +745,26 @@ export default function SceneCanvas({
             1,
           );
           const bright = THREE.MathUtils.clamp(highBand / sumBands, 0, 1);
+          const mouthScale = effectiveConfig.mouthOpenScale ?? 1;
+          const openScaled = mouthOpen * mouthScale;
 
-          lipSyncController.setGroupValue("aa", mouthOpen * vowelOpen);
+          lipSyncController.setGroupValue("aa", openScaled * vowelOpen);
           lipSyncController.setGroupValue(
             "oh",
-            mouthOpen * THREE.MathUtils.clamp(lowBand / sumBands, 0, 1),
+            openScaled * THREE.MathUtils.clamp(lowBand / sumBands, 0, 1),
           );
-          lipSyncController.setGroupValue("ee", mouthOpen * bright);
-          lipSyncController.setGroupValue("fv", mouthOpen * bright * 0.65);
+          lipSyncController.setGroupValue("ee", openScaled * bright);
+          lipSyncController.setGroupValue("fv", openScaled * bright * 0.65);
           lipSyncController.setGroupValue("mbp", (1 - mouthOpen) * 0.2);
         }
 
-        // Visible baseline: raised from 0.22 to 0.45 so the jaw always opens
-        // noticeably when audio is playing, regardless of blendshape mapping.
+        // Visible baseline so the jaw always opens noticeably when audio is
+        // playing, regardless of blendshape mapping — scaled by mouthOpenScale.
         if (hasMorphs) {
-          lipSyncController.setGroupValue("mouthOpen", mouthOpen * 0.45);
+          lipSyncController.setGroupValue(
+            "mouthOpen",
+            mouthOpen * 0.45 * (effectiveConfig.mouthOpenScale ?? 1),
+          );
         }
 
         if (
@@ -769,7 +779,11 @@ export default function SceneCanvas({
               effectiveConfig.jawMicroJitterAmount *
               mouthOpen
             : 0;
-          const jawOpen = THREE.MathUtils.clamp(mouthOpen + jawJitter, 0, 1);
+          const jawOpen = THREE.MathUtils.clamp(
+            (mouthOpen + jawJitter) * (effectiveConfig.mouthOpenScale ?? 1),
+            0,
+            1,
+          );
           const jawAngleDeg = pseudoJawRig ? 6.5 : 18;
           const jawOpenAngle = THREE.MathUtils.degToRad(
             jawAngleDeg * effectiveConfig.jawFallbackStrength * jawOpen,

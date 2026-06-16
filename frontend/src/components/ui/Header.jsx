@@ -6,18 +6,12 @@ import useTheme from '../../context/useTheme';
 import HelpModal from './HelpModal';
 import Icon from './Icon';
 
-/** Top navigation bar with title, language toggle and autosave indicator. */
-export default function Header({ autosaveStatus }) {
+/** Top navigation bar with title and language/theme toggles. */
+export default function Header() {
   const { t, i18n } = useTranslation();
   const { isAuthenticated, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
-
-  const autosaveLabel = autosaveStatus === 'saving'
-    ? t('headerAutosaveSaving')
-    : autosaveStatus instanceof Date
-      ? t('headerAutosaveSaved', { time: autosaveStatus.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) })
-      : null;
 
   return (
     <>
@@ -26,13 +20,6 @@ export default function Header({ autosaveStatus }) {
       <Link to={isAuthenticated ? '/stories' : '/login'} className="text-white font-bold text-lg tracking-tight">
         {t('appTitle')}
       </Link>
-      <div className="flex items-center gap-3">
-        {autosaveLabel && (
-          <span className="text-xs text-gray-400 hidden sm:inline transition-all duration-300">
-            {autosaveLabel}
-          </span>
-        )}
-      </div>
       <div className="flex items-center gap-2">
         {isAuthenticated && (
           <>

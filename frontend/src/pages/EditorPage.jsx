@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import LeftPanel from '../components/ui/LeftPanel';
 import BottomNav from '../components/ui/BottomNav';
+import Icon from '../components/ui/Icon';
 import OnboardingOverlay, { shouldShowOnboarding } from '../components/ui/OnboardingOverlay';
 import WalkthroughTour, { shouldShowTour } from '../components/ui/WalkthroughTour';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
@@ -107,8 +108,15 @@ export default function EditorPage() {
 
   // ── Autosave ────────────────────────────────────────────────
   const [autosaveStatus, setAutosaveStatus] = useState(null); // null | 'saving' | Date
+  // True while the current state differs from what's persisted (the 3s window
+  // before autosave fires, or after a failed save) — surfaced as "Unsaved".
+  const [isDirty, setIsDirty] = useState(false);
   const autosaveTimerRef = useRef(null);
   const pendingPayloadRef = useRef(null);
+  // Signature (serialized payload) of the last state persisted to / loaded from
+  // the server. Comparing against it tells real edits apart from the store
+  // updates a scene load triggers, so opening a scene never flashes "Unsaved".
+  const lastSavedSigRef = useRef(null);
 
   useEffect(() => {
     // Only autosave when there is meaningful content to preserve
@@ -117,19 +125,36 @@ export default function EditorPage() {
       pendingPayloadRef.current = null;
       return;
     }
-    pendingPayloadRef.current = buildScenePayload(currentSceneId || undefined);
+    const payload = buildScenePayload(currentSceneId || undefined);
+    const sig = JSON.stringify(payload);
+    // Nothing actually changed vs the persisted/loaded state — stay "saved".
+    if (sig === lastSavedSigRef.current) {
+      pendingPayloadRef.current = null;
+      setIsDirty(false);
+      return;
+    }
+    pendingPayloadRef.current = payload;
+    setIsDirty(true);
     clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(async () => {
       setAutosaveStatus('saving');
       try {
-        const result = await saveScene(buildScenePayload(currentSceneId || undefined));
+        const result = await saveScene(payload);
         pendingPayloadRef.current = null;
         // Capture the generated sceneId on first save
         if (result?.sceneId && !currentSceneId) {
           useSceneStore.getState().setCurrentSceneId(result.sceneId);
         }
+        // Record the persisted signature (with the new sceneId if just created)
+        // so the follow-up dep change from setCurrentSceneId isn't seen as dirty.
+        const savedId = result?.sceneId || currentSceneId || undefined;
+        lastSavedSigRef.current = JSON.stringify(
+          useSceneStore.getState().buildScenePayload(savedId),
+        );
+        setIsDirty(false);
         setAutosaveStatus(new Date());
       } catch {
+        // Save failed — keep it flagged as unsaved so the user notices.
         setAutosaveStatus(null);
       }
     }, 3000);
@@ -203,6 +228,14 @@ export default function EditorPage() {
           narrativeAudioUrl: narrative.audioUrl || '',
           textDisplayMode: narrative.displayMode || 'bubble',
         });
+
+        // The freshly loaded scene matches what's persisted — mark it clean so
+        // the autosave effect doesn't flag it as unsaved right after opening.
+        lastSavedSigRef.current = JSON.stringify(
+          useSceneStore.getState().buildScenePayload(data.sceneId),
+        );
+        setIsDirty(false);
+        setAutosaveStatus(null);
 
         // Load this scene's previously generated narration audio (if any) so
         // playback and lip sync reflect THIS scene, not whatever was loaded
@@ -286,6 +319,15 @@ export default function EditorPage() {
     try {
       const result = await saveScene(buildScenePayload(currentSceneId || undefined));
       if (result?.sceneId) setCurrentSceneId(result.sceneId);
+      // Mark clean so the toolbar reflects the manual save (and autosave doesn't
+      // re-fire a redundant save for the now-identical state).
+      const savedId = result?.sceneId || currentSceneId || undefined;
+      lastSavedSigRef.current = JSON.stringify(
+        useSceneStore.getState().buildScenePayload(savedId),
+      );
+      pendingPayloadRef.current = null;
+      setIsDirty(false);
+      setAutosaveStatus(new Date());
       addToast(t('epSceneSaved'), 'success');
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
@@ -370,20 +412,54 @@ export default function EditorPage() {
     await handleSaveStory();
   };
 
+  // Save status shown in the editor toolbar: unsaved (amber) → saving → saved.
+  const savedTime = autosaveStatus instanceof Date
+    ? autosaveStatus.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : '';
+  const saveStatusEl = isDirty ? (
+    <span className="flex items-center gap-1.5 text-xs font-medium text-amber-400 shrink-0">
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+      {t('epUnsavedChanges')}
+    </span>
+  ) : autosaveStatus === 'saving' ? (
+    <span className="flex items-center gap-1.5 text-xs text-gray-400 shrink-0">
+      <span className="h-3 w-3 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
+      {t('headerAutosaveSaving')}
+    </span>
+  ) : autosaveStatus instanceof Date ? (
+    <span className="flex items-center gap-1.5 text-xs text-emerald-400/90 shrink-0">
+      <Icon name="check" className="h-3.5 w-3.5" />
+      {t('headerAutosaveSaved', { time: savedTime })}
+    </span>
+  ) : null;
+  const saveStatusCompactEl = isDirty ? (
+    <span title={t('epUnsavedChanges')} className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+  ) : autosaveStatus === 'saving' ? (
+    <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
+  ) : autosaveStatus instanceof Date ? (
+    <Icon name="check" className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+  ) : null;
+
   return (
     <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
       {showOnboarding && (
         <OnboardingOverlay onDone={() => setShowOnboarding(false)} />
       )}
       <WalkthroughTour isOpen={showTour} onClose={() => setShowTour(false)} />
-      <Header autosaveStatus={autosaveStatus} />
+      <Header />
       {error && (
         <div className="shrink-0 bg-red-900/80 text-red-200 text-sm px-4 py-2 border-b border-red-700 flex items-center justify-between gap-2">
           <span>{error}</span>
           <button onClick={() => setError('')} className="text-red-300 hover:text-white text-lg leading-none">×</button>
         </div>
       )}
-      <div className="shrink-0 border-b border-gray-800 bg-gray-950 px-4 py-2 flex items-center justify-end gap-2 md:hidden">
+      <div className="shrink-0 border-b border-gray-800 bg-gray-950 px-4 py-2 flex items-center justify-between gap-2 md:hidden">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Icon name="scene" className="w-4 h-4 text-cyan-500/70 shrink-0" />
+          <span className="truncate text-sm font-medium text-gray-200">{sceneTitle?.trim() || t('epUntitledScene')}</span>
+          {saveStatusCompactEl}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={() => setShowTour(true)}
           className="rounded-full border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors"
@@ -393,6 +469,7 @@ export default function EditorPage() {
         <Link to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
           {t('viewerOpenAr')}
         </Link>
+        </div>
       </div>
       <div className="flex flex-1 overflow-hidden">
         <LeftPanel
@@ -415,17 +492,26 @@ export default function EditorPage() {
           avatarClips={avatarClips}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="hidden md:flex shrink-0 items-center justify-end px-4 py-2 border-b border-gray-800 bg-gray-950 gap-2">
-            <button
-              onClick={() => setShowTour(true)}
-              className="rounded-full border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white hover:border-gray-400 transition-colors"
-              title="Iniciar tour guiado"
-            >
-              ? Tour
-            </button>
-            <Link data-tour="ar-btn" to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
-              {t('openSurfaceAr')}
-            </Link>
+          <div className="hidden md:flex shrink-0 items-center gap-3 px-4 py-2 border-b border-gray-800 bg-gray-950">
+            <div className="flex flex-1 items-center gap-2 min-w-0">
+              <Icon name="scene" className="w-4 h-4 text-cyan-500/70 shrink-0" />
+              <span className="truncate text-sm font-medium text-gray-200" title={sceneTitle?.trim() || undefined}>
+                {sceneTitle?.trim() || t('epUntitledScene')}
+              </span>
+            </div>
+            {saveStatusEl}
+            <div className="flex flex-1 items-center justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setShowTour(true)}
+                className="rounded-full border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white hover:border-gray-400 transition-colors"
+                title="Iniciar tour guiado"
+              >
+                ? Tour
+              </button>
+              <Link data-tour="ar-btn" to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
+                {t('openSurfaceAr')}
+              </Link>
+            </div>
           </div>
           <div className="flex-1 overflow-hidden relative" data-tour="scene-canvas">
             {sceneLoading && (

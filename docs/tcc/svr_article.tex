@@ -263,8 +263,8 @@ módulos técnicos principais e seus relacionamentos.
 
 \begin{figure}[htbp]
   \centering
-  \resizebox{\columnwidth}{!}{%
   \begin{tikzpicture}[
+      scale=0.9, transform shape,
       font=\footnotesize,
       node distance=3mm and 3mm,
       box/.style={draw, rounded corners, align=center, minimum height=8mm, inner sep=2pt, fill=blue!6},
@@ -307,7 +307,7 @@ módulos técnicos principais e seus relacionamentos.
     \draw[arr] (server.south) -- (mongo.north);
     \draw[arr] (server.south) -- (azure.north);
     \draw[arr] (server.south) -- (cloud.north);
-  \end{tikzpicture}}
+  \end{tikzpicture}
   \caption{Arquitetura geral do ContAR: SPA React no cliente concentra os módulos 3D (BoneMapper, LipSyncController, AnimationController) e de áudio, comunicando-se via REST API com o backend Node.js/Express, que integra MongoDB, Azure Speech e Cloudinary, todos executados em containers Docker/nginx.}
   \label{fig:arquitetura}
 \end{figure}
@@ -391,22 +391,31 @@ padrões de rig suportados.
 
 \begin{figure}[htbp]
   \centering
-  \fbox{%
-    \begin{minipage}{0.9\columnwidth}
-      \centering
-      \vspace{1.5cm}
-      \textbf{[Fig. 3. BoneMapper: mapeamento de rigs]}\\[6pt]
-      \small
-      \texttt{Mixamo: mixamorigHips}\\
-      \texttt{VRM: J\_Bip\_C\_Hips} \quad $\xrightarrow{\text{BoneMapper}}$ \quad \texttt{hip (canônico)}\\
-      \texttt{CC3: CC\_Base\_Hip}\\[4pt]
-      $\downarrow$\\[4pt]
-      \texttt{AnimationController / PosePresets}
-      \vspace{1.5cm}
-    \end{minipage}%
-  }
-  \caption{BoneMapper: mapeamento automático entre padrões de rig para nomes
-    canônicos Three.js. Substitua pelo diagrama final.}
+  \begin{tikzpicture}[
+      scale=0.9, transform shape,
+      font=\footnotesize,
+      node distance=4mm and 6mm,
+      rig/.style={draw, rounded corners, align=left, minimum height=8mm, inner sep=2pt, fill=blue!6},
+      core/.style={draw, rounded corners, align=center, minimum height=8mm, inner sep=2pt, fill=orange!8},
+      arr/.style={-{Latex[length=2mm]}, thick},
+    ]
+    \node[rig] (mixamo) {Mixamo:\\\texttt{mixamorigHips}};
+    \node[rig, below=of mixamo] (vrm) {VRM:\\\texttt{J\_Bip\_C\_Hips}};
+    \node[rig, below=of vrm] (cc3) {CC3:\\\texttt{CC\_Base\_Hip}};
+
+    \node[core, right=14mm of vrm] (mapper) {BoneMapper};
+    \node[core, right=14mm of mapper] (canon) {Nome canônico\\\texttt{hip}};
+    \node[core, below=8mm of mapper, minimum width=3.6cm] (anim) {AnimationController\\/ PosePresets};
+
+    \draw[arr] (mixamo.east) -- (mapper.north -| mixamo.east) -- (mapper);
+    \draw[arr] (vrm.east) -- (mapper);
+    \draw[arr] (cc3.east) -- (mapper.south -| cc3.east) -- (mapper);
+    \draw[arr] (mapper) -- (canon);
+    \draw[arr] (mapper) -- (anim);
+  \end{tikzpicture}
+  \caption{BoneMapper: mapeamento automático dos nomes de ossos dos padrões de
+    rig suportados (Mixamo, VRM, CC3) para nomes canônicos Three.js, usados
+    pelo AnimationController e pelos PosePresets.}
   \label{fig:bonemapper}
 \end{figure}
 
@@ -449,21 +458,25 @@ sobreposto ao avatar (\textit{bubble}), legenda na parte inferior da tela
 
 \subsection{Fundamentação e Motivação}
 
-A Lei~10.639/2003 instituiu a obrigatoriedade do ensino de história e cultura
-afro-brasileira e africana nas escolas de educação básica brasileiras. Mais de
-duas décadas após sua promulgação, sua implementação ainda é desigual, em
-parte pela escassez de materiais didáticos representativos~\cite{araujo2023a}.
+A Lei~10.639/2003, fruto da luta histórica do Movimento Negro~\cite{santos2005},
+instituiu a obrigatoriedade do ensino de história e cultura afro-brasileira e
+africana nas escolas de educação básica brasileiras. Mais de duas décadas após
+sua promulgação, sua implementação ainda é desigual, em parte pela escassez de
+materiais didáticos representativos~\cite{araujo2023a,rocha2015}.
 
 Djamila Ribeiro~\cite{ribeiro2019} argumenta que negar à população negra a sua
 própria história e a possibilidade de se ver representada nos espaços de saber
 é uma forma de violência simbólica que se perpetua cotidianamente. Jeferson
 Tenório, em \textit{O Avesso da Pele}~\cite{tenorio2020}, constrói uma narrativa
 na qual o professor negro protagonista é confrontado, a cada aula, com a ausência
-de si mesmo nos materiais didáticos. Essas perspectivas nos convocam a entender
-o ContAR não apenas como ferramenta técnica, mas como instrumento de política
-educacional: ao permitir que qualquer professor crie um narrador virtual negro
-que conte a história de Zumbi dos Palmares, de Carolina Maria de Jesus ou de
-Machado de Assis, a plataforma democratiza a produção de memória pedagógica.
+de si mesmo nos materiais didáticos. Essa resistência se manifesta de forma
+concreta: em 2024, a obra foi alvo de censura em escolas de três estados
+brasileiros, sob justificativa equivocada sobre seu conteúdo~\cite{g1_2024}.
+Essas perspectivas nos convocam a entender o ContAR não apenas como ferramenta
+técnica, mas como instrumento de política educacional: ao permitir que qualquer
+professor crie um narrador virtual negro que conte a história de Zumbi dos
+Palmares, de Carolina Maria de Jesus ou de Machado de Assis, a plataforma
+democratiza a produção de memória pedagógica.
 
 \subsection{História de Exemplo: \textit{Dandara dos Palmares}}
 
@@ -744,6 +757,23 @@ Letras, 2018.
 
 \bibitem{tenorio2020}
 J.~Tenório, \textit{O Avesso da Pele}. São Paulo: Companhia das Letras, 2020.
+
+\bibitem{g1_2024}
+G1 Educação, ```O avesso da pele', livro que debate racismo, é censurado em
+escolas de 3 estados por reação equivocada ao conteúdo, alertam especialistas,''
+\textit{G1}, mar. 2024. [Online]. Available:
+\url{https://g1.globo.com/educacao/noticia/2024/03/08/o-avesso-da-pele-livro-que-debate-racismo-e-censurado-em-escolas-de-3-estados-por-reacao-equivocada-ao-conteudo-alertam-especialistas.ghtml}
+
+\bibitem{santos2005}
+S.~A.~dos Santos, ``A Lei no. 10.639/03 como fruto da luta anti-racista do
+Movimento Negro,'' in \textit{Educação Anti-Racista: Caminhos Abertos pela Lei
+Federal no. 10.639/03}. Brasília: Ministério da Educação, Secretaria de
+Educação Continuada, Alfabetização e Diversidade, 2005.
+
+\bibitem{rocha2015}
+L.~F.~R.~Rocha, ``A implementação da Lei 10.639/2003 na Rede Federal de
+Educação Profissional, Científica e Tecnológica,'' Dissertação (Mestrado em
+Educação), Universidade Federal de Ouro Preto (UFOP), Ouro Preto, 2015.
 
 \bibitem{araujo2023a}
 G.~J.~Ferreira de Araújo, ``Profissionais de educação recebem curso de

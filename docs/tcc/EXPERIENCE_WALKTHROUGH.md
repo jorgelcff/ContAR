@@ -29,7 +29,7 @@ O resultado deste walkthrough deve apontar:
    experiência ainda fresca.
 4. Ao final, aplique as **perguntas específicas da área** do participante e as
    **perguntas gerais de encerramento**.
-5. Duração estimada: 30-45 minutos.
+5. Duração estimada: **60–90 minutos** (inclui SUS e perguntas qualitativas por perfil).
 
 ---
 
@@ -64,7 +64,7 @@ Criar conta → Criar avatar → Configurar cena → Montar história → Visual
 
 ---
 
-## 2. Criar o avatar
+## 2. Criar o avatar `(Tarefa T1)`
 
 1. Clique em **Nova cena** no painel de cenas
 2. No painel esquerdo, vá para a aba **Avatar**
@@ -98,7 +98,7 @@ Criar conta → Criar avatar → Configurar cena → Montar história → Visual
 2. Digite o que o narrador vai dizer
 3. O texto aparece na bolha de fala acima do avatar
 
-### Gerar áudio com lip sync
+### Gerar áudio com lip sync `(Tarefa T2)`
 
 **Azure TTS (recomendado):**
 1. Vá para a aba **Áudio**
@@ -114,7 +114,7 @@ Criar conta → Criar avatar → Configurar cena → Montar história → Visual
 1. Clique em **Gravar** (microfone) ou **Carregar áudio** (MP3/WAV)
 2. Em **Configurações avançadas**, clique em **Gerar timeline local** para adicionar lip sync baseado no texto
 
-### Salvar a cena
+### Salvar a cena `(Tarefa T3)`
 
 1. Vá para a aba **Cena**
 2. Digite um nome (ex: "Cena 1 — Introdução")
@@ -127,7 +127,7 @@ Criar conta → Criar avatar → Configurar cena → Montar história → Visual
 
 ---
 
-## 4. Montar a história — como o editor funciona
+## 4. Montar a história — como o editor funciona `(Tarefa T4)`
 
 ### O editor trabalha em uma cena de cada vez
 
@@ -182,7 +182,7 @@ Arraste os cards no painel inferior para mudar a ordem de reprodução da histó
 
 ---
 
-## 5. Visualizar
+## 5. Visualizar e abrir em AR `(Tarefa T5)`
 
 - Acesse `/stories` para ver suas histórias
 - Clique em **▶ Assistir** ou use o link público gerado
@@ -195,7 +195,7 @@ Arraste os cards no painel inferior para mudar a ordem de reprodução da histó
 
 ---
 
-## 6. Abrir em AR
+## 6. Abrir em AR *(continuação T5)*
 
 ### Marcador (funciona em qualquer smartphone)
 
@@ -231,38 +231,91 @@ https://avaturn-threejs-1.onrender.com/story/[ID]
 
 ---
 
-## Perguntas específicas por área
+## 8. System Usability Scale (SUS)
 
-### Letras
+> Aplique **imediatamente após §7**, antes das perguntas qualitativas. Compartilhe o link do Google Forms no chat da videochamada e peça para preencher ali (leva ~3 minutos). Assim a impressão do sistema ainda está fresca e não é influenciada pelas perguntas abertas.
+>
+> Escala: **1** = Discordo totalmente · **5** = Concordo totalmente
 
-- A qualidade da narrativa (texto + voz + expressividade do avatar) é adequada para uso didático em língua portuguesa, literatura ou produção textual?
-- Você usaria essa ferramenta para encenar textos literários, contos ou exercícios de produção textual com alunos?
-- O fluxo de edição de texto é amigável para alguém sem conhecimento técnico de tecnologia?
-- Quais melhorias tornariam essa ferramenta mais útil no ensino de línguas/literatura?
+| # | Afirmação | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| 1 | Eu acho que gostaria de usar esse sistema com frequência. | ○ | ○ | ○ | ○ | ○ |
+| 2 | Eu achei o sistema desnecessariamente complexo. | ○ | ○ | ○ | ○ | ○ |
+| 3 | Eu achei o sistema fácil de usar. | ○ | ○ | ○ | ○ | ○ |
+| 4 | Eu acho que precisaria de ajuda de uma pessoa técnica para conseguir usar o sistema. | ○ | ○ | ○ | ○ | ○ |
+| 5 | Eu achei que as várias funções do sistema estavam bem integradas. | ○ | ○ | ○ | ○ | ○ |
+| 6 | Eu achei que havia muita inconsistência no sistema. | ○ | ○ | ○ | ○ | ○ |
+| 7 | Eu imagino que a maioria das pessoas aprenderia a usar esse sistema muito rapidamente. | ○ | ○ | ○ | ○ | ○ |
+| 8 | Eu achei o sistema muito incômodo de usar. | ○ | ○ | ○ | ○ | ○ |
+| 9 | Eu me senti muito confiante ao usar o sistema. | ○ | ○ | ○ | ○ | ○ |
+| 10 | Eu precisei aprender muitas coisas antes de conseguir usar o sistema. | ○ | ○ | ○ | ○ | ○ |
 
-### Geografia
+**Cálculo do score:** some as contribuições de cada item. Para ímpares (1,3,5,7,9): valor − 1. Para pares (2,4,6,8,10): 5 − valor. Multiplique o total por 2,5. Score: ____ / 100.
 
-- Como você imagina usar um avatar narrador em AR para ensino de conceitos geográficos (relevo, clima, território, etc.)?
-- A AR de marcador ou de superfície tem aplicação em atividades de campo, maquetes ou em sala de aula?
-- O narrador poderia complementar explicações sobre mapas ou modelos 3D de terrenos?
-- Você vê valor em integrar dados geográficos reais (localização, mapas) com essa experiência narrada?
-
-### Computação
-
-- O que você achou da arquitetura geral percebida (renderização 3D, geração de voz/lip sync, AR via marcador/WebXR)?
-- A performance foi adequada nos dispositivos testados (desktop/mobile)?
-- Quais pontos de extensibilidade ou integração você enxerga (APIs, exportação, automação de criação de cenas)?
-- Há gargalos técnicos perceptíveis (tempo de geração de áudio, carregamento de modelos 3D, etc.)?
+> Referência: acima de 68 = acima da média · acima de 80 = bom · acima de 90 = excelente (Bangor et al., 2009).
 
 ---
 
-## Perguntas gerais de encerramento
+## 9. Perguntas específicas por perfil
+
+> Aplique **apenas o bloco do perfil** do especialista que está sendo entrevistado. Faça após o SUS, com a experiência ainda presente.
+
+### E1 — Especialista em IHC, Realidade Aumentada e RV
+
+- Considerando as 10 heurísticas de Nielsen, quais foram as violações mais evidentes durante o uso?
+- A experiência de AR (Surface WebXR e/ou Marker AR.js) apresentou problemas de estabilidade de ancoragem, feedback de rastreamento ou ergonomia de interação móvel?
+- O fluxo de autoria (avatar → fala → pose → história → publicação) está adequadamente integrado para um usuário sem formação técnica?
+- Que padrões de interação ou metáforas de interface você recomendaria adotar ou evitar nesta plataforma?
+- Há gargalos técnicos perceptíveis (geração de áudio, carregamento de modelos 3D, tempo de resposta do backend)?
+
+### E2 — Especialista em Educação Antirracista e Letramento Racial
+
+- O suporte a avatares com diversidade fenotípica atende à demanda por representatividade exigida pela Lei 10.639/2003?
+- A qualidade da voz, do lip sync e da expressividade do avatar é suficiente para uso em materiais pedagógicos sobre cultura afro-brasileira?
+- Um professor sem formação técnica conseguiria criar, de forma autônoma, uma história antirracista como a de "Dandara dos Palmares"?
+- O modo AR (marcador ou superfície) agrega valor em contextos de formação docente ou sala de aula? Em qual situação concreta você imagina esse uso?
+- Quais melhorias tornariam o ContAR mais útil nos cursos de letramento racial que você conduz?
+
+### E3 — Especialista em RA Educacional e Autoria de Conteúdo
+
+- Em que medida o ContAR atende aos princípios de design para ferramentas de autoria de RA que você estabeleceu (fluxo guiado, sem código, feedback imediato, vocabulário pedagógico)?
+- Onde o fluxo de autoria mais se afasta desses princípios? O que seria necessário para aproximá-lo?
+- O conceito de "cena ativa" e a composição de histórias sequenciais ficaram claros sem documentação prévia?
+- Como o ContAR se posiciona frente às ferramentas avaliadas em seu trabalho (ZapWorks, Assemblr, CoSpaces)?
+- Que funcionalidades ou integrações você priorizaria para uma próxima versão voltada a professores da educação básica?
+
+---
+
+## 10. Perguntas gerais de encerramento
 
 - De 0 a 10, qual a probabilidade de você recomendar o ContAR para um colega da sua área?
 - Qual seria o principal caso de uso que você imagina para essa ferramenta?
 - O que mais te surpreendeu, positiva ou negativamente?
 - Quais seriam os 3 principais pontos a melhorar antes de testar com usuários finais?
 - Você teria interesse em participar de uma próxima rodada de testes, já com as melhorias aplicadas?
+
+---
+
+## Anexo — Ficha de Registro de Heurísticas *(uso exclusivo do moderador)*
+
+> Preencha durante e após a sessão. Anote cada problema identificado com a heurística violada e a severidade segundo Nielsen (0 = não é problema; 1 = cosmético; 2 = menor; 3 = maior; 4 = catastrófico).
+
+| # | Etapa / tela | Descrição do problema | Heurística | Sev. |
+|---|---|---|---|---|
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+| 6 | | | | |
+| 7 | | | | |
+| 8 | | | | |
+
+**Heurísticas de Nielsen:**
+H1 Visibilidade do status · H2 Correspondência com o mundo real · H3 Controle e liberdade · H4 Consistência e padrões · H5 Prevenção de erros · H6 Reconhecimento em vez de memorização · H7 Flexibilidade e eficiência · H8 Estética e design minimalista · H9 Recuperação de erros · H10 Ajuda e documentação
+
+**Critérios XR (Gabbard & Swan, 2008):**
+XR1 Estabilidade e ancoragem de objetos virtuais · XR2 Feedback de rastreamento e estado do AR · XR3 Ergonomia da interação em ambiente móvel
 
 ---
 

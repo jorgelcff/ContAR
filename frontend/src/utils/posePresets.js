@@ -18,7 +18,7 @@ export function applyPosePreset(
   // Names are matched case-sensitively (they can contain dots/parens, e.g.
   // "IdleV4.2(maya_head)"), bypassing the keyword heuristic below.
   if (raw.startsWith("clip:")) {
-    const clipName = raw.slice(5);
+    const ref = raw.slice(5).trim();
     if (animationController) {
       animationController.setProceduralMode("default");
       animationController.stopAll();
@@ -26,9 +26,17 @@ export function applyPosePreset(
     ensureRestPoseSnapshot(model);
     resetToRestPose(model);
     const clips = Array.isArray(avatarClips) ? avatarClips : [];
-    const clip = clips.find((c) => String(c?.name || "") === clipName);
+    // "clip:<index>" (preferred — unambiguous even with duplicate clip names)
+    // or "clip:<name>" (legacy/saved scenes). avatarClips lists the model's
+    // embedded clips first, so the index lines up with the panel's list.
+    const clip = /^\d+$/.test(ref)
+      ? clips[Number(ref)] || null
+      : clips.find((c) => String(c?.name || "").trim() === ref) || null;
     if (animationController && clip) {
-      animationController.play(clip, 0.35);
+      // Play the model's native clip as-authored (no Mixamo retargeting), so
+      // partial clips (hand/eye poses) don't get their tracks misrouted onto
+      // the spine/hips and tip the character over.
+      animationController.play(clip, 0.35, { retarget: false });
     } else if (animationController) {
       // Clip not found (e.g. avatar changed) — fall back to idle, never T-pose.
       const fallbackIdle = externalClips.idle || idleClip;

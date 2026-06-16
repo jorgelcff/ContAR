@@ -407,6 +407,16 @@ export default function LeftPanel({
               </div>
               <select value={posePreset} onChange={(e) => handlePoseChange(e.target.value)}
                 className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-blue-500">
+                {/* When a model's embedded animation is active, posePreset is
+                    "clip:<name>", which matches none of the options below — the
+                    browser would then show the first option (idle), making it
+                    look like idle was selected. This hidden, matching option
+                    keeps the dropdown reflecting the active model animation. */}
+                {String(posePreset).startsWith('clip:') && (
+                  <option value={posePreset} hidden>
+                    {t('lpModelAnimations')}: {avatarClips.find((c) => `clip:${c.index}` === posePreset)?.name || String(posePreset).slice(5)}
+                  </option>
+                )}
                 <optgroup label="Animadas">
                   <option value="idle">{t('poseIdle')}</option>
                   <option value="walk">{t('poseWalk')}</option>
@@ -441,12 +451,12 @@ export default function LeftPanel({
                   <TooltipIcon text={t('lpModelAnimationsTooltip')} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {avatarClips.map((name) => {
-                    const value = `clip:${name}`;
+                  {avatarClips.map(({ name, index }) => {
+                    const value = `clip:${index}`;
                     const active = posePreset === value;
                     return (
                       <button
-                        key={name}
+                        key={index}
                         onClick={() => handlePoseChange(value)}
                         title={name}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-left transition-colors ${

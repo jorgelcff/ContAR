@@ -312,7 +312,7 @@ export class AnimationController {
     return retargetedClip;
   }
 
-  play(clipOrName, fadeDuration = 0.4) {
+  play(clipOrName, fadeDuration = 0.4, { retarget = true } = {}) {
     // Determine the clip name before resolving the action so we can toggle
     // circular motion even when the same action is already current.
     const nameHint = (clipOrName instanceof THREE.AnimationClip)
@@ -321,7 +321,11 @@ export class AnimationController {
 
     let action;
     if (clipOrName instanceof THREE.AnimationClip) {
-      const clip = this._retargetClip(clipOrName);
+      // retarget=false plays the clip exactly as authored — used for a model's
+      // OWN embedded animations (finger/eye poses, etc.), which already target
+      // its skeleton. Running them through _retargetClip (built for foreign
+      // Mixamo clips) drops/misroutes tracks and mangles the body.
+      const clip = retarget ? this._retargetClip(clipOrName) : clipOrName;
       action = this._mixer.clipAction(clip);
       action.enabled = true;
       this._actions.set(clip.name.toLowerCase(), action);

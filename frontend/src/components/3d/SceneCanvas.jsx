@@ -74,6 +74,16 @@ const MOUTH_OPEN_PATTERNS = [
 
 const MOUTH_FALLBACK_PATTERNS = [/jaw/i, /mouth/i, /lip/i, /viseme/i];
 
+// Embedded clips that are clearly rig poses — per-hand finger poses
+// (pinch_L, point_R, allGrip_L…) and eye/face micro-anims (idle_eyes, blink…) —
+// rather than full-body animations. Hidden from the "model animations" list,
+// which is meant for body animations the user can play on their own.
+const RIG_POSE_CLIP_PATTERNS = [
+  /_[lr]$/i,
+  /grip|pinch|point|thumb|index|finger|fist|knuckle|palm|mrp|allopen|allgrip/i,
+  /eye|blink|wink|brow|jaw|viseme|mouth|tongue|teeth|phoneme/i,
+];
+
 const JAW_BONE_PATTERNS = [
   /jaw/i,
   /lower.?jaw/i,
@@ -1032,12 +1042,15 @@ export default function SceneCanvas({
         avatarClipsRef.current = Array.isArray(gltf.animations)
           ? gltf.animations
           : [];
-        // Surface the model's own embedded clip names (NOT the Mixamo extras
-        // merged in below) so the editor can offer them for direct selection.
+        // Surface the model's own embedded clips (NOT the Mixamo extras merged
+        // in below) so the editor can offer them for direct selection. We send
+        // { name, index } so the panel selects by index — embedded clips are
+        // first in avatarClipsRef, so the index is unambiguous even when several
+        // clips share the same name (common in Mixamo exports → "mixamo.com").
         onAvatarClipsRef.current?.(
           (Array.isArray(gltf.animations) ? gltf.animations : [])
-            .map((c) => String(c?.name || "").trim())
-            .filter(Boolean),
+            .map((c, index) => ({ name: String(c?.name || "").trim(), index }))
+            .filter((c) => c.name && !RIG_POSE_CLIP_PATTERNS.some((re) => re.test(c.name))),
         );
         if (!idleClipRef.current && gltf.animations?.length) {
           idleClipRef.current = gltf.animations[0];

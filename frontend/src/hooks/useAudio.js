@@ -324,9 +324,11 @@ export default function useAudio({ onAudioBlob } = {}) {
     utterance.rate = 0.88;
     utterance.pitch = 1;
 
-    // Pick a voice for the selected language
     const voices = window.speechSynthesis.getVoices();
-    const match = voices.find((v) => v.lang === lang)
+    const exactVoices = voices.filter((v) => v.lang === lang);
+    const female = exactVoices.find((v) => /female|feminino|francisca|vitoria|camila/i.test(v.name));
+    const match = female
+      || exactVoices[0]
       || voices.find((v) => v.lang.startsWith(lang.split('-')[0]))
       || null;
     if (match) utterance.voice = match;

@@ -501,7 +501,8 @@ export default function LeftPanel({
               </div>
             )}
 
-            {/* VRM Expressions */}
+            {/* VRM Expressions — only shown for .vrm avatars */}
+            {avatarUrl && /\.vrm(\?|$)/i.test(avatarUrl) && (
             <div className="flex flex-col gap-2">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('lpExpressionVrm')}</p>
               <div className="grid grid-cols-3 gap-1.5">
@@ -526,17 +527,20 @@ export default function LeftPanel({
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-500">{t('lpVrmOnly')}</p>
             </div>
+            )}
 
             {/* Advanced controls toggle */}
-            <button
-              onClick={() => setShowAdvanced((v) => !v)}
-              className="flex items-center justify-between w-full text-xs text-gray-400 hover:text-gray-200 py-1 transition-colors"
-            >
-              <span className="flex items-center gap-1"><Icon name="settings" className="w-3.5 h-3.5" /> Configurações avançadas</span>
-              <span>{showAdvanced ? '▲' : '▼'}</span>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="flex items-center justify-between flex-1 text-xs text-gray-400 hover:text-gray-200 py-1 transition-colors"
+              >
+                <span className="flex items-center gap-1"><Icon name="settings" className="w-3.5 h-3.5" /> {t('lpAdvancedSettings')}</span>
+                <span>{showAdvanced ? '▲' : '▼'}</span>
+              </button>
+              <TooltipIcon text={t('lpAdvancedSettingsHelp')} />
+            </div>
             {showAdvanced && (
               <div className="border border-gray-700 rounded-xl p-3">
                 <TransformControls transform={transform} onUpdate={setTransform} onReset={handleResetTransform} />
@@ -605,7 +609,7 @@ export default function LeftPanel({
                       className="flex-1 py-3 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white text-sm font-semibold transition-all shadow-md shadow-purple-900/30"
                     >
                       {tts.isGenerating
-                        ? t('lpGeneratingVoice')
+                        ? <span className="flex items-center justify-center gap-1.5"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> {t('lpGeneratingVoice')}</span>
                         : <span className="flex items-center justify-center gap-1.5"><Icon name="microphone" className="w-4 h-4" /> {t('lpGenerateVoice')}</span>
                       }
                     </button>

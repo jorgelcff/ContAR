@@ -170,7 +170,7 @@ export default function AudioPanel({
             <button
               onClick={() => onSpeakWebSpeech(speechText, selectedLang)}
               disabled={!hasSpeechText}
-              className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
+              className="w-full py-3 min-h-12 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
             >
               <span className="flex items-center justify-center gap-1.5"><Icon name="volume" className="w-4 h-4" /> {t('apSpeakNow')}</span>
             </button>
@@ -196,7 +196,7 @@ export default function AudioPanel({
           <button
             onClick={isPlaying ? onPause : onPlay}
             disabled={isRecording}
-            className="flex-1 py-2 rounded-lg bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 min-h-12 rounded-lg bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
           >
             <Icon name={isPlaying ? 'pause' : 'play'} className="w-4 h-4" />
             {isPlaying ? t('audioPause') : t('audioPlay')}
@@ -204,7 +204,7 @@ export default function AudioPanel({
           <button
             onClick={onStop}
             disabled={isRecording}
-            className="px-3 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 disabled:opacity-50 text-white text-sm transition-colors flex items-center justify-center gap-1.5"
+            className="px-3 py-2.5 min-h-12 rounded-lg bg-gray-600 hover:bg-gray-500 disabled:opacity-50 text-white text-sm transition-colors flex items-center justify-center gap-1.5"
           >
             <Icon name="stop" className="w-4 h-4" />
             {t('audioStop')}

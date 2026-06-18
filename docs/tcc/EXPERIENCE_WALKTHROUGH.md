@@ -324,3 +324,9 @@ XR1 Estabilidade e ancoragem de objetos virtuais · XR2 Feedback de rastreamento
 - A experiência mobile ainda está em ajuste — recomenda-se desktop para autoria
 - AR de superfície depende do suporte ARCore/WebXR do navegador (não funciona em iPhone)
 - O backend no free tier do Render pode demorar ~30s para responder após ficar inativo
+- **Óculos duplicados**: o SDK Avaturn exporta o GLB com óculos mesclados à geometria; não é possível corrigir via código — limitação do exportador Avaturn
+- **Upload de foto para avatar**: o SDK Avaturn (`@avaturn/sdk` v1.1.4) não expõe API de upload de foto; o fluxo de foto é exclusivamente via interface interna do iframe
+- **Variedade de cabelo/acessórios**: limitada ao catálogo Avaturn; a plataforma não permite adicionar assets customizados via SDK
+- **Fidelidade do avatar ao usuário**: depende integralmente do motor de geração do Avaturn; a plataforma não tem controle sobre o resultado
+- **Variedade de poses**: atualmente limitada às animações empacotadas; expansão requer adição de novos arquivos de animação
+- **Expressões VRM**: botões de expressão (happy, sad, etc.) só aparecem quando o avatar é do tipo VRM (.vrm); avatares GLB do Avaturn não suportam morphTargets de expressão

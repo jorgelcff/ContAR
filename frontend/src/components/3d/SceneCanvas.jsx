@@ -981,11 +981,18 @@ export default function SceneCanvas({
         setAvatarLoadError("");
         setAvatarLoading(false);
 
-        // Enable shadows on every mesh
+        const maxAniso = rendererRef.current?.capabilities.getMaxAnisotropy() || 1;
         model.traverse((node) => {
           if (node.isMesh) {
             node.castShadow = true;
             node.receiveShadow = true;
+            const mats = Array.isArray(node.material) ? node.material : [node.material];
+            for (const mat of mats) {
+              if (!mat) continue;
+              for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap']) {
+                if (mat[key]) mat[key].anisotropy = maxAniso;
+              }
+            }
           }
         });
 

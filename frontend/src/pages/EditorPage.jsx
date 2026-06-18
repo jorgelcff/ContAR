@@ -117,6 +117,7 @@ export default function EditorPage() {
   // the server. Comparing against it tells real edits apart from the store
   // updates a scene load triggers, so opening a scene never flashes "Unsaved".
   const lastSavedSigRef = useRef(null);
+  const autosaveEducatedRef = useRef(false);
 
   useEffect(() => {
     // Only autosave when there is meaningful content to preserve
@@ -141,23 +142,23 @@ export default function EditorPage() {
       try {
         const result = await saveScene(payload);
         pendingPayloadRef.current = null;
-        // Capture the generated sceneId on first save
         if (result?.sceneId && !currentSceneId) {
           useSceneStore.getState().setCurrentSceneId(result.sceneId);
         }
-        // Record the persisted signature (with the new sceneId if just created)
-        // so the follow-up dep change from setCurrentSceneId isn't seen as dirty.
         const savedId = result?.sceneId || currentSceneId || undefined;
         lastSavedSigRef.current = JSON.stringify(
           useSceneStore.getState().buildScenePayload(savedId),
         );
         setIsDirty(false);
         setAutosaveStatus(new Date());
+        if (!autosaveEducatedRef.current) {
+          autosaveEducatedRef.current = true;
+          addToast(t('epAutosaveEducational'), 'info', 4000);
+        }
       } catch {
-        // Save failed — keep it flagged as unsaved so the user notices.
         setAutosaveStatus(null);
       }
-    }, 3000);
+    }, 5000);
     return () => clearTimeout(autosaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl, textDisplayMode]);
@@ -417,27 +418,27 @@ export default function EditorPage() {
     ? autosaveStatus.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     : '';
   const saveStatusEl = isDirty ? (
-    <span className="flex items-center gap-1.5 text-xs font-medium text-amber-400 shrink-0">
-      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+    <span className="flex items-center gap-1.5 text-sm font-medium text-amber-400 shrink-0">
+      <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
       {t('epUnsavedChanges')}
     </span>
   ) : autosaveStatus === 'saving' ? (
-    <span className="flex items-center gap-1.5 text-xs text-gray-400 shrink-0">
-      <span className="h-3 w-3 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
+    <span className="flex items-center gap-1.5 text-sm text-gray-400 shrink-0">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
       {t('headerAutosaveSaving')}
     </span>
   ) : autosaveStatus instanceof Date ? (
-    <span className="flex items-center gap-1.5 text-xs text-emerald-400/90 shrink-0">
-      <Icon name="check" className="h-3.5 w-3.5" />
+    <span className="flex items-center gap-1.5 text-sm text-emerald-400/90 shrink-0">
+      <Icon name="check" className="h-4 w-4" />
       {t('headerAutosaveSaved', { time: savedTime })}
     </span>
   ) : null;
   const saveStatusCompactEl = isDirty ? (
-    <span title={t('epUnsavedChanges')} className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+    <span title={t('epUnsavedChanges')} className="h-3 w-3 shrink-0 rounded-full bg-amber-400 animate-pulse" />
   ) : autosaveStatus === 'saving' ? (
-    <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
+    <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
   ) : autosaveStatus instanceof Date ? (
-    <Icon name="check" className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+    <Icon name="check" className="h-4 w-4 shrink-0 text-emerald-400" />
   ) : null;
 
   return (
@@ -466,7 +467,8 @@ export default function EditorPage() {
         >
           ? Tour
         </button>
-        <Link to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
+        <Link to={arHref} className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 flex items-center gap-1">
+          <Icon name="cube" className="w-3.5 h-3.5" />
           {t('viewerOpenAr')}
         </Link>
         </div>
@@ -508,7 +510,8 @@ export default function EditorPage() {
               >
                 ? Tour
               </button>
-              <Link data-tour="ar-btn" to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600">
+              <Link data-tour="ar-btn" to={arHref} className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 flex items-center gap-1">
+                <Icon name="cube" className="w-3.5 h-3.5" />
                 {t('openSurfaceAr')}
               </Link>
             </div>

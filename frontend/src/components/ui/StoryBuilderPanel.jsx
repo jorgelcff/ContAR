@@ -21,6 +21,7 @@ export default function StoryBuilderPanel() {
     storyScenes,
     sceneTitlesById,
     currentStoryId,
+    currentSceneId,
     updateStoryScene,
     removeStoryScene,
     reorderStoryScenes
@@ -57,13 +58,16 @@ export default function StoryBuilderPanel() {
           <div className="flex gap-4 overflow-x-auto pb-2 pr-6 snap-x snap-mandatory">
           {storyScenes.map((item, index) => {
             const isPendingDelete = confirmDeleteIndex === index;
+            const isActive = item.sceneId === currentSceneId;
             return (
               <div
                 key={`${item.sceneId}-${index}`}
                 className={`w-72 min-w-72 snap-start rounded-lg border p-2 flex flex-col gap-2 transition-colors ${
                   isPendingDelete
                     ? 'border-red-600 bg-red-950/40'
-                    : 'border-gray-700 bg-gray-900/50'
+                    : isActive
+                      ? 'border-cyan-500 bg-cyan-950/30 ring-1 ring-cyan-500/30'
+                      : 'border-gray-700 bg-gray-900/50'
                 }`}
                 draggable={!isPendingDelete}
                 onDragStart={() => { dragIndexRef.current = index; }}
@@ -77,8 +81,13 @@ export default function StoryBuilderPanel() {
                   dragIndexRef.current = -1;
                 }}
               >
-                <div className="text-xs text-gray-200 font-medium truncate">
-                  #{index + 1} {resolveSceneTitle(sceneTitlesById, item.sceneId)}
+                <div className="text-xs text-gray-200 font-medium truncate flex items-center gap-1.5">
+                  <span>#{index + 1} {resolveSceneTitle(sceneTitlesById, item.sceneId)}</span>
+                  {isActive && (
+                    <span className="shrink-0 rounded bg-cyan-600/80 px-1.5 py-0.5 text-[10px] font-semibold text-white uppercase">
+                      {t('storySceneEditing')}
+                    </span>
+                  )}
                 </div>
 
                 {isPendingDelete ? (

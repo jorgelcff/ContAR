@@ -272,8 +272,19 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
         style={fullHeight ? undefined : { height: 480 }}
       >
         {!ready && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-400 text-sm">
-            Carregando criador de avatares…
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-800 gap-3">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+            <p className="text-sm text-gray-300 font-medium">{t('avaturnLoading')}</p>
+            <p className="text-xs text-gray-500">{t('avaturnLoadingHint')}</p>
+          </div>
+        )}
+        {ready && (
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-linear-to-b from-gray-900/95 to-transparent pointer-events-none">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
+            </span>
+            <p className="text-xs text-cyan-200 font-medium">{t('avaturnNextHint')}</p>
           </div>
         )}
         {error && (

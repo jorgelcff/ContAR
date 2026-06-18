@@ -99,10 +99,10 @@ export default function TimelinePanel() {
         </button>
         <div className="flex gap-2">
           <button onClick={() => addDummyBlock('action')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-1 rounded">
-            + Action Track
+            + {t('timelineActionTrack')}
           </button>
           <button onClick={() => addDummyBlock('audio')} className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-2 py-1 rounded">
-            + Audio Track
+            + {t('timelineAudioTrack')}
           </button>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-gray-400">{t('timelineTotalDur')}</span>
@@ -133,7 +133,7 @@ export default function TimelinePanel() {
           {/* Action Track */}
           <div className="h-8 bg-gray-800/50 rounded relative border border-gray-700 flex items-center group">
             <div className="absolute left-1 text-[10px] uppercase text-gray-500 font-medium z-0">
-              Actions
+              {t('timelineActionLabel')}
             </div>
             {actionBlocks.map(b => (
               <div 
@@ -159,7 +159,7 @@ export default function TimelinePanel() {
           {/* Audio Track */}
           <div className="h-8 bg-gray-800/50 rounded relative border border-gray-700 flex items-center group">
             <div className="absolute left-1 text-[10px] uppercase text-gray-500 font-medium z-0">
-              Audio
+              {t('timelineAudioLabel')}
             </div>
             {audioBlocks.map(b => (
               <div 

@@ -33,8 +33,9 @@ export default function Header() {
         )}
         <Link
           to="/ar"
-          className="text-xs font-medium px-3 py-1 rounded-full bg-cyan-700 hover:bg-cyan-600 text-white transition-colors hidden sm:inline-flex"
+          className="text-xs font-medium px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors hidden sm:inline-flex items-center gap-1"
         >
+          <Icon name="cube" className="w-3.5 h-3.5" />
           {t('ar')}
         </Link>
         <select

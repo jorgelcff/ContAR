@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
+import Icon from '../components/ui/Icon';
 import { getPublicStory, getScene } from '../api/sceneApi';
 import useAudio from '../hooks/useAudio';
 import { stripEmojis, linkifyText } from '../utils/text';
@@ -231,7 +232,8 @@ export default function StoryViewerPage() {
             </div>
             <div className="hidden md:flex items-center gap-2">
               <Link to={arHref}
-                className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center">
+                className="px-3 py-2 min-h-12 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold flex items-center gap-1.5">
+                <Icon name="cube" className="w-4 h-4" />
                 {t('viewerOpenAr')}
               </Link>
               <button onClick={() => setIsPlaying((p) => !p)} disabled={!hasStarted}
@@ -326,7 +328,8 @@ export default function StoryViewerPage() {
             <div className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-gray-700 bg-gray-950/95 px-4 py-3 backdrop-blur-sm">
               <div className="flex items-center gap-2">
                 <Link to={arHref}
-                  className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center">
+                  className="px-3 py-2 min-h-12 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold flex items-center gap-1.5">
+                  <Icon name="cube" className="w-4 h-4" />
                   {t('viewerOpenAr')}
                 </Link>
                 {!hasStarted ? (

@@ -403,7 +403,7 @@ export default function LeftPanel({
             <div data-tour="pose-selector" className="flex flex-col gap-2">
               <div className="flex items-center gap-1">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pose</p>
-                <TooltipIcon text="Define a animação base do avatar: idle (parado), wave (acenando), speaker (palestrando) e outros." />
+                <TooltipIcon text={t('lpPoseTooltip')} />
               </div>
               <select value={posePreset} onChange={(e) => handlePoseChange(e.target.value)}
                 className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-blue-500">
@@ -613,7 +613,7 @@ export default function LeftPanel({
                         : <span className="flex items-center justify-center gap-1.5"><Icon name="microphone" className="w-4 h-4" /> {t('lpGenerateVoice')}</span>
                       }
                     </button>
-                    <TooltipIcon text="Converte o texto acima em áudio com voz sintética e sincroniza os lábios do avatar automaticamente." />
+                    <TooltipIcon text={t('lpTtsTooltip')} />
                   </div>
                   {tts.error && <p className="text-xs text-red-400">{tts.error}</p>}
                 </>
@@ -631,7 +631,7 @@ export default function LeftPanel({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-medium text-gray-400 flex items-center gap-1"><Icon name="volume" className="w-3.5 h-3.5" /> {t('lpSpeechIntensity')}</span>
-                        <TooltipIcon text="Controla o quanto a boca do avatar se move. Aumente se os lábios parecerem parados." />
+                        <TooltipIcon text={t('lpLipSyncIntensityTooltip')} />
                       </div>
                       <span className={`text-xs font-semibold ${labelColor}`}>{label}</span>
                     </div>
@@ -700,14 +700,16 @@ export default function LeftPanel({
               {isSaving ? t('saving') : <span className="flex items-center justify-center gap-1.5"><Icon name="save" className="w-4 h-4" />{t('saveScene')}</span>}
             </button>
             <button onClick={onAddCurrentSceneToStory}
+              title={t('lpAddSceneToStoryTooltip')}
               className="w-full py-2 rounded-xl bg-sky-700 hover:bg-sky-600 text-white text-sm font-medium transition-colors">
               {t('addCurrentSceneToStory')}
             </button>
 
             <button onClick={handleNewScene}
+              title={t('lpNewSceneTooltip')}
               className="w-full py-2 rounded-xl border border-gray-600 hover:bg-gray-700 text-gray-200 text-sm font-medium transition-colors flex items-center justify-center gap-1.5">
               <Icon name="plus" className="w-4 h-4" />
-              Nova cena
+              {t('lpNewScene')}
             </button>
 
             {currentSceneId && (

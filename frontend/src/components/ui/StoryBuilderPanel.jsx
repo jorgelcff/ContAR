@@ -14,7 +14,7 @@ function resolveSceneTitle(sceneTitlesById, sceneId) {
   return raw;
 }
 
-export default function StoryBuilderPanel() {
+export default function StoryBuilderPanel({ onAddScene }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const {
@@ -146,6 +146,17 @@ export default function StoryBuilderPanel() {
               </div>
             );
           })}
+
+          {/* Add new scene card */}
+          {onAddScene && (
+            <button
+              onClick={onAddScene}
+              className="w-72 min-w-72 snap-start rounded-lg border-2 border-dashed border-gray-600 hover:border-cyan-500 bg-transparent hover:bg-cyan-950/20 flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer min-h-22"
+            >
+              <Icon name="plus" className="w-6 h-6 text-gray-500" />
+              <span className="text-xs text-gray-400">{t('storyAddScene')}</span>
+            </button>
+          )}
           </div>
           {storyScenes.length > 1 && (
             <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-gray-800/80 to-transparent rounded-r-lg" />

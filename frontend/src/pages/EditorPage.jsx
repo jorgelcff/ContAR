@@ -551,7 +551,7 @@ export default function EditorPage() {
             </Suspense>
           </div>
           <TimelinePanel />
-          <StoryBuilderPanel />
+          <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} />
         </div>
       </div>
 

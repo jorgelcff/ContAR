@@ -98,10 +98,10 @@ export default function TimelinePanel() {
           {!collapsed && <span className="text-[10px] text-gray-500 font-normal border border-gray-600 rounded px-1">{timelineDuration}s</span>}
         </button>
         <div className="flex gap-2">
-          <button onClick={() => addDummyBlock('action')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-1 rounded">
+          <button onClick={() => addDummyBlock('action')} title={t('timelineAddActionTooltip')} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-2 py-1 rounded">
             + {t('timelineActionTrack')}
           </button>
-          <button onClick={() => addDummyBlock('audio')} className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-2 py-1 rounded">
+          <button onClick={() => addDummyBlock('audio')} title={t('timelineAddAudioTooltip')} className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-2 py-1 rounded">
             + {t('timelineAudioTrack')}
           </button>
           <div className="flex items-center gap-2">

@@ -51,7 +51,7 @@ export default function TransformControls({ transform, onUpdate, onReset }) {
             onClick={onReset}
             className="text-[10px] text-gray-500 hover:text-red-400 transition-colors px-1.5 py-0.5 rounded hover:bg-gray-800"
           >
-            Limpar
+            {t('resetTransform')}
           </button>
         )}
       </div>

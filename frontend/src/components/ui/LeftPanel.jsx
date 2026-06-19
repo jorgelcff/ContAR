@@ -312,7 +312,7 @@ export default function LeftPanel({
                 disabled={isUploadingGlb}
                 className="flex-1 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-medium transition-colors"
               >
-                {isUploadingGlb ? 'Enviando...' : 'GLB / VRM'}
+                {isUploadingGlb ? t('uploading') : 'GLB / VRM'}
               </button>
             </div>
 
@@ -557,6 +557,7 @@ export default function LeftPanel({
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 {t('speech')}
               </p>
+              <p className="text-xs text-gray-400">{t('lpSpeechHint')}</p>
               <textarea
                 rows={4}
                 value={speechInput}
@@ -746,22 +747,19 @@ export default function LeftPanel({
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('story')}</p>
 
-            {isStoryLinked ? (
+            {isStoryLinked && (
               <div className="rounded-xl border border-emerald-700/60 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-200 break-all">
-                História vinculada: {linkedStoryId}
+                {t('lpStoryLinked', { id: linkedStoryId.slice(0, 8) })}
               </div>
-            ) : (
-              <>
-                <input type="text" value={storyTitle} onChange={(e) => setStoryTitle(e.target.value)}
-                  placeholder={t('storyTitlePlaceholder')}
-                  className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                />
-                <textarea rows={2} value={storyDescription} onChange={(e) => setStoryDescription(e.target.value)}
-                  placeholder={t('storyDescriptionPlaceholder')}
-                  className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
-                />
-              </>
             )}
+            <input type="text" value={storyTitle} onChange={(e) => setStoryTitle(e.target.value)}
+              placeholder={t('storyTitlePlaceholder')}
+              className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            />
+            <textarea rows={2} value={storyDescription} onChange={(e) => setStoryDescription(e.target.value)}
+              placeholder={t('storyDescriptionPlaceholder')}
+              className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+            />
 
             <div className="flex gap-2">
               <input type="text" value={manualSceneId} onChange={(e) => setManualSceneId(e.target.value)}

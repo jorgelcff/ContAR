@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import useTheme from '../../context/useTheme';
 import HelpModal from './HelpModal';
@@ -11,7 +11,9 @@ export default function Header() {
   const { t, i18n } = useTranslation();
   const { isAuthenticated, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const location = useLocation();
   const [showHelp, setShowHelp] = useState(false);
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
     <>
@@ -23,17 +25,17 @@ export default function Header() {
       <div className="flex items-center gap-2">
         {isAuthenticated && (
           <>
-            <Link to="/scenes" className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors hidden sm:inline-flex">
+            <Link to="/scenes" className={`text-xs font-medium px-3 py-1 rounded-full transition-colors hidden sm:inline-flex ${isActive('/scenes') ? 'bg-cyan-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>
               {t('headerScenes')}
             </Link>
-            <Link to="/stories" className="text-xs font-medium px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors hidden sm:inline-flex">
+            <Link to="/stories" className={`text-xs font-medium px-3 py-1 rounded-full transition-colors hidden sm:inline-flex ${isActive('/stories') ? 'bg-cyan-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>
               {t('headerStories')}
             </Link>
           </>
         )}
         <Link
           to="/ar"
-          className="text-xs font-medium px-3 py-1 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white transition-colors hidden sm:inline-flex items-center gap-1"
+          className={`text-xs font-medium px-3 py-1 rounded-full transition-colors hidden sm:inline-flex items-center gap-1 ${isActive('/ar') ? 'bg-indigo-500 text-white ring-2 ring-indigo-400/50' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}
         >
           <Icon name="cube" className="w-3.5 h-3.5" />
           {t('ar')}

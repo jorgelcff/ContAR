@@ -89,7 +89,7 @@ export default function EditorPage() {
   });
 
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
-  const [showTour, setShowTour] = useState(shouldShowTour);
+  const [showTour, setShowTour] = useState(() => !shouldShowOnboarding() && shouldShowTour());
   const [mobilePanelTab, setMobilePanelTab] = useState(null);
   const [vrmaUrl, setVrmaUrl] = useState('');
   // Names of animation clips embedded in the currently loaded avatar GLB,
@@ -343,6 +343,7 @@ export default function EditorPage() {
       const result = await saveScene(buildScenePayload(undefined));
       const sceneId = result?.sceneId;
       if (!sceneId) throw new Error('Missing sceneId in save response');
+      const sceneCount = useSceneStore.getState().storyScenes.length;
       useSceneStore.getState().addStoryScene(sceneId);
       // Detach from this scene: further edits/autosave should create a new
       // scene instead of overwriting the one we just added to the story.
@@ -350,7 +351,7 @@ export default function EditorPage() {
       // same name (which made it look like nothing new was created).
       setCurrentSceneId('');
       useSceneStore.getState().setSceneTitle('');
-      addToast(t('epSceneAddedToStory'), 'success');
+      addToast(t('epSceneAddedClear', { n: sceneCount + 1 }), 'success', 4000);
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro: ${err.message}`, 'error');
@@ -443,7 +444,10 @@ export default function EditorPage() {
   return (
     <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
       {showOnboarding && (
-        <OnboardingOverlay onDone={() => setShowOnboarding(false)} />
+        <OnboardingOverlay onDone={() => {
+          setShowOnboarding(false);
+          if (shouldShowTour()) setShowTour(true);
+        }} />
       )}
       <WalkthroughTour isOpen={showTour} onClose={() => setShowTour(false)} />
       <Header />
@@ -480,8 +484,6 @@ export default function EditorPage() {
           onPublishStory={handlePublishStory}
           isStorySaving={isStorySaving}
           isStoryLinked={isStoryLinked}
-          onSave={handleSave}
-          isSaving={isSaving}
           audio={audio}
           tts={tts}
           vrmaUrl={vrmaUrl}

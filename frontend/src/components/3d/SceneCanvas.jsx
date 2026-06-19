@@ -924,7 +924,24 @@ export default function SceneCanvas({
 
   /* ── Avatar loading (when URL changes) ───────────────────────────── */
   useEffect(() => {
-    if (!avatarUrl || !sceneRef.current || !loaderRef.current) return;
+    // When avatarUrl is cleared, actively remove the old model from the scene
+    // so no "ghost" avatar remains visible from the previous session/scene.
+    if (!avatarUrl) {
+      if (avatarRef.current && sceneRef.current) {
+        sceneRef.current.remove(avatarRef.current);
+        disposeObject3D(avatarRef.current);
+        animControllerRef.current?.dispose();
+        animControllerRef.current = null;
+        lipSyncControllerRef.current?.dispose();
+        lipSyncControllerRef.current = null;
+        avatarRef.current = null;
+        vrmRef.current = null;
+        avatarClipsRef.current = [];
+        onAvatarClipsRef.current?.([]);
+      }
+      return;
+    }
+    if (!sceneRef.current || !loaderRef.current) return;
     const modelUrl = normalizeAvatarUrl(avatarUrl);
     const loadId = ++activeAvatarLoadIdRef.current;
     let cancelled = false;

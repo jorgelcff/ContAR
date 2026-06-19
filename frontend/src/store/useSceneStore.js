@@ -180,7 +180,8 @@ export const useSceneStore = create(
     {
       name: STORE_KEY,
       partialize: (state) => ({
-        avatarUrl: sanitizeUrl(state.avatarUrl),
+        // avatarUrl is intentionally excluded — scene data is always loaded from
+        // the API via sceneId, and persisting it caused stale-state races on F5.
         posePreset: state.posePreset,
         transform: state.transform,
         speechText: state.speechText,

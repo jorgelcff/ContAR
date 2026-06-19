@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
+import { QRCodeCanvas } from 'qrcode.react';
 import Header from '../components/ui/Header';
 import SceneCanvas from '../components/3d/SceneCanvas';
+import Icon from '../components/ui/Icon';
 import { useSceneStore } from '../store/useSceneStore';
 import { LipSyncController } from '../controllers/LipSyncController';
 import { getPublicStory, getScene } from '../api/sceneApi';
@@ -292,6 +294,12 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       const target = modelRootRef.current;
       if (!target) return;
 
+      // Don't allow placement if the model hasn't loaded yet
+      if (!target.children.length) {
+        setStatus(t('arModelStillLoading'));
+        return;
+      }
+
       // No-hit-test mode: each tap re-anchors the avatar in front of the camera.
       if (noHitTestRef.current) {
         placeInFrontOfCamera();
@@ -301,7 +309,10 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       }
 
       const reticleMesh = reticleRef.current;
-      if (!reticleMesh || !reticleMesh.visible) return;
+      if (!reticleMesh || !reticleMesh.visible) {
+        setStatus(t('arNoSurfaceYet'));
+        return;
+      }
       if (lockPlacementRef.current && placedRef.current) return;
 
       target.visible = true;
@@ -880,6 +891,31 @@ export default function ARPage() {
               </Link>
             </div>
           )}
+
+          {/* Share with smartphone */}
+          <div className="rounded-2xl border border-white/10 bg-white/3 p-5 flex flex-col sm:flex-row items-center gap-5">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-bold text-white mb-1">{t('arSmartphoneTitle')}</h2>
+              <p className="text-sm text-gray-300 mb-3">{t('arSmartphoneDesc')}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { navigator.clipboard.writeText(window.location.href).catch(() => {}); }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gray-700 hover:bg-gray-600 px-4 py-2 text-sm font-medium text-white transition-colors"
+                >
+                  <Icon name="link" className="w-4 h-4" /> {t('arCopyLink')}
+                </button>
+              </div>
+            </div>
+            <div className="shrink-0 rounded-xl bg-white p-3">
+              <QRCodeCanvas
+                value={window.location.href}
+                size={512}
+                level="M"
+                marginSize={1}
+                style={{ width: 120, height: 120 }}
+              />
+            </div>
+          </div>
 
           {/* Mode cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

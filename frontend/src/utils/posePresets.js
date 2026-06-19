@@ -139,6 +139,16 @@ function pickAnimationClip(preset, idleClip, avatarClips = [], externalClips = {
   return null;
 }
 
+export function captureRestPoseSnapshot(model) {
+  model.updateMatrixWorld(true);
+  model.traverse((node) => {
+    if (!node?.isBone) return;
+    node.userData.__restQuat = node.quaternion.clone();
+    node.userData.__restWorldQuat = new THREE.Quaternion();
+    node.getWorldQuaternion(node.userData.__restWorldQuat);
+  });
+}
+
 function ensureRestPoseSnapshot(model) {
   model.updateMatrixWorld(true);
   model.traverse((node) => {
@@ -375,10 +385,10 @@ function applyHandsOnHipsPose(model, boneMapper = null) {
   const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
   const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
 
-  rotateBoneDeg(leftUpperArm, 0, 0, 45);
-  rotateBoneDeg(rightUpperArm, 0, 0, -45);
-  rotateBoneDeg(leftForeArm, -30, 0, -30);
-  rotateBoneDeg(rightForeArm, -30, 0, 30);
+  rotateBoneDeg(leftUpperArm, 5, 0, 30);
+  rotateBoneDeg(rightUpperArm, 5, 0, -30);
+  rotateBoneDeg(leftForeArm, -65, 0, -20);
+  rotateBoneDeg(rightForeArm, -65, 0, 20);
 }
 
 function applySalutePose(model, boneMapper = null) {
@@ -386,9 +396,9 @@ function applySalutePose(model, boneMapper = null) {
   const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
   const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
 
-  rotateBoneDeg(rightUpperArm, -35, 0, -40);
-  rotateBoneDeg(rightForeArm, -70, 0, 20);
-  rotateBoneDeg(rightHand, -10, 0, 25);
+  rotateBoneDeg(rightUpperArm, -55, 0, -50);
+  rotateBoneDeg(rightForeArm, -95, 0, 10);
+  rotateBoneDeg(rightHand, -5, 0, 15);
 
   // Flat hand for salute — fingers extended and together
   applyFingerPose(model, 'right', 'flat');

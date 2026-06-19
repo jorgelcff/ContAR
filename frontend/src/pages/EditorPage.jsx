@@ -278,7 +278,6 @@ export default function EditorPage() {
               }))
           : [];
         setStoryScenes(scenes);
-        setSceneTitlesById({});
         // Open the story's first scene for editing when entering a story
         // directly (no sceneId in the URL), so the editor isn't blank. The
         // scene-load effect picks up the added sceneId param.
@@ -344,7 +343,13 @@ export default function EditorPage() {
       const sceneId = result?.sceneId;
       if (!sceneId) throw new Error('Missing sceneId in save response');
       const sceneCount = useSceneStore.getState().storyScenes.length;
+      // Capture the title *before* clearing it so the story-builder card shows
+      // the user-typed name instead of a truncated ID.
+      const titleForCard = useSceneStore.getState().sceneTitle || '';
       useSceneStore.getState().addStoryScene(sceneId);
+      if (titleForCard) {
+        setSceneTitlesById({ [sceneId]: titleForCard });
+      }
       // Detach from this scene: further edits/autosave should create a new
       // scene instead of overwriting the one we just added to the story.
       // Also clear the title so the next scene doesn't get saved with the
@@ -352,6 +357,9 @@ export default function EditorPage() {
       setCurrentSceneId('');
       useSceneStore.getState().setSceneTitle('');
       addToast(t('epSceneAddedClear', { n: sceneCount + 1 }), 'success', 4000);
+      if (!useSceneStore.getState().narrativeAudioUrl) {
+        addToast(t('epSceneNoAudioWarning'), 'warning', 5000);
+      }
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro: ${err.message}`, 'error');

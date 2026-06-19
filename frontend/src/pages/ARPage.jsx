@@ -985,10 +985,16 @@ export default function ARPage() {
                   className="inline-flex items-center justify-center rounded-xl bg-fuchsia-700 hover:bg-fuchsia-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
                   {t('arMarkerDemoBtn')}
                 </Link>
-                <Link to={markerHref}
-                  className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-gray-800 hover:bg-gray-700 px-4 py-2 text-xs font-medium text-gray-300 transition-colors">
-                  {t('arMarkerCustomBtn')}
-                </Link>
+                {markerUrl ? (
+                  <Link to={markerHref}
+                    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-gray-800 hover:bg-gray-700 px-4 py-2 text-xs font-medium text-gray-300 transition-colors">
+                    {t('arMarkerCustomBtn')}
+                  </Link>
+                ) : (
+                  <span className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-gray-800/50 px-4 py-2 text-xs font-medium text-gray-500 cursor-not-allowed">
+                    {t('arMarkerNoCustomMarker')}
+                  </span>
+                )}
               </div>
             </div>
           </div>

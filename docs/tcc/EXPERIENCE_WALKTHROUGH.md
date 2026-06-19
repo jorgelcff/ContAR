@@ -330,3 +330,5 @@ XR1 Estabilidade e ancoragem de objetos virtuais · XR2 Feedback de rastreamento
 - **Fidelidade do avatar ao usuário**: depende integralmente do motor de geração do Avaturn; a plataforma não tem controle sobre o resultado
 - **Variedade de poses**: atualmente limitada às animações empacotadas; expansão requer adição de novos arquivos de animação
 - **Expressões VRM**: botões de expressão (happy, sad, etc.) só aparecem quando o avatar é do tipo VRM (.vrm); avatares GLB do Avaturn não suportam morphTargets de expressão
+- **Navegação interna do Avaturn (P2.4)**: o botão "Next" dentro do iframe do SDK Avaturn permite que o usuário avance sem ter explorado todas as categorias de customização. O `@avaturn/sdk` v1.1.4 não expõe eventos de mudança de etapa nem API para travar a navegação — não há fix possível sem fork do SDK
+- **Interface do Avaturn em inglês (P3.1)**: o SDK Avaturn não aceita parâmetro de idioma; a interface do criador de avatares é sempre exibida em inglês independente do idioma configurado no ContAR

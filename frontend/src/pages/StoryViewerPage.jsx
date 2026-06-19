@@ -165,6 +165,33 @@ export default function StoryViewerPage() {
   // Stop audio when leaving the page
   useEffect(() => () => { audio.stop(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Keyboard navigation ───────────────────────────────────────
+  useEffect(() => {
+    if (!hasStarted) return;
+    const handleKeyDown = (e) => {
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          e.preventDefault();
+          setIndex((p) => Math.min(p + 1, storyScenes.length - 1));
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault();
+          setIndex((p) => Math.max(0, p - 1));
+          break;
+        case ' ':
+          e.preventDefault();
+          setIsPlaying((p) => !p);
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasStarted, storyScenes.length]);
+
   // ── Preload next scene's GLB ───────────────────────────────────
   const nextSceneId = storyScenes[index + 1]?.sceneId;
   useEffect(() => {
@@ -264,7 +291,10 @@ export default function StoryViewerPage() {
           )}
 
           {/* Canvas area */}
-          <div className={`flex-1 overflow-hidden relative ${fullscreen ? '' : 'pb-24 md:pb-0'}`}>
+          <div
+            className={`flex-1 overflow-hidden relative ${fullscreen ? '' : 'pb-24 md:pb-0'}`}
+            onClick={() => { if (hasStarted) setIndex((p) => Math.min(p + 1, storyScenes.length - 1)); }}
+          >
 
             {/* ── Splash screen (shown until user clicks ▶) ── */}
             {!hasStarted && (

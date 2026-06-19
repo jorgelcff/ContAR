@@ -10,7 +10,7 @@ import SpeechBubble from './SpeechBubble';
 import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
-import { applyPosePreset } from '../../utils/posePresets';
+import { applyPosePreset, captureRestPoseSnapshot } from '../../utils/posePresets';
 import { mapBones as mapBonesApi } from '../../api/sceneApi';
 
 const BONE_LABELS = {
@@ -1061,6 +1061,8 @@ export default function SceneCanvas({
         }
 
         jawBonesRef.current = jawBones;
+
+        captureRestPoseSnapshot(model);
 
         // Set up animation controller (crossfade + procedural micro-animation).
         avatarClipsRef.current = Array.isArray(gltf.animations)

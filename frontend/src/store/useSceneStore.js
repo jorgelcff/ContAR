@@ -193,6 +193,7 @@ export const useSceneStore = create(
         storyDescription: state.storyDescription,
         currentStoryId: state.currentStoryId,
         storyScenes: state.storyScenes,
+        sceneTitlesById: state.sceneTitlesById,
         timelineBlocks: state.timelineBlocks,
         timelineDuration: state.timelineDuration,
       }),

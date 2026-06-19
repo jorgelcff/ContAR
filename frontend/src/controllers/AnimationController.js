@@ -49,6 +49,15 @@ export class AnimationController {
     this._circleRadius   = 0.8;              // metres — diameter ≈ 1.6 m
     this._circleSpeed    = Math.PI / 7;      // rad/s → full loop ≈ 14 s
 
+    this._mixer.addEventListener('finished', () => {
+      if (this._circularMotion) {
+        this._model.position.x = this._circleCenter.x;
+        this._model.position.z = this._circleCenter.z;
+        this._model.rotation.y = this._circleBaseRotY;
+        this._circularMotion = false;
+      }
+    });
+
     // ── Blink ────────────────────────────────────────────────
     this._blinkTimer = 0;
     this._blinkInterval = 2.5 + Math.random() * 4;

@@ -295,7 +295,7 @@ export default function LeftPanel({
               onClick={() => setShowAvaturn((v) => !v)}
               className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
             >
-              {t('openAvaturn')}
+              {avatarUrl ? t('editAvatar') : t('openAvaturn')}
             </button>
 
             {/* File upload + my avatars row */}

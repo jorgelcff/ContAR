@@ -75,14 +75,16 @@ export default function LeftPanel({
   };
 
   const handleNewScene = () => {
-    if (!window.confirm('Criar uma nova cena? O conteúdo atual já foi salvo automaticamente.')) return;
+    if (!window.confirm(t('lpNewSceneConfirm'))) return;
     audio?.stop?.();
     setSpeechInput('');
-    setUrlInput('');
     setTransformByPose({ idle: DEFAULT_TRANSFORM });
+    const hasStory = useSceneStore.getState().storyScenes.length > 0;
+    const keepAvatarUrl = hasStory ? avatarUrl : '';
+    setUrlInput(keepAvatarUrl);
     useSceneStore.setState({
       currentSceneId: '',
-      avatarUrl: '',
+      avatarUrl: keepAvatarUrl,
       speechText: '',
       sceneTitle: '',
       posePreset: 'idle',
@@ -141,8 +143,9 @@ export default function LeftPanel({
   const handleLoad = () => { if (urlInput.trim()) setAvatarUrl(urlInput.trim()); };
 
   const handleAvaturnExport = (url) => {
+    const bust = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
     setUrlInput(url);
-    setAvatarUrl(url);
+    setAvatarUrl(bust);
     setShowAvaturn(false);
   };
 
@@ -713,10 +716,20 @@ export default function LeftPanel({
             </button>
 
             {currentSceneId && (
-              <div className="rounded-xl bg-gray-700/50 border border-gray-600 px-3 py-2">
-                <p className="text-[10px] text-gray-400 mb-0.5">{t('lpSceneIdLabel')}</p>
-                <p className="text-xs text-cyan-300 font-mono break-all">{currentSceneId}</p>
-              </div>
+              <>
+                <a
+                  href={`/scene/${encodeURIComponent(currentSceneId)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Icon name="eye" className="w-4 h-4" /> {t('lpPreviewScene')}
+                </a>
+                <div className="rounded-xl bg-gray-700/50 border border-gray-600 px-3 py-2">
+                  <p className="text-[10px] text-gray-400 mb-0.5">{t('lpSceneIdLabel')}</p>
+                  <p className="text-xs text-cyan-300 font-mono break-all">{currentSceneId}</p>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -762,6 +775,17 @@ export default function LeftPanel({
               className="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
               <Icon name="rocket" className="w-4 h-4" /> {t('publish')}
             </button>
+
+            {storyShareUrl && (
+              <a
+                href={storyShareUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Icon name="eye" className="w-4 h-4" /> {t('lpPreviewStory')}
+              </a>
+            )}
 
             {storyShareUrl && (
               <>

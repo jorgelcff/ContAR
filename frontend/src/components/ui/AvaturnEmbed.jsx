@@ -266,16 +266,18 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
   }, []);
 
   return (
-    <div className={`flex flex-col gap-2 ${fullHeight ? 'h-full' : ''}`}>
+    <div className={`flex flex-col gap-2 ${fullHeight ? "h-full" : ""}`}>
       <div
-        className={`relative rounded-xl overflow-hidden border border-gray-600 ${fullHeight ? 'flex-1' : ''}`}
+        className={`relative rounded-xl overflow-hidden border border-gray-600 ${fullHeight ? "flex-1" : ""}`}
         style={fullHeight ? undefined : { height: 480 }}
       >
         {!ready && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-800 gap-3">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
-            <p className="text-sm text-gray-300 font-medium">{t('avaturnLoading')}</p>
-            <p className="text-xs text-gray-500">{t('avaturnLoadingHint')}</p>
+            <p className="text-sm text-gray-300 font-medium">
+              {t("avaturnLoading")}
+            </p>
+            <p className="text-xs text-gray-500">{t("avaturnLoadingHint")}</p>
           </div>
         )}
         {ready && (
@@ -284,7 +286,9 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
             </span>
-            <p className="text-xs text-cyan-200 font-medium">{t('avaturnNextHint')}</p>
+            <p className="text-xs text-cyan-200 font-medium drop-shadow-md">
+              {t("avaturnNextHint")}
+            </p>
           </div>
         )}
         {error && (
@@ -299,7 +303,7 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
           onClick={onClose}
           className="text-sm text-gray-400 hover:text-white transition-colors text-center"
         >
-          {t('closeAvaturn')}
+          {t("closeAvaturn")}
         </button>
       )}
     </div>

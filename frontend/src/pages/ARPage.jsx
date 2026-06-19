@@ -884,6 +884,26 @@ export default function ARPage() {
           {/* Mode cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 
+            {/* Pseudo AR (markerless, camera + gyroscope) — primary recommendation */}
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-950/20 p-5 flex flex-col gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-emerald-200">{t('arImmersiveTitle')}</h2>
+                <p className="mt-1 text-sm text-gray-300">
+                  {t('pseudoArDescription')}
+                </p>
+              </div>
+              <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
+                <p className="font-semibold text-gray-300 mb-1">{t('arRequirements')}</p>
+                <p>{t('arImmersiveReqDevice')}</p>
+                <p>{t('arImmersiveReqMotion')}</p>
+                <p>{t('arReqHttps')}</p>
+              </div>
+              <Link to={pseudoHref}
+                className="mt-auto inline-flex items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                {t('openPseudoAr')} →
+              </Link>
+            </div>
+
             {/* Surface AR */}
             <div className="rounded-2xl border border-cyan-500/20 bg-cyan-950/20 p-5 flex flex-col gap-4">
               <div>
@@ -908,26 +928,6 @@ export default function ARPage() {
                   {t('openSurfaceAr')} →
                 </Link>
               )}
-            </div>
-
-            {/* Pseudo AR (markerless, camera + gyroscope) */}
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-950/20 p-5 flex flex-col gap-4">
-              <div>
-                <h2 className="text-lg font-bold text-emerald-200">{t('arImmersiveTitle')}</h2>
-                <p className="mt-1 text-sm text-gray-300">
-                  {t('pseudoArDescription')}
-                </p>
-              </div>
-              <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
-                <p className="font-semibold text-gray-300 mb-1">{t('arRequirements')}</p>
-                <p>{t('arImmersiveReqDevice')}</p>
-                <p>{t('arImmersiveReqMotion')}</p>
-                <p>{t('arReqHttps')}</p>
-              </div>
-              <Link to={pseudoHref}
-                className="mt-auto inline-flex items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                {t('openPseudoAr')} →
-              </Link>
             </div>
 
             {/* Marker AR */}

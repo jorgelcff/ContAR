@@ -9,7 +9,6 @@ import Icon from '../components/ui/Icon';
 import OnboardingOverlay, { shouldShowOnboarding } from '../components/ui/OnboardingOverlay';
 import WalkthroughTour, { shouldShowTour } from '../components/ui/WalkthroughTour';
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
-import TimelinePanel from '../components/ui/TimelinePanel';
 import { useSceneStore, hadLocalAvatarOnInit } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
 import useTTS from '../hooks/useTTS';
@@ -550,7 +549,6 @@ export default function EditorPage() {
               />
             </Suspense>
           </div>
-          <TimelinePanel />
           <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} />
         </div>
       </div>

@@ -11,6 +11,7 @@ import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
 import { applyPosePreset } from '../../utils/posePresets';
+import { injectSyntheticJaw, SYNTHETIC_JAW_NAME } from '../../utils/syntheticJaw';
 import { mapBones as mapBonesApi } from '../../api/sceneApi';
 
 const BONE_LABELS = {
@@ -96,6 +97,7 @@ const JAW_BONE_PATTERNS = [
   /mixamorigjaw/i,
   /cc_base_jawroot/i,
   /head_jaw/i,
+  /^__synthetic_jaw$/,
 ];
 
 const VISEME_PATTERNS = {
@@ -1027,6 +1029,15 @@ export default function SceneCanvas({
         lipSyncControllerRef.current?.dispose();
         const lipSyncController = new LipSyncController(model);
         lipSyncControllerRef.current = lipSyncController;
+
+        // Inject a synthetic jaw bone for avatars with no mouth control
+        if (!lipSyncController.hasMouth) {
+          const syntheticJaw = injectSyntheticJaw(model, boneMapper);
+          if (syntheticJaw) {
+            lipSyncController._jawBone = syntheticJaw;
+            lipSyncController._jawRestQuat = syntheticJaw.quaternion.clone();
+          }
+        }
 
         const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
 

@@ -31,8 +31,8 @@ export const STANDARD_BONES = [
 const MIXAMO_TABLE = {
   hips:          ['hips'],
   spine:         ['spine'],
-  chest:         ['spine1'],
-  upperChest:    ['spine2'],
+  chest:         ['spine1', 'spine01'],
+  upperChest:    ['spine2', 'spine02'],
   neck:          ['neck'],
   head:          ['head'],
   jaw:           ['jaw'],

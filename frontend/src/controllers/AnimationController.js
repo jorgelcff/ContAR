@@ -102,6 +102,9 @@ export class AnimationController {
         if (n?.isBone && n.name) {
           this._boneNameSet.add(n.name);
           this._boneByName.set(n.name, n);
+          if (!n.userData.__restQuat) {
+            n.userData.__restQuat = n.quaternion.clone();
+          }
         }
       });
       // Capture hips bind-pose local Y here, before any animation modifies it.
@@ -216,6 +219,37 @@ export class AnimationController {
     retargetedClip.tracks = retargetedClip.tracks.filter(
       (track) => boneNameSet.has(getBoneName(track.name)),
     );
+
+    // ── Rest-pose compensation ──────────────────────────────────────────────
+    // Mixamo animations assume every bone's rest quaternion is identity.
+    // Non-Mixamo rigs (Meshy, generic exports) often have non-identity rest
+    // rotations — without correction the character's limbs/torso skew sideways.
+    // Fix: for each bone with a non-identity rest quaternion, transform every
+    // keyframe so the animation delta is applied on top of the actual rest pose:
+    //   Q_corrected = Q_rest * Q_anim
+    {
+      const eps = 1e-3;
+      const _q = new THREE.Quaternion();
+      for (const track of retargetedClip.tracks) {
+        if (getProperty(track.name) !== 'quaternion') continue;
+        const bone = boneByName.get(getBoneName(track.name));
+        if (!bone) continue;
+        const rest = bone.userData.__restQuat ?? bone.quaternion;
+        const isIdentity =
+          Math.abs(rest.x) < eps &&
+          Math.abs(rest.y) < eps &&
+          Math.abs(rest.z) < eps &&
+          Math.abs(Math.abs(rest.w) - 1) < eps;
+        if (isIdentity) continue;
+        const vals = track.values;
+        for (let i = 0; i < vals.length; i += 4) {
+          _q.set(vals[i], vals[i + 1], vals[i + 2], vals[i + 3]);
+          _q.premultiply(rest);
+          vals[i] = _q.x; vals[i + 1] = _q.y; vals[i + 2] = _q.z; vals[i + 3] = _q.w;
+        }
+        if (_dbg) console.log(`[AnimCtrl] rest-pose correction applied to "${bone.name}"`);
+      }
+    }
 
     // FIX FOR VRM: Mixamo animations often contain a 90-degree X-axis rotation on the Hips 
     // to compensate for their Armature export rotation. VRM models do not have this armature, 

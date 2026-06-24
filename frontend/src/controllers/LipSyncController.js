@@ -21,6 +21,7 @@ const VISEME_PATTERNS = {
 // Avaturn/ReadyPlayerMe). Used for the no-morph-target fallback.
 const JAW_BONE_PATTERNS = [
   /^jaw$/i, /jaw_?root/i, /lower_?jaw/i, /^c_jaw/i, /j_bip_c_jaw/i, /cc_base_jawroot/i, /\bjaw\b/i,
+  /^__synthetic_jaw$/,
 ];
 // Max jaw-open rotation (radians) when value = 1.
 const JAW_MAX_ANGLE = 0.32;

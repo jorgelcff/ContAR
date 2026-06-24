@@ -11,7 +11,7 @@ import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
 import { applyPosePreset } from '../../utils/posePresets';
-import { injectSyntheticJaw, SYNTHETIC_JAW_NAME } from '../../utils/syntheticJaw';
+import { injectSyntheticJaw, createJawDebugVisuals, SYNTHETIC_JAW_NAME } from '../../utils/syntheticJaw';
 import { mapBones as mapBonesApi } from '../../api/sceneApi';
 
 const BONE_LABELS = {
@@ -1032,10 +1032,13 @@ export default function SceneCanvas({
 
         // Inject a synthetic jaw bone for avatars with no mouth control
         if (!lipSyncController.hasMouth) {
-          const syntheticJaw = injectSyntheticJaw(model, boneMapper);
-          if (syntheticJaw) {
-            lipSyncController._jawBone = syntheticJaw;
-            lipSyncController._jawRestQuat = syntheticJaw.quaternion.clone();
+          const result = injectSyntheticJaw(model, boneMapper);
+          if (result) {
+            lipSyncController._jawBone = result.jawBone;
+            lipSyncController._jawRestQuat = result.jawBone.quaternion.clone();
+            if (import.meta.env.DEV) {
+              createJawDebugVisuals(sceneRef.current, result.jawBone, result.radius);
+            }
           }
         }
 

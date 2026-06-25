@@ -268,6 +268,7 @@ const en = {
   landingStep3Desc: 'Save the scene, build the story and copy the link — anyone can watch, without logging in.',
   landingSocialBadgeTitle: 'Academic research project',
   landingSocialBadgeDesc: 'Developed as a Computer Science undergraduate thesis · UFPE',
+  landingInstitutionalLabel: 'Developed in partnership with',
   landingSocialQuote: '"ContAR proposes a no-code ecosystem for creating and publishing interactive 3D virtual narrators, focused on educational and augmented reality applications."',
   landingCtaFinalTitle: 'Ready to create?',
   landingCtaFinalSubtitle: 'If you want to test quickly, create one simple scene first, validate audio/lip sync, then build the complete story.',
@@ -833,6 +834,7 @@ const pt = {
   landingSocialBadgeTitle: "Projeto de pesquisa acadêmica",
   landingSocialBadgeDesc:
     "Desenvolvido como Trabalho de Conclusão de Curso em Ciência da Computação · UFPE",
+  landingInstitutionalLabel: "Desenvolvido em parceria com",
   landingSocialQuote:
     '"ContAR propõe um ecossistema no-code para criação e publicação de narradores virtuais 3D interativos, com foco em aplicações educacionais e de realidade aumentada."',
   landingCtaFinalTitle: "Pronto para criar?",
@@ -1354,6 +1356,7 @@ const es = {
   landingStep3Desc: 'Guarda la escena, arma la historia y copia el enlace — cualquiera puede ver, sin iniciar sesión.',
   landingSocialBadgeTitle: 'Proyecto de investigación académica',
   landingSocialBadgeDesc: 'Desarrollado como Trabajo de Conclusión de Carrera en Ciencias de la Computación · UFPE',
+  landingInstitutionalLabel: 'Desarrollado en colaboración con',
   landingSocialQuote: '"ContAR propone un ecosistema no-code para la creación y publicación de narradores virtuales 3D interactivos, enfocado en aplicaciones educativas y de realidad aumentada."',
   landingCtaFinalTitle: '¿Listo para crear?',
   landingCtaFinalSubtitle: 'Crea tu primera escena con avatar 3D hablante en menos de 5 minutos — gratis, sin instalar nada.',
@@ -1871,6 +1874,7 @@ const fr = {
   landingStep3Desc: "Enregistrez la scène, construisez l'histoire et copiez le lien — tout le monde peut regarder, sans se connecter.",
   landingSocialBadgeTitle: 'Projet de recherche académique',
   landingSocialBadgeDesc: "Développé comme mémoire de fin d'études en informatique · UFPE",
+  landingInstitutionalLabel: 'Développé en partenariat avec',
   landingSocialQuote: '"ContAR propose un écosystème no-code pour la création et la publication de narrateurs virtuels 3D interactifs, axé sur les applications éducatives et de réalité augmentée."',
   landingCtaFinalTitle: 'Prêt à créer ?',
   landingCtaFinalSubtitle: 'Créez votre première scène avec un avatar 3D parlant en moins de 5 minutes — gratuitement, sans rien installer.',

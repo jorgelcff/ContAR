@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80">
+  <defs>
+    <linearGradient id="voxarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4FC3F7"/>
+      <stop offset="50%" stop-color="#29B6F6"/>
+      <stop offset="100%" stop-color="#0288D1"/>
+    </linearGradient>
+  </defs>
+  <!-- Diamond shape -->
+  <g transform="translate(32, 40)">
+    <rect x="-16" y="-16" width="32" height="32" rx="5" ry="5" transform="rotate(45)" fill="url(#voxarGrad)" opacity="0.85"/>
+    <rect x="-11" y="-11" width="22" height="22" rx="3" ry="3" transform="rotate(45)" fill="url(#voxarGrad)" opacity="0.5"/>
+  </g>
+  <!-- Text: voxar -->
+  <text x="62" y="42" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900" fill="#555555" letter-spacing="-0.5">voxar</text>
+  <!-- Text: labs -->
+  <text x="62" y="62" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" fill="#999999" letter-spacing="0">labs</text>
+</svg>

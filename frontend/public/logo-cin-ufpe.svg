@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 120">
+  <!-- CIN/UFPE Logo - stylized "i" with red dot and swoosh -->
+  <defs>
+    <linearGradient id="cinRed" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#CC0000"/>
+      <stop offset="100%" stop-color="#AA0000"/>
+    </linearGradient>
+  </defs>
+  <!-- Red dot -->
+  <ellipse cx="52" cy="18" rx="12" ry="13" fill="url(#cinRed)"/>
+  <!-- Red swoosh body -->
+  <path d="M28,95 C15,95 5,80 8,65 C12,45 30,38 42,42 L42,42 L38,75 C37,85 32,95 28,95 Z" fill="url(#cinRed)"/>
+  <!-- Red swoosh tail -->
+  <path d="M8,100 C-2,108 -2,115 15,115 C32,115 45,105 50,90 C52,84 48,82 45,86 C38,98 25,105 15,105 C8,105 10,100 15,98 Z" fill="url(#cinRed)"/>
+  <!-- Text: Centro de -->
+  <text x="72" y="35" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="900" fill="#1a1a1a" letter-spacing="-0.5">Centro de</text>
+  <!-- Text: Informática -->
+  <text x="72" y="65" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900" fill="#1a1a1a" letter-spacing="-0.5">Inform&#225;tica</text>
+  <!-- Text: UFPE -->
+  <text x="72" y="90" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#555555" letter-spacing="2">UFPE</text>
+</svg>

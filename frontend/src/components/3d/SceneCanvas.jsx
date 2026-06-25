@@ -11,7 +11,7 @@ import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
 import { applyPosePreset } from '../../utils/posePresets';
-import { injectSyntheticJaw, createJawDebugVisuals, SYNTHETIC_JAW_NAME } from '../../utils/syntheticJaw';
+import { injectSyntheticJaw, repositionSyntheticJaw, createJawDebugVisuals, SYNTHETIC_JAW_NAME } from '../../utils/syntheticJaw';
 import { mapBones as mapBonesApi } from '../../api/sceneApi';
 
 const BONE_LABELS = {
@@ -223,6 +223,9 @@ export default function SceneCanvas({
   const lastDebugCommitAtRef = useRef(0);
   const jawSmoothedOpenRef = useRef(0);
   const adaptiveNoiseFloorRef = useRef(0.005);
+  const syntheticJawRef = useRef(null);
+  const jawDebugVisualsRef = useRef(null);
+  const [jawPlacementMode, setJawPlacementMode] = useState(false);
   const jawJitterPhaseRef = useRef(0);
   // Reusable typed array for analyser reads (allocated once per fftSize)
   const lipSyncDataRef = useRef(null);
@@ -1031,14 +1034,18 @@ export default function SceneCanvas({
         lipSyncControllerRef.current = lipSyncController;
 
         // Inject a synthetic jaw bone for avatars with no mouth control
+        syntheticJawRef.current = null;
+        jawDebugVisualsRef.current?.dispose();
+        jawDebugVisualsRef.current = null;
         if (!lipSyncController.hasMouth) {
           const result = injectSyntheticJaw(model, boneMapper);
           if (result) {
+            syntheticJawRef.current = result.jawBone;
             lipSyncController._jawBone = result.jawBone;
             lipSyncController._jawRestQuat = result.jawBone.quaternion.clone();
-            if (import.meta.env.DEV) {
-              createJawDebugVisuals(sceneRef.current, result.jawBone, result.radius);
-            }
+            jawDebugVisualsRef.current = createJawDebugVisuals(
+              sceneRef.current, result.jawBone, result.radius,
+            );
           }
         }
 
@@ -1330,12 +1337,81 @@ export default function SceneCanvas({
     }
   };
 
+  // ── Jaw placement click handler ──────────────────────────────────────
+  useEffect(() => {
+    if (!jawPlacementMode) return;
+    const container = containerRef.current;
+    const camera = cameraRef.current;
+    if (!container || !camera) return;
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const handleClick = (e) => {
+      const rect = container.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const model = avatarRef.current;
+      if (!model) return;
+
+      const meshes = [];
+      model.traverse((n) => { if (n.isMesh) meshes.push(n); });
+      const hits = raycaster.intersectObjects(meshes, false);
+      if (!hits.length) return;
+
+      const hitPoint = hits[0].point;
+      const jawBone = syntheticJawRef.current;
+      const boneMapper = boneMapperRef.current;
+      if (!jawBone || !boneMapper) return;
+
+      const { radius, affected } = repositionSyntheticJaw(
+        model, jawBone, hitPoint, boneMapper,
+      );
+
+      // Update rest quat for lip sync
+      jawBone.updateWorldMatrix(true, false);
+      const lipSync = lipSyncControllerRef.current;
+      if (lipSync) {
+        lipSync._jawRestQuat = jawBone.quaternion.clone();
+      }
+      // Update jawBones ref for SceneCanvas animation loop
+      jawBone.userData.__jawRestQuat = jawBone.quaternion.clone();
+
+      // Rebuild debug visuals at new position
+      jawDebugVisualsRef.current?.dispose();
+      jawDebugVisualsRef.current = createJawDebugVisuals(
+        sceneRef.current, jawBone, radius,
+      );
+
+      // Re-resolve jaw bones so the animation loop uses the repositioned bone
+      const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
+      jawBonesRef.current = jawBones;
+
+      setJawPlacementMode(false);
+      if (import.meta.env.DEV) {
+        console.log(`[SyntheticJaw] placed at [${hitPoint.toArray().map(n => n.toFixed(4)).join(', ')}], ${affected} vertices`);
+      }
+    };
+
+    container.addEventListener('click', handleClick, { once: true });
+    return () => container.removeEventListener('click', handleClick);
+  }, [jawPlacementMode, manualJawBoneName]);
+
   return (
     <div
       ref={containerRef}
       className="relative flex-1 w-full h-full overflow-hidden"
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "none", cursor: jawPlacementMode ? "crosshair" : undefined }}
     >
+      {jawPlacementMode && (
+        <div className="absolute inset-x-0 top-0 z-30 flex justify-center pointer-events-none">
+          <div className="mt-4 rounded-lg bg-cyan-900/90 border border-cyan-400 px-6 py-3 text-sm text-cyan-100 shadow-lg animate-pulse">
+            Clique na boca do avatar para posicionar a mandíbula
+          </div>
+        </div>
+      )}
       {avatarLoading && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/75 pointer-events-none">
           <div className="flex flex-col items-center gap-4">
@@ -1518,6 +1594,20 @@ export default function SceneCanvas({
               </option>
             ))}
           </select>
+          {syntheticJawRef.current && (
+            <button
+              onClick={() => setJawPlacementMode(true)}
+              className={`mt-2 w-full rounded border px-2 py-1 text-xs ${
+                jawPlacementMode
+                  ? "border-green-400 bg-green-900/60 text-green-100 animate-pulse"
+                  : "border-cyan-600 bg-cyan-900/60 text-cyan-100 hover:bg-cyan-800/70"
+              }`}
+            >
+              {jawPlacementMode
+                ? "Clique na boca do avatar..."
+                : "Posicionar mandíbula (clique no modelo)"}
+            </button>
+          )}
           <p className="mt-2 text-[11px] text-amber-300">
             Todos os ossos detectados
           </p>

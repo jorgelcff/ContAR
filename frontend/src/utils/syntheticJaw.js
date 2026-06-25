@@ -370,4 +370,91 @@ export function injectSyntheticJaw(model, boneMapper) {
   return { jawBone, radius };
 }
 
+/**
+ * Reposition an existing synthetic jaw bone to a new world-space point and
+ * recalculate skin weights around it.
+ *
+ * @param {THREE.Object3D} model
+ * @param {THREE.Bone} jawBone        the existing synthetic jaw bone
+ * @param {THREE.Vector3} worldPos    new mouth position in world space
+ * @param {import('./BoneMapper').BoneMapper} boneMapper
+ * @returns {{ radius: number, affected: number }}
+ */
+export function repositionSyntheticJaw(model, jawBone, worldPos, boneMapper) {
+  const headBone = boneMapper?.get('head');
+  if (!headBone) return { radius: 0, affected: 0 };
+
+  let skinnedMesh = null;
+  model.traverse((node) => {
+    if (!skinnedMesh && node.isSkinnedMesh && node.skeleton) skinnedMesh = node;
+  });
+  if (!skinnedMesh) return { radius: 0, affected: 0 };
+
+  const skeleton = skinnedMesh.skeleton;
+  const headBoneIndex = skeleton.bones.indexOf(headBone);
+  const jawBoneIndex = skeleton.bones.indexOf(jawBone);
+  if (headBoneIndex < 0 || jawBoneIndex < 0) return { radius: 0, affected: 0 };
+
+  // Move jaw bone to new position (head-local space)
+  model.updateMatrixWorld(true);
+  const headWorldInv = new THREE.Matrix4().copy(headBone.matrixWorld).invert();
+  const localPos = worldPos.clone().applyMatrix4(headWorldInv);
+  jawBone.position.copy(localPos);
+  jawBone.updateWorldMatrix(true, false);
+
+  // Recompute bone inverse
+  skeleton.boneInverses[jawBoneIndex].copy(jawBone.matrixWorld).invert();
+
+  // Clear old jaw weights from all vertices
+  const geom = skinnedMesh.geometry;
+  const skinIdx = geom.attributes.skinIndex;
+  const skinWt = geom.attributes.skinWeight;
+  for (let i = 0; i < skinIdx.count; i++) {
+    for (let s = 0; s < skinIdx.itemSize; s++) {
+      if (skinIdx.getComponent(i, s) === jawBoneIndex) {
+        const wt = skinWt.getComponent(i, s);
+        skinIdx.setComponent(i, s, 0);
+        skinWt.setComponent(i, s, 0);
+        // Return weight to head bone if present
+        for (let h = 0; h < skinIdx.itemSize; h++) {
+          if (skinIdx.getComponent(i, h) === headBoneIndex) {
+            skinWt.setComponent(i, h, skinWt.getComponent(i, h) + wt);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Compute head bbox for radius
+  const headBbox = new THREE.Box3();
+  const posAttr = geom.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    let wt = 0;
+    for (let s = 0; s < skinIdx.itemSize; s++) {
+      if (skinIdx.getComponent(i, s) === headBoneIndex) wt += skinWt.getComponent(i, s);
+    }
+    if (wt >= 0.3) {
+      const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
+      skinnedMesh.localToWorld(v);
+      headBbox.expandByPoint(v);
+    }
+  }
+
+  const headHeight = headBbox.isEmpty() ? 0.2 : (headBbox.max.y - headBbox.min.y);
+  const radius = headHeight * 0.28;
+
+  const affected = _assignSkinWeights(skinnedMesh, worldPos, jawBoneIndex, headBoneIndex, radius);
+
+  skinIdx.needsUpdate = true;
+  skinWt.needsUpdate = true;
+
+  if (_dbg()) {
+    console.log(`[SyntheticJaw] repositioned to [${worldPos.toArray().map(n => n.toFixed(4)).join(', ')}]`);
+    console.log(`[SyntheticJaw] affected vertices: ${affected}, radius: ${radius.toFixed(4)}`);
+  }
+
+  return { radius, affected };
+}
+
 export { SYNTHETIC_JAW_NAME };

@@ -397,11 +397,11 @@ export default function LandingPage() {
             <div className="flex items-center gap-8">
               <a href="https://portal.cin.ufpe.br" target="_blank" rel="noopener noreferrer"
                 className="opacity-70 hover:opacity-100 transition-opacity">
-                <img src="/logo-cin-ufpe.svg" alt="Centro de Informática - UFPE" className="h-16 w-auto invert" />
+                <img src="/logo-cin-ufpe.png" alt="Centro de Informática - UFPE" className="h-16 w-auto" />
               </a>
               <a href="https://www.cin.ufpe.br/~voxarlabs/" target="_blank" rel="noopener noreferrer"
                 className="opacity-70 hover:opacity-100 transition-opacity">
-                <img src="/logo-voxar-labs.svg" alt="Voxar Labs" className="h-16 w-auto" />
+                <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-16 w-auto" />
               </a>
             </div>
           </div>
@@ -433,8 +433,8 @@ export default function LandingPage() {
       <footer className="border-t border-white/5 py-8 px-5">
         <div className="max-w-6xl mx-auto flex flex-col items-center gap-6">
           <div className="flex items-center gap-6 opacity-50">
-            <img src="/logo-cin-ufpe.svg" alt="CIn UFPE" className="h-10 w-auto invert" />
-            <img src="/logo-voxar-labs.svg" alt="Voxar Labs" className="h-10 w-auto" />
+            <img src="/logo-cin-ufpe.png" alt="CIn UFPE" className="h-10 w-auto" />
+            <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-10 w-auto" />
           </div>
           <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
             <div className="flex items-center gap-2">

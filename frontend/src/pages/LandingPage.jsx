@@ -394,14 +394,14 @@ export default function LandingPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
               {t('landingInstitutionalLabel', 'Desenvolvido em parceria com')}
             </p>
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-6">
               <a href="https://portal.cin.ufpe.br" target="_blank" rel="noopener noreferrer"
-                className="opacity-70 hover:opacity-100 transition-opacity">
-                <img src="/logo-cin-ufpe.png" alt="Centro de Informática - UFPE" className="h-16 w-auto" />
+                className="rounded-xl bg-white/90 px-5 py-3 hover:bg-white transition-colors shadow-sm">
+                <img src="/logo-cin-ufpe.png" alt="Centro de Informática - UFPE" className="h-14 w-auto" />
               </a>
               <a href="https://www.cin.ufpe.br/~voxarlabs/" target="_blank" rel="noopener noreferrer"
-                className="opacity-70 hover:opacity-100 transition-opacity">
-                <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-16 w-auto" />
+                className="rounded-xl bg-white/90 px-5 py-3 hover:bg-white transition-colors shadow-sm">
+                <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-14 w-auto" />
               </a>
             </div>
           </div>
@@ -432,9 +432,13 @@ export default function LandingPage() {
       {/* ── Footer ──────────────────────────────────────────────── */}
       <footer className="border-t border-white/5 py-8 px-5">
         <div className="max-w-6xl mx-auto flex flex-col items-center gap-6">
-          <div className="flex items-center gap-6 opacity-50">
-            <img src="/logo-cin-ufpe.png" alt="CIn UFPE" className="h-10 w-auto" />
-            <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-10 w-auto" />
+          <div className="flex items-center gap-4">
+            <div className="rounded-lg bg-white/90 px-3 py-2">
+              <img src="/logo-cin-ufpe.png" alt="CIn UFPE" className="h-8 w-auto" />
+            </div>
+            <div className="rounded-lg bg-white/90 px-3 py-2">
+              <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-8 w-auto" />
+            </div>
           </div>
           <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
             <div className="flex items-center gap-2">

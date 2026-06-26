@@ -380,7 +380,7 @@ export function injectSyntheticJaw(model, boneMapper) {
  * @param {import('./BoneMapper').BoneMapper} boneMapper
  * @returns {{ radius: number, affected: number }}
  */
-export function repositionSyntheticJaw(model, jawBone, worldPos, boneMapper) {
+export function repositionSyntheticJaw(model, jawBone, worldPos, boneMapper, customRadius) {
   const headBone = boneMapper?.get('head');
   if (!headBone) return { radius: 0, affected: 0 };
 
@@ -442,7 +442,7 @@ export function repositionSyntheticJaw(model, jawBone, worldPos, boneMapper) {
   }
 
   const headHeight = headBbox.isEmpty() ? 0.2 : (headBbox.max.y - headBbox.min.y);
-  const radius = headHeight * 0.28;
+  const radius = customRadius != null ? customRadius : headHeight * 0.28;
 
   const affected = _assignSkinWeights(skinnedMesh, worldPos, jawBoneIndex, headBoneIndex, radius);
 

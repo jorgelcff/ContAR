@@ -226,6 +226,9 @@ export default function SceneCanvas({
   const syntheticJawRef = useRef(null);
   const jawDebugVisualsRef = useRef(null);
   const [jawPlacementMode, setJawPlacementMode] = useState(false);
+  const [jawOffset, setJawOffset] = useState({ x: 0, y: 0, z: 0 });
+  const [jawRadius, setJawRadius] = useState(0.05);
+  const [jawBaseWorldPos, setJawBaseWorldPos] = useState(null);
   const jawJitterPhaseRef = useRef(0);
   // Reusable typed array for analyser reads (allocated once per fftSize)
   const lipSyncDataRef = useRef(null);
@@ -1370,6 +1373,11 @@ export default function SceneCanvas({
         model, jawBone, hitPoint, boneMapper,
       );
 
+      // Store base position and reset sliders
+      setJawBaseWorldPos(hitPoint.clone());
+      setJawRadius(radius);
+      setJawOffset({ x: 0, y: 0, z: 0 });
+
       // Update rest quat for lip sync
       jawBone.updateWorldMatrix(true, false);
       const lipSync = lipSyncControllerRef.current;
@@ -1607,6 +1615,76 @@ export default function SceneCanvas({
                 ? "Clique na boca do avatar..."
                 : "Posicionar mandíbula (clique no modelo)"}
             </button>
+          )}
+          {syntheticJawRef.current && jawBaseWorldPos && (
+            <div className="mt-2 rounded border border-cyan-600 bg-cyan-950/80 p-2 space-y-1">
+              {[
+                { key: 'x', label: 'Ajuste X' },
+                { key: 'y', label: 'Ajuste Y' },
+                { key: 'z', label: 'Ajuste Z' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-1 text-xs text-cyan-100">
+                  <span className="w-16 shrink-0">{label}</span>
+                  <input
+                    type="range"
+                    min={-0.1}
+                    max={0.1}
+                    step={0.001}
+                    value={jawOffset[key]}
+                    onChange={(e) => {
+                      const newOffset = { ...jawOffset, [key]: parseFloat(e.target.value) };
+                      setJawOffset(newOffset);
+                      const model = avatarRef.current;
+                      const jawBone = syntheticJawRef.current;
+                      const boneMapper = boneMapperRef.current;
+                      if (!model || !jawBone || !boneMapper || !jawBaseWorldPos) return;
+                      const newPos = jawBaseWorldPos.clone().add(new THREE.Vector3(newOffset.x, newOffset.y, newOffset.z));
+                      const { radius } = repositionSyntheticJaw(model, jawBone, newPos, boneMapper, jawRadius);
+                      jawBone.updateWorldMatrix(true, false);
+                      const lipSync = lipSyncControllerRef.current;
+                      if (lipSync) lipSync._jawRestQuat = jawBone.quaternion.clone();
+                      jawBone.userData.__jawRestQuat = jawBone.quaternion.clone();
+                      jawDebugVisualsRef.current?.dispose();
+                      jawDebugVisualsRef.current = createJawDebugVisuals(sceneRef.current, jawBone, radius);
+                      const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
+                      jawBonesRef.current = jawBones;
+                    }}
+                    className="flex-1"
+                  />
+                  <span className="w-14 text-right font-mono text-[10px] text-cyan-300">{jawOffset[key].toFixed(3)}</span>
+                </label>
+              ))}
+              <label className="flex items-center gap-1 text-xs text-cyan-100">
+                <span className="w-16 shrink-0">Raio de deformação</span>
+                <input
+                  type="range"
+                  min={0.01}
+                  max={0.2}
+                  step={0.005}
+                  value={jawRadius}
+                  onChange={(e) => {
+                    const newRadius = parseFloat(e.target.value);
+                    setJawRadius(newRadius);
+                    const model = avatarRef.current;
+                    const jawBone = syntheticJawRef.current;
+                    const boneMapper = boneMapperRef.current;
+                    if (!model || !jawBone || !boneMapper || !jawBaseWorldPos) return;
+                    const newPos = jawBaseWorldPos.clone().add(new THREE.Vector3(jawOffset.x, jawOffset.y, jawOffset.z));
+                    const { radius } = repositionSyntheticJaw(model, jawBone, newPos, boneMapper, newRadius);
+                    jawBone.updateWorldMatrix(true, false);
+                    const lipSync = lipSyncControllerRef.current;
+                    if (lipSync) lipSync._jawRestQuat = jawBone.quaternion.clone();
+                    jawBone.userData.__jawRestQuat = jawBone.quaternion.clone();
+                    jawDebugVisualsRef.current?.dispose();
+                    jawDebugVisualsRef.current = createJawDebugVisuals(sceneRef.current, jawBone, radius);
+                    const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
+                    jawBonesRef.current = jawBones;
+                  }}
+                  className="flex-1"
+                />
+                <span className="w-14 text-right font-mono text-[10px] text-cyan-300">{jawRadius.toFixed(3)}</span>
+              </label>
+            </div>
           )}
           <p className="mt-2 text-[11px] text-amber-300">
             Todos os ossos detectados

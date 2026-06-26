@@ -36,6 +36,7 @@ export default function LeftPanel({
   textDisplayMode = 'bubble',
   onTextDisplayModeChange,
   avatarClips = [],
+  jawApi,
 }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -651,6 +652,51 @@ export default function LeftPanel({
                   </div>
                 );
               })()}
+              {jawApi?.hasSyntheticJaw && (
+                <div className="border border-cyan-700/40 rounded-xl p-3 space-y-2 bg-cyan-950/30">
+                  <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1">
+                    <Icon name="settings" className="w-3.5 h-3.5" />
+                    {t('lpJawConfig')}
+                  </p>
+                  <p className="text-[11px] text-gray-400">{t('lpJawConfigHelp')}</p>
+                  <button
+                    onClick={() => jawApi.startPlacement()}
+                    className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                      jawApi.jawPlacementMode
+                        ? 'bg-green-700 text-green-100 animate-pulse'
+                        : 'bg-cyan-800 hover:bg-cyan-700 text-cyan-100'
+                    }`}
+                  >
+                    {jawApi.jawPlacementMode ? t('lpJawClickModel') : t('lpJawPlace')}
+                  </button>
+                  {jawApi.hasBasePos && (
+                    <>
+                      {['x', 'y', 'z'].map((key) => (
+                        <label key={key} className="flex items-center gap-1.5 text-xs text-gray-300">
+                          <span className="w-14 shrink-0 font-medium">{t('lpJawAdjust')} {key.toUpperCase()}</span>
+                          <input
+                            type="range" min={-0.1} max={0.1} step={0.001}
+                            value={jawApi.jawOffset[key]}
+                            onChange={(e) => jawApi.setOffset({ ...jawApi.jawOffset, [key]: parseFloat(e.target.value) })}
+                            className="flex-1 accent-cyan-400"
+                          />
+                          <span className="w-12 text-right font-mono text-[10px] text-cyan-300">{jawApi.jawOffset[key].toFixed(3)}</span>
+                        </label>
+                      ))}
+                      <label className="flex items-center gap-1.5 text-xs text-gray-300">
+                        <span className="w-14 shrink-0 font-medium">{t('lpJawRadius')}</span>
+                        <input
+                          type="range" min={0.01} max={0.2} step={0.005}
+                          value={jawApi.jawRadius}
+                          onChange={(e) => jawApi.setRadius(parseFloat(e.target.value))}
+                          className="flex-1 accent-cyan-400"
+                        />
+                        <span className="w-12 text-right font-mono text-[10px] text-cyan-300">{jawApi.jawRadius.toFixed(3)}</span>
+                      </label>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {audio && (

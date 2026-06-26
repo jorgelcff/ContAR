@@ -95,6 +95,7 @@ export default function EditorPage() {
   // Names of animation clips embedded in the currently loaded avatar GLB,
   // surfaced by SceneCanvas so the panel can offer them for direct selection.
   const [avatarClips, setAvatarClips] = useState([]);
+  const [jawApi, setJawApi] = useState(null);
 
   useEffect(() => {
     if (hadLocalAvatarOnInit()) {
@@ -493,6 +494,7 @@ export default function EditorPage() {
           mobilePanelTab={mobilePanelTab}
           onMobilePanelClose={() => setMobilePanelTab(null)}
           avatarClips={avatarClips}
+          jawApi={jawApi}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center gap-3 px-4 py-2 border-b border-gray-800 bg-gray-950">
@@ -548,6 +550,7 @@ export default function EditorPage() {
                 vrmExpression={vrmExpression}
                 textDisplayMode={textDisplayMode}
                 onAvatarClips={setAvatarClips}
+                onJawApi={setJawApi}
               />
             </Suspense>
           </div>

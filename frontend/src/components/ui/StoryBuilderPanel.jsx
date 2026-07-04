@@ -14,7 +14,7 @@ function resolveSceneTitle(sceneTitlesById, sceneId) {
   return raw;
 }
 
-export default function StoryBuilderPanel({ onAddScene }) {
+export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const {
@@ -151,10 +151,15 @@ export default function StoryBuilderPanel({ onAddScene }) {
           {onAddScene && (
             <button
               onClick={onAddScene}
-              className="w-72 min-w-72 snap-start rounded-lg border-2 border-dashed border-gray-600 hover:border-cyan-500 bg-transparent hover:bg-cyan-950/20 flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer min-h-22"
+              disabled={isAddingScene}
+              className={`w-72 min-w-72 snap-start rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors min-h-22 ${
+                isAddingScene
+                  ? 'border-gray-700 bg-transparent cursor-wait opacity-50'
+                  : 'border-gray-600 hover:border-cyan-500 bg-transparent hover:bg-cyan-950/20 cursor-pointer'
+              }`}
             >
-              <Icon name="plus" className="w-6 h-6 text-gray-500" />
-              <span className="text-xs text-gray-400">{t('storyAddScene')}</span>
+              <Icon name="plus" className={`w-6 h-6 ${isAddingScene ? 'animate-spin' : 'text-gray-500'}`} />
+              <span className="text-xs text-gray-400">{isAddingScene ? '…' : t('storyAddScene')}</span>
             </button>
           )}
           </div>

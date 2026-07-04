@@ -184,6 +184,8 @@ export default function LeftPanel({
   const handleLocalGlbChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Prevent a second upload while one is already in flight
+    if (isUploadingGlb) return;
     const lower = file.name.toLowerCase();
     const valid = lower.endsWith('.glb') || lower.endsWith('.vrm')
       || file.type === 'model/gltf-binary' || file.type === 'model/vrm'
@@ -191,8 +193,8 @@ export default function LeftPanel({
     if (!valid) { e.target.value = ''; return; }
     e.target.value = '';
 
-    // Validate size before uploading (backend limit: 50 MB)
-    const MAX_MODEL_MB = 50;
+    // Validate size before uploading (Cloudinary free plan: 10 MB)
+    const MAX_MODEL_MB = 10;
     if (file.size > MAX_MODEL_MB * 1024 * 1024) {
       const sizeMB = (file.size / 1024 / 1024).toFixed(1);
       addToast(t('lpModelTooLarge', { size: sizeMB, max: MAX_MODEL_MB }), 'error', 8000);

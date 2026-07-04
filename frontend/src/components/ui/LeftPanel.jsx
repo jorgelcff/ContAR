@@ -184,6 +184,8 @@ export default function LeftPanel({
   const handleLocalGlbChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Prevent a second upload while one is already in flight
+    if (isUploadingGlb) return;
     const lower = file.name.toLowerCase();
     const valid = lower.endsWith('.glb') || lower.endsWith('.vrm')
       || file.type === 'model/gltf-binary' || file.type === 'model/vrm'

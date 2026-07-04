@@ -76,7 +76,10 @@ const modelUpload = multer({
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 
 const audioLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60,  standardHeaders: true, legacyHeaders: false });
-const modelLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20,  standardHeaders: true, legacyHeaders: false });
+// 60 model uploads per 15 min — generous enough for iterative testing while
+// still blocking brute-force abuse. Cloudinary deduplicates by content hash
+// so repeated uploads of the same file don't waste storage quota.
+const modelLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60,  standardHeaders: true, legacyHeaders: false });
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 

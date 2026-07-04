@@ -133,7 +133,7 @@ router.post('/model', modelLimiter, requireAuth, modelUpload.single('file'), asy
     res.json({ url, size: req.file.size });
   } catch (err) {
     console.error('Model upload failed', err);
-    res.status(502).json({ error: 'Falha ao enviar o modelo para o armazenamento' });
+    res.status(502).json({ error: 'Falha ao enviar o modelo para o armazenamento', reason: err?.message || String(err) });
   }
 });
 

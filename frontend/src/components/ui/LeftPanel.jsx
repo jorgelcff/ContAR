@@ -191,6 +191,14 @@ export default function LeftPanel({
     if (!valid) { e.target.value = ''; return; }
     e.target.value = '';
 
+    // Validate size before uploading (backend limit: 50 MB)
+    const MAX_MODEL_MB = 50;
+    if (file.size > MAX_MODEL_MB * 1024 * 1024) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      addToast(t('lpModelTooLarge', { size: sizeMB, max: MAX_MODEL_MB }), 'error', 8000);
+      return;
+    }
+
     // Preview immediately with blob URL
     if (localBlobUrlRef.current) URL.revokeObjectURL(localBlobUrlRef.current);
     const blobUrl = URL.createObjectURL(file);
@@ -212,8 +220,17 @@ export default function LeftPanel({
       } else {
         addToast(t('epAvatarSaved'), 'success');
       }
-    } catch {
-      addToast('Avatar carregado localmente. Será perdido ao recarregar a página.', 'warning', 6000);
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 413) {
+        addToast(t('lpModelTooLarge', { size: (file.size / 1024 / 1024).toFixed(1), max: MAX_MODEL_MB }), 'error', 8000);
+      } else if (status === 401 || status === 403) {
+        addToast(t('lpModelUploadAuth'), 'error', 6000);
+      } else if (status === 429) {
+        addToast(t('lpModelUploadRateLimit'), 'warning', 6000);
+      } else {
+        addToast(t('lpModelUploadFailed'), 'warning', 6000);
+      }
     } finally {
       setIsUploadingGlb(false);
     }

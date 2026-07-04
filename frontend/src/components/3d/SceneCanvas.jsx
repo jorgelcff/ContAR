@@ -65,6 +65,35 @@ const VISEME_GROUP_MAP = {
   X: { mbp: 0.3 },
 };
 
+// Azure TTS viseme IDs (0–21) → ARKit blendshape names (Avaturn / ReadyPlayerMe).
+// When the avatar has these blendshapes directly, we drive them instead of the
+// heuristic groups, producing accurate lip sync with Azure TTS.
+// Reference: https://learn.microsoft.com/azure/ai-services/speech-service/how-to-speech-synthesis-viseme
+const AZURE_VISEME_TO_ARKIT = {
+  0:  null,            // sil
+  1:  'viseme_PP',     // p, b, m
+  2:  'viseme_FF',     // f, v
+  3:  'viseme_TH',     // th
+  4:  'viseme_DD',     // t, d
+  5:  'viseme_kk',     // k, g
+  6:  'viseme_CH',     // tʃ, dʒ, ʃ
+  7:  'viseme_SS',     // s, z
+  8:  'viseme_nn',     // n, l
+  9:  'viseme_RR',     // r
+  10: 'viseme_aa',     // ɑ (father)
+  11: 'viseme_aa',     // æ (cat)
+  12: 'viseme_aa',     // ʌ (but)
+  13: 'viseme_O',      // ɔ (all)
+  14: 'viseme_U',      // ʊ (book)
+  15: 'viseme_O',      // oʊ (no)
+  16: 'viseme_U',      // uː (too)
+  17: 'viseme_aa',     // aɪ (my)
+  18: 'viseme_O',      // aʊ (cow)
+  19: 'viseme_I',      // ɪ (it)
+  20: 'viseme_E',      // eɪ (say)
+  21: 'viseme_I',      // iː (see)
+};
+
 const MOUTH_OPEN_PATTERNS = [
   /jaw.*open/i,
   /mouth.*open/i,
@@ -584,6 +613,7 @@ export default function SceneCanvas({
       const lipSyncController = lipSyncControllerRef.current;
       const jawBones = jawBonesRef.current;
       const hasMorphs = lipSyncController?.hasTargets;
+      const hasArkitVisemes = avatarRef.current?.userData.__hasArkitVisemes ?? false;
       const pseudoJawRig = isPseudoJawRig(jawBones);
       const effectiveConfig = pseudoJawRig
         ? {
@@ -604,11 +634,18 @@ export default function SceneCanvas({
         lipSyncController.resetGroups();
         if (timelineBlend) {
           timelineBlend.forEach(({ cue, weight }) => {
-            const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
-            if (blend) {
-              Object.entries(blend).forEach(([grp, w]) => {
-                lipSyncController.setGroupValue(grp, THREE.MathUtils.clamp(0.85 * weight * w, 0, 1));
-              });
+            const visemeId = Number(cue?.value);
+            if (hasArkitVisemes && !isNaN(visemeId)) {
+              // Direct Azure ID → ARKit blendshape for Avaturn / ReadyPlayerMe
+              const blendshape = AZURE_VISEME_TO_ARKIT[visemeId];
+              if (blendshape) lipSyncController.setMorphValue(blendshape, THREE.MathUtils.clamp(0.85 * weight, 0, 1));
+            } else {
+              const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
+              if (blend) {
+                Object.entries(blend).forEach(([grp, w]) => {
+                  lipSyncController.setGroupValue(grp, THREE.MathUtils.clamp(0.85 * weight * w, 0, 1));
+                });
+              }
             }
           });
         }
@@ -748,11 +785,17 @@ export default function SceneCanvas({
                 0,
                 1,
               );
-              const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
-              if (blend) {
-                Object.entries(blend).forEach(([grp, w]) => {
-                  lipSyncController.setGroupValue(grp, cueIntensity * w);
-                });
+              const visemeId = Number(cue?.value);
+              if (hasArkitVisemes && !isNaN(visemeId)) {
+                const blendshape = AZURE_VISEME_TO_ARKIT[visemeId];
+                if (blendshape) lipSyncController.setMorphValue(blendshape, cueIntensity);
+              } else {
+                const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
+                if (blend) {
+                  Object.entries(blend).forEach(([grp, w]) => {
+                    lipSyncController.setGroupValue(grp, cueIntensity * w);
+                  });
+                }
               }
             });
           } else {
@@ -830,6 +873,8 @@ export default function SceneCanvas({
           }`,
           analyserReady: true,
           hasMorphs,
+          hasArkitVisemes,
+          mouthTargetCount: lipSyncController?._mouthTargetCount ?? 0,
           jawBoneCount: jawBones.length,
         };
       } else {
@@ -861,6 +906,8 @@ export default function SceneCanvas({
               : "idle",
           analyserReady: hasAnalyser,
           hasMorphs,
+          hasArkitVisemes,
+          mouthTargetCount: lipSyncController?._mouthTargetCount ?? 0,
           jawBoneCount: jawBones.length,
         };
       }
@@ -1038,6 +1085,14 @@ export default function SceneCanvas({
         lipSyncControllerRef.current?.dispose();
         const lipSyncController = new LipSyncController(model);
         lipSyncControllerRef.current = lipSyncController;
+
+        // Detect ARKit blendshapes (Avaturn / ReadyPlayerMe) for direct Azure viseme mapping
+        const allMorphNames = new Set(lipSyncController.getAll().map((t) => t.name));
+        const hasArkitVisemes = AZURE_VISEME_TO_ARKIT[10] && allMorphNames.has(AZURE_VISEME_TO_ARKIT[10]);
+        avatarRef.current.userData.__hasArkitVisemes = hasArkitVisemes;
+        if (hasArkitVisemes && import.meta.env.DEV) {
+          console.log('[SceneCanvas] ARKit visemes detected — using direct Azure→ARKit mapping');
+        }
 
         // Inject a synthetic jaw bone for avatars with no mouth control
         syntheticJawRef.current = null;
@@ -1966,6 +2021,7 @@ function buildRigReport({
   lines.push(`mode=${debugSnapshot.mode}`);
   lines.push(`analyserReady=${debugSnapshot.analyserReady}`);
   lines.push(`mouthTargets=${debugSnapshot.mouthTargetCount ?? 0}`);
+  lines.push(`arkitVisemes=${debugSnapshot.hasArkitVisemes ? 'yes' : 'no'}`);
   lines.push(`jawBones=${debugSnapshot.jawBoneCount ?? 0}`);
   lines.push(`manualJawBone=${manualJawBoneName || "(auto)"}`);
   lines.push(

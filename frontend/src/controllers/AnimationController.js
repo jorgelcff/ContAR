@@ -217,51 +217,6 @@ export class AnimationController {
       (track) => boneNameSet.has(getBoneName(track.name)),
     );
 
-    // ── Bind-pose compensation ────────────────────────────────────────────────
-    // Mixamo animations assume every bone's bind-pose quaternion is identity
-    // (T-pose). Generic GLB rigs (Meshy, CC3, A-pose exports) often have
-    // non-identity bind quaternions, so applying Mixamo keyframes directly
-    // skews limbs into wrong orientations.
-    //
-    // Correct formula:  Q_final = Q_bind_inv * Q_anim
-    //   — Q_bind_inv cancels out the rig's natural offset before the
-    //     animation delta is applied, matching the T-pose intent of the source.
-    //
-    // Skip VRM (handled separately) and skip Hips (has its own correction below).
-    // Only apply to bones with a meaningfully non-identity bind quaternion.
-    if (this._boneMapper && this._boneMapper.source !== 'vrm') {
-      const hipsBone = this._boneMapper.get('hips');
-      const hipsName = hipsBone?.name ?? '';
-      const eps = 1e-3;
-      const _q = new THREE.Quaternion();
-      const _inv = new THREE.Quaternion();
-
-      for (const track of retargetedClip.tracks) {
-        if (getProperty(track.name) !== 'quaternion') continue;
-        const boneName = getBoneName(track.name);
-        if (boneName === hipsName) continue; // handled by hipsParentCorrection
-        const bone = boneByName.get(boneName);
-        if (!bone) continue;
-
-        const rest = bone.quaternion;
-        const isIdentity =
-          Math.abs(rest.x) < eps &&
-          Math.abs(rest.y) < eps &&
-          Math.abs(rest.z) < eps &&
-          Math.abs(Math.abs(rest.w) - 1) < eps;
-        if (isIdentity) continue;
-
-        _inv.copy(rest).invert();
-        const vals = track.values;
-        for (let i = 0; i < vals.length; i += 4) {
-          _q.set(vals[i], vals[i + 1], vals[i + 2], vals[i + 3]);
-          _q.premultiply(_inv); // Q_bind_inv * Q_anim
-          vals[i] = _q.x; vals[i + 1] = _q.y; vals[i + 2] = _q.z; vals[i + 3] = _q.w;
-        }
-        if (_dbg) console.log(`[AnimCtrl] bind-pose compensation applied to "${bone.name}"`);
-      }
-    }
-
     // FIX FOR VRM: Mixamo animations often contain a 90-degree X-axis rotation on the Hips 
     // to compensate for their Armature export rotation. VRM models do not have this armature, 
     // so applying Mixamo Hips quaternions directly makes the VRM character lie face down or float horizontally.

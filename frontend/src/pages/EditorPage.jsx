@@ -155,8 +155,14 @@ export default function EditorPage() {
           autosaveEducatedRef.current = true;
           addToast(t('epAutosaveEducational'), 'info', 4000);
         }
-      } catch {
+      } catch (err) {
         setAutosaveStatus(null);
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          addToast(t('epAutosaveFailedAuth'), 'error', 7000);
+        } else {
+          addToast(t('epAutosaveFailed'), 'warning', 5000);
+        }
       }
     }, 5000);
     return () => clearTimeout(autosaveTimerRef.current);

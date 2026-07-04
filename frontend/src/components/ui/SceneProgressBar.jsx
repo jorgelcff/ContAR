@@ -1,14 +1,18 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 
-const STEPS = [
-  { key: 'avatar',  label: 'Avatar',  icon: 'avatar' },
-  { key: 'fala',    label: 'Fala',    icon: 'speech' },
-  { key: 'audio',   label: 'Áudio',   icon: 'audio' },
-  { key: 'salva',   label: 'Salvo',   icon: 'save' },
+const STEP_KEYS = [
+  { key: 'avatar', labelKey: 'stepAvatar', icon: 'avatar' },
+  { key: 'fala',   labelKey: 'stepFala',   icon: 'speech' },
+  { key: 'audio',  labelKey: 'stepAudio',  icon: 'audio' },
+  { key: 'salva',  labelKey: 'stepSalvo',  icon: 'save' },
 ];
 
 export default function SceneProgressBar({ avatarUrl, speechText, audioUrl, sceneId, onTabChange }) {
+  const { t } = useTranslation();
+  const steps = STEP_KEYS.map((s) => ({ ...s, label: t(s.labelKey) }));
+
   const done = {
     avatar: Boolean(avatarUrl),
     fala:   Boolean(speechText),
@@ -20,11 +24,11 @@ export default function SceneProgressBar({ avatarUrl, speechText, audioUrl, scen
 
   return (
     <div className="flex items-center px-3 py-2 border-b border-gray-700 bg-gray-850">
-      {STEPS.map((step, i) => (
+      {steps.map((step, i) => (
         <React.Fragment key={step.key}>
           <button
             onClick={() => onTabChange?.(TAB_BY_STEP[step.key])}
-            title={done[step.key] ? `${step.label} — concluído` : `${step.label} — pendente`}
+            title={done[step.key] ? `${step.label} — ${t('stepDone')}` : `${step.label} — ${t('stepPending')}`}
             className="flex flex-col items-center gap-0.5 flex-1 group"
           >
             <span
@@ -41,11 +45,11 @@ export default function SceneProgressBar({ avatarUrl, speechText, audioUrl, scen
             </span>
           </button>
 
-          {i < STEPS.length - 1 && (
+          {i < steps.length - 1 && (
             <div className={`h-0.5 flex-1 mx-1 rounded-full transition-all duration-500 ${
-              done[STEPS[i].key] && done[STEPS[i + 1].key]
+              done[steps[i].key] && done[steps[i + 1].key]
                 ? 'bg-cyan-500'
-                : done[STEPS[i].key]
+                : done[steps[i].key]
                 ? 'bg-linear-to-r from-cyan-500 to-gray-600'
                 : 'bg-gray-700'
             }`} />

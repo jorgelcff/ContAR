@@ -13,11 +13,11 @@ import { useToast } from '../../context/ToastContext';
 
 const AVATURN_USER_ID_KEY = 'avaturn:userId';
 
-const TABS = [
-  { id: 'avatar',   label: 'Avatar',   icon: 'avatar' },
-  { id: 'fala',     label: 'Fala',     icon: 'speech' },
-  { id: 'cena',     label: 'Cena',     icon: 'scene' },
-  { id: 'historia', label: 'História', icon: 'story' },
+const TAB_DEFS = [
+  { id: 'avatar',   labelKey: 'tabAvatar',   icon: 'avatar' },
+  { id: 'fala',     labelKey: 'tabFala',     icon: 'speech' },
+  { id: 'cena',     labelKey: 'tabCena',     icon: 'scene' },
+  { id: 'historia', labelKey: 'tabHistoria', icon: 'story' },
 ];
 
 export default function LeftPanel({
@@ -40,6 +40,7 @@ export default function LeftPanel({
 }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
+  const TABS = TAB_DEFS.map((tab) => ({ ...tab, label: t(tab.labelKey) }));
 
   const {
     avatarUrl, setAvatarUrl,

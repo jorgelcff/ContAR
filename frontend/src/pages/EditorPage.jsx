@@ -103,6 +103,7 @@ export default function EditorPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [isSaving, setIsSaving] = useState(false);
+  const [isAddingScene, setIsAddingScene] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -356,23 +357,55 @@ export default function EditorPage() {
   };
 
   const handleAddCurrentSceneToStory = async () => {
+    // Guard against double-click creating multiple blank entries
+    if (isAddingScene) return;
+    setIsAddingScene(true);
     setError('');
     try {
-      const result = await saveScene(buildScenePayload(undefined));
-      const sceneId = result?.sceneId;
-      if (!sceneId) throw new Error('Missing sceneId in save response');
-      const sceneCount = useSceneStore.getState().storyScenes.length;
-      useSceneStore.getState().addStoryScene(sceneId);
-      // Detach from this scene: further edits/autosave should create a new
-      // scene instead of overwriting the one we just added to the story.
-      // Also clear the title so the next scene doesn't get saved with the
-      // same name (which made it look like nothing new was created).
-      setCurrentSceneId('');
-      useSceneStore.getState().setSceneTitle('');
-      addToast(t('epSceneAddedClear', { n: sceneCount + 1 }), 'success', 4000);
+      const store = useSceneStore.getState();
+      const existingId = store.currentSceneId;
+
+      // 1. Save current scene in-place (update, never create a copy).
+      //    Only bother if there is actual content worth preserving.
+      if (existingId || store.avatarUrl || store.speechText || store.sceneTitle) {
+        try {
+          const result = await saveScene(buildScenePayload(existingId || undefined));
+          const savedId = result?.sceneId;
+          // If this scene wasn't in the story yet, add it (first-time add).
+          if (savedId && !store.storyScenes.some((s) => s.sceneId === savedId)) {
+            store.addStoryScene(savedId);
+            store.setSceneTitlesById({ [savedId]: store.sceneTitle?.trim() || '' });
+          }
+        } catch {
+          // Best-effort — don't block new scene creation on a save failure.
+        }
+      }
+
+      // 2. Generate a fresh UUID for the new blank scene, reset editor.
+      const newSceneId = crypto.randomUUID();
+      store.resetSceneForNew();
+      store.setCurrentSceneId(newSceneId);
+      store.addStoryScene(newSceneId);
+      store.setSceneTitlesById({ [newSceneId]: '' });
+
+      // 3. Pre-mark as "loaded" so the scene-load effect doesn't try to GET
+      //    this UUID from the server (it doesn't exist yet — first edit/autosave
+      //    will create it via upsert).
+      loadedSceneIdRef.current = newSceneId;
+
+      // 4. Update URL so the address bar reflects the new scene and a refresh
+      //    lands back here (once it's been saved at least once).
+      const params = new URLSearchParams(searchParams);
+      params.set('sceneId', newSceneId);
+      setSearchParams(params, { replace: false });
+
+      const n = useSceneStore.getState().storyScenes.length;
+      addToast(t('epSceneAddedClear', { n }), 'success', 3000);
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro: ${err.message}`, 'error');
+    } finally {
+      setIsAddingScene(false);
     }
   };
 
@@ -571,7 +604,7 @@ export default function EditorPage() {
               />
             </Suspense>
           </div>
-          <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} />
+          <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} isAddingScene={isAddingScene} />
         </div>
       </div>
 

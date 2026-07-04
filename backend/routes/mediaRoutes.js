@@ -58,9 +58,14 @@ const audioUpload = multer({
   },
 });
 
+// Cloudinary free plan caps individual uploads at 10 MB for raw files.
+// Match that limit at the multer layer so we reject early with a clear 413
+// instead of buffering the whole file only for Cloudinary to refuse it.
+const MODEL_SIZE_LIMIT = cloudinaryConfigured ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
+
 const modelUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: MODEL_SIZE_LIMIT },
   fileFilter: (_req, file, cb) => {
     const ok = /\.(glb|vrm)$/i.test(file.originalname)
       || ['model/gltf-binary', 'model/vrm', 'application/octet-stream'].includes(file.mimetype);
@@ -114,7 +119,19 @@ router.delete('/audio', audioLimiter, requireAuth, async (req, res) => {
   }
 });
 
-router.post('/model', modelLimiter, requireAuth, modelUpload.single('file'), async (req, res) => {
+// Multer's LIMIT_FILE_SIZE fires as middleware error before the route handler.
+function modelUploadMiddleware(req, res, next) {
+  modelUpload.single('file')(req, res, (err) => {
+    if (err?.code === 'LIMIT_FILE_SIZE') {
+      const limitMB = Math.round(MODEL_SIZE_LIMIT / 1024 / 1024);
+      return res.status(413).json({ error: `Arquivo muito grande. O limite é ${limitMB} MB.` });
+    }
+    if (err) return next(err);
+    next();
+  });
+}
+
+router.post('/model', modelLimiter, requireAuth, modelUploadMiddleware, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
   const ext = (path.extname(req.file.originalname).toLowerCase() || '.glb').replace('.', '');
   try {
@@ -133,6 +150,12 @@ router.post('/model', modelLimiter, requireAuth, modelUpload.single('file'), asy
     res.json({ url, size: req.file.size });
   } catch (err) {
     console.error('Model upload failed', err);
+    // Cloudinary rejects files exceeding the plan's per-upload size cap with a
+    // message like "File size too large. Got N. Maximum is M."
+    if (/file size too large/i.test(err?.message)) {
+      const limitMB = Math.round(MODEL_SIZE_LIMIT / 1024 / 1024);
+      return res.status(413).json({ error: `Arquivo muito grande. O limite é ${limitMB} MB.` });
+    }
     res.status(502).json({ error: 'Falha ao enviar o modelo para o armazenamento', reason: err?.message || String(err) });
   }
 });

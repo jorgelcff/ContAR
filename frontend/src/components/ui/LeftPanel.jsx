@@ -191,8 +191,8 @@ export default function LeftPanel({
     if (!valid) { e.target.value = ''; return; }
     e.target.value = '';
 
-    // Validate size before uploading (backend limit: 50 MB)
-    const MAX_MODEL_MB = 50;
+    // Validate size before uploading (Cloudinary free plan: 10 MB)
+    const MAX_MODEL_MB = 10;
     if (file.size > MAX_MODEL_MB * 1024 * 1024) {
       const sizeMB = (file.size / 1024 / 1024).toFixed(1);
       addToast(t('lpModelTooLarge', { size: sizeMB, max: MAX_MODEL_MB }), 'error', 8000);

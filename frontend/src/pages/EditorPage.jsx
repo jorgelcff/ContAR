@@ -319,6 +319,17 @@ export default function EditorPage() {
     return () => { active = false; };
   }, [storyScenes, sceneTitlesById, setSceneTitlesById]);
 
+  // ── Keep timeline in sync with live scene title edits ────────
+  useEffect(() => {
+    if (!currentSceneId) return;
+    setSceneTitlesById((prev) => {
+      const current = prev[currentSceneId];
+      const next = sceneTitle?.trim() || '';
+      if (current === next) return prev;
+      return { ...prev, [currentSceneId]: next };
+    });
+  }, [currentSceneId, sceneTitle, setSceneTitlesById]);
+
   // ── Handlers ─────────────────────────────────────────────────
   const handleSave = async () => {
     setIsSaving(true);

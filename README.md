@@ -1,41 +1,41 @@
 # ContAR
 
-Plataforma web **no-code** para criação, publicação e compartilhamento de narradores virtuais 3D interativos com fala, lip sync e realidade aumentada.
+**No-code** web platform for creating, publishing, and sharing interactive 3D virtual narrators with speech, lip sync, and augmented reality.
 
-## Contexto de pesquisa
+## Research context
 
-O ContAR nasceu de uma pesquisa acadêmica no Centro de Informática (CIn) da UFPE e é apresentado como artigo no **SVR (Symposium on Virtual and Augmented Reality)**.
+ContAR originated from academic research at the Centro de Informática (CIn), Universidade Federal de Pernambuco (UFPE), and is presented as a paper at **SVR (Symposium on Virtual and Augmented Reality)**.
 
-## Referências
+## References
 
-- Repositório: https://github.com/jorgelcff/avaturn-threejs
-- Produção: https://avaturn-threejs-1.onrender.com
+- Repository: https://github.com/jorgelcff/avaturn-threejs
+- Production: https://avaturn-threejs-1.onrender.com
 
-## Escopo atual (sem marketing)
+## Current scope (no marketing)
 
-O ContAR já cobre o fluxo principal de autoria:
+ContAR already covers the main authoring flow:
 
-- criar/carregar avatar;
-- escrever texto e gerar narração;
-- salvar cenas e montar história;
-- publicar com link público;
-- visualizar em viewer web e modos AR.
+- create/load an avatar;
+- write text and generate narration;
+- save scenes and assemble a story;
+- publish with a public link;
+- view in the web viewer and AR modes.
 
-Limites atuais importantes:
+Important current limitations:
 
-- a validação principal ainda é no frontend; backend ainda não possui suíte de testes real;
-- parte da experiência mobile e do onboarding segue em ajuste;
-- alguns fluxos de AR dependem de compatibilidade do navegador/dispositivo.
+- validation is mostly on the frontend; the backend has no real test suite yet;
+- parts of the mobile experience and onboarding are still being refined;
+- some AR flows depend on browser/device compatibility.
 
-## Guia rápido para desenvolvedores
+## Quick start for developers
 
-### Pré-requisitos
+### Prerequisites
 
 - Node.js 18+
 - npm
-- MongoDB local **ou** Docker
+- Local MongoDB **or** Docker
 
-### Setup local (sem Docker)
+### Local setup (without Docker)
 
 ```bash
 npm run install:all
@@ -43,12 +43,12 @@ cp backend/.env.example backend/.env
 npm run dev
 ```
 
-URLs locais:
+Local URLs:
 
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:3001`
 
-### Setup com Docker
+### Setup with Docker
 
 ```bash
 cp .env.example .env
@@ -56,13 +56,13 @@ cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
-Serviços:
+Services:
 
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:3001`
 - MongoDB: `mongodb://localhost:27017/avaturn3d`
 
-## Arquitetura e stack
+## Architecture and stack
 
 ```text
 Frontend (React SPA)  ->  Backend (Node/Express API)  ->  MongoDB
@@ -70,9 +70,9 @@ Frontend (React SPA)  ->  Backend (Node/Express API)  ->  MongoDB
 
 - **Frontend:** React 19, Vite, TailwindCSS v4, Three.js, Zustand, i18next
 - **Backend:** Node.js, Express 5, Mongoose, JWT, Multer
-- **Infra local:** Docker Compose (mongo + backend + frontend)
+- **Local infra:** Docker Compose (mongo + backend + frontend)
 
-Estrutura:
+Structure:
 
 ```text
 ContAR/
@@ -81,7 +81,7 @@ ContAR/
 └── docker-compose.yml
 ```
 
-## API principal
+## Main API
 
 ### Auth (`/api/auth`)
 
@@ -95,14 +95,14 @@ ContAR/
 - `PUT /account`
 - `PUT /change-password`
 
-### Cenas (`/api/scene`)
+### Scenes (`/api/scene`)
 
 - `POST /`
 - `GET /`
 - `GET /:id`
 - `DELETE /:id`
 
-### Histórias (`/api/story`)
+### Stories (`/api/story`)
 
 - `POST /`
 - `GET /`
@@ -110,7 +110,7 @@ ContAR/
 - `GET /:id`
 - `DELETE /:id`
 
-### Mídia (`/api/media`)
+### Media (`/api/media`)
 
 - `POST /audio`
 - `POST /model`
@@ -119,15 +119,15 @@ ContAR/
 
 - `POST /generate`
 
-### Avatares (`/api/avatar`)
+### Avatars (`/api/avatar`)
 
 - `POST /`
 - `POST /session`
 - `GET /list`
 
-## Scripts úteis
+## Useful scripts
 
-### Raiz
+### Root
 
 - `npm run dev`
 - `npm run dev:backend`
@@ -145,9 +145,9 @@ ContAR/
 - `npm run dev --prefix backend`
 - `npm start --prefix backend`
 
-## Variáveis de ambiente (backend)
+## Environment variables (backend)
 
-Com base em `backend/.env.example`:
+Based on `backend/.env.example`:
 
 - `PORT`
 - `MONGODB_URI`
@@ -157,21 +157,21 @@ Com base em `backend/.env.example`:
 - `FRONTEND_URL`
 - `CORS_ORIGIN`
 - `TRUST_PROXY`
-- `ELEVENLABS_API_KEY` (opcional)
-- `AVATURN_API_TOKEN` (opcional)
-- `AVATURN_API_BASE_URL` (opcional)
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — **obrigatório em produção**: sem essas três, uploads de avatar/áudio caem no disco local, que é efêmero no Render e é apagado a cada deploy/restart
+- `ELEVENLABS_API_KEY` (optional)
+- `AVATURN_API_TOKEN` (optional)
+- `AVATURN_API_BASE_URL` (optional)
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` — **required in production**: without these three, avatar/audio uploads fall back to local disk, which is ephemeral on Render and gets wiped on every deploy/restart
 
-> Observação: o backend também suporta Azure Speech TTS quando `AZURE_SPEECH_KEY` e `AZURE_SPEECH_REGION` estão definidos.
+> Note: the backend also supports Azure Speech TTS when `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` are set.
 
-## Estado atual de validação
+## Current validation status
 
-- `npm run lint --prefix frontend` → possui erros preexistentes no repositório
-- `npm run build --prefix frontend` → build concluído com sucesso
-- `npm test --prefix backend` → script placeholder (falha por padrão)
-- `npm audit` (frontend e backend) → 0 vulnerabilidades conhecidas
-- backend recusa subir em produção (`NODE_ENV=production`) sem um `AUTH_JWT_SECRET` real definido
+- `npm run lint --prefix frontend` → has pre-existing errors in the repository
+- `npm run build --prefix frontend` → builds successfully
+- `npm test --prefix backend` → placeholder script (fails by default)
+- `npm audit` (frontend and backend) → 0 known vulnerabilities
+- the backend refuses to start in production (`NODE_ENV=production`) without a real `AUTH_JWT_SECRET` set
 
-## Licença
+## License
 
-Licença formal a definir conforme estratégia de publicação.
+Formal license to be defined based on publication strategy.

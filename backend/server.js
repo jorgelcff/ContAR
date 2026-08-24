@@ -4,6 +4,9 @@ const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
 
+const { getAuthSecret } = require('./config/auth');
+getAuthSecret(); // fail fast in production if AUTH_JWT_SECRET is missing/insecure
+
 const sceneRoutes = require('./routes/sceneRoutes');
 const avatarRoutes = require('./routes/avatarRoutes');
 const storyRoutes = require('./routes/storyRoutes');

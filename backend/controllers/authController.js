@@ -4,14 +4,7 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
-
-function getAuthSecret() {
-  const secret = (process.env.AUTH_JWT_SECRET || 'dev_only_change_me').trim();
-  if (secret === 'dev_only_change_me') {
-    console.warn('[AUTH] WARNING: AUTH_JWT_SECRET is using the insecure default. Set a strong secret in production.');
-  }
-  return secret;
-}
+const { getAuthSecret } = require('../config/auth');
 
 function signToken(user) {
   return jwt.sign(

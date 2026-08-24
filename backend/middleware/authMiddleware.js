@@ -1,8 +1,5 @@
 const jwt = require('jsonwebtoken');
-
-function getAuthSecret() {
-  return (process.env.AUTH_JWT_SECRET || 'dev_only_change_me').trim();
-}
+const { getAuthSecret } = require('../config/auth');
 
 function requireAuth(req, res, next) {
   const header = String(req.headers?.authorization || '');

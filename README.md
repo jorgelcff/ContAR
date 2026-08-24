@@ -4,7 +4,7 @@ Plataforma web **no-code** para criação, publicação e compartilhamento de na
 
 ## Contexto de pesquisa
 
-O ContAR nasceu de uma pesquisa acadêmica no Centro de Informática (CIn) da UFPE e é apresentado como artigo no **SVR (Symposium on Virtual and Augmented Reality)**. O paper completo, com metodologia de avaliação (Expert Walkthrough) e resultados, está em [`docs/tcc/svr_article.tex`](docs/tcc/svr_article.tex).
+O ContAR nasceu de uma pesquisa acadêmica no Centro de Informática (CIn) da UFPE e é apresentado como artigo no **SVR (Symposium on Virtual and Augmented Reality)**.
 
 ## Referências
 
@@ -78,7 +78,6 @@ Estrutura:
 ContAR/
 ├── frontend/
 ├── backend/
-├── docs/tcc/         paper acadêmico e material de pesquisa
 └── docker-compose.yml
 ```
 

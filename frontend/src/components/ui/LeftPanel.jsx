@@ -13,11 +13,11 @@ import { useToast } from '../../context/ToastContext';
 
 const AVATURN_USER_ID_KEY = 'avaturn:userId';
 
-const TABS = [
-  { id: 'avatar',   label: 'Avatar',   icon: 'avatar' },
-  { id: 'fala',     label: 'Fala',     icon: 'speech' },
-  { id: 'cena',     label: 'Cena',     icon: 'scene' },
-  { id: 'historia', label: 'História', icon: 'story' },
+const TAB_DEFS = [
+  { id: 'avatar',   labelKey: 'tabAvatar',   icon: 'avatar' },
+  { id: 'fala',     labelKey: 'tabFala',     icon: 'speech' },
+  { id: 'cena',     labelKey: 'tabCena',     icon: 'scene' },
+  { id: 'historia', labelKey: 'tabHistoria', icon: 'story' },
 ];
 
 export default function LeftPanel({
@@ -36,9 +36,11 @@ export default function LeftPanel({
   textDisplayMode = 'bubble',
   onTextDisplayModeChange,
   avatarClips = [],
+  jawApi,
 }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
+  const TABS = TAB_DEFS.map((tab) => ({ ...tab, label: t(tab.labelKey) }));
 
   const {
     avatarUrl, setAvatarUrl,
@@ -182,12 +184,22 @@ export default function LeftPanel({
   const handleLocalGlbChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Prevent a second upload while one is already in flight
+    if (isUploadingGlb) return;
     const lower = file.name.toLowerCase();
     const valid = lower.endsWith('.glb') || lower.endsWith('.vrm')
       || file.type === 'model/gltf-binary' || file.type === 'model/vrm'
       || file.type === 'application/octet-stream';
     if (!valid) { e.target.value = ''; return; }
     e.target.value = '';
+
+    // Validate size before uploading (Cloudinary free plan: 10 MB)
+    const MAX_MODEL_MB = 10;
+    if (file.size > MAX_MODEL_MB * 1024 * 1024) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      addToast(t('lpModelTooLarge', { size: sizeMB, max: MAX_MODEL_MB }), 'error', 8000);
+      return;
+    }
 
     // Preview immediately with blob URL
     if (localBlobUrlRef.current) URL.revokeObjectURL(localBlobUrlRef.current);
@@ -210,8 +222,17 @@ export default function LeftPanel({
       } else {
         addToast(t('epAvatarSaved'), 'success');
       }
-    } catch {
-      addToast('Avatar carregado localmente. Será perdido ao recarregar a página.', 'warning', 6000);
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 413) {
+        addToast(t('lpModelTooLarge', { size: (file.size / 1024 / 1024).toFixed(1), max: MAX_MODEL_MB }), 'error', 8000);
+      } else if (status === 401 || status === 403) {
+        addToast(t('lpModelUploadAuth'), 'error', 6000);
+      } else if (status === 429) {
+        addToast(t('lpModelUploadRateLimit'), 'warning', 6000);
+      } else {
+        addToast(t('lpModelUploadFailed'), 'warning', 6000);
+      }
     } finally {
       setIsUploadingGlb(false);
     }
@@ -652,6 +673,51 @@ export default function LeftPanel({
                   </div>
                 );
               })()}
+              {jawApi?.hasSyntheticJaw && (
+                <div className="border border-cyan-700/40 rounded-xl p-3 space-y-2 bg-cyan-950/30">
+                  <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1">
+                    <Icon name="settings" className="w-3.5 h-3.5" />
+                    {t('lpJawConfig')}
+                  </p>
+                  <p className="text-[11px] text-gray-400">{t('lpJawConfigHelp')}</p>
+                  <button
+                    onClick={() => jawApi.startPlacement()}
+                    className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                      jawApi.jawPlacementMode
+                        ? 'bg-green-700 text-green-100 animate-pulse'
+                        : 'bg-cyan-800 hover:bg-cyan-700 text-cyan-100'
+                    }`}
+                  >
+                    {jawApi.jawPlacementMode ? t('lpJawClickModel') : t('lpJawPlace')}
+                  </button>
+                  {jawApi.hasBasePos && (
+                    <>
+                      {['x', 'y', 'z'].map((key) => (
+                        <label key={key} className="flex items-center gap-1.5 text-xs text-gray-300">
+                          <span className="w-14 shrink-0 font-medium">{t('lpJawAdjust')} {key.toUpperCase()}</span>
+                          <input
+                            type="range" min={-0.1} max={0.1} step={0.001}
+                            value={jawApi.jawOffset[key]}
+                            onChange={(e) => jawApi.setOffset({ ...jawApi.jawOffset, [key]: parseFloat(e.target.value) })}
+                            className="flex-1 accent-cyan-400"
+                          />
+                          <span className="w-12 text-right font-mono text-[10px] text-cyan-300">{jawApi.jawOffset[key].toFixed(3)}</span>
+                        </label>
+                      ))}
+                      <label className="flex items-center gap-1.5 text-xs text-gray-300">
+                        <span className="w-14 shrink-0 font-medium">{t('lpJawRadius')}</span>
+                        <input
+                          type="range" min={0.01} max={0.2} step={0.005}
+                          value={jawApi.jawRadius}
+                          onChange={(e) => jawApi.setRadius(parseFloat(e.target.value))}
+                          className="flex-1 accent-cyan-400"
+                        />
+                        <span className="w-12 text-right font-mono text-[10px] text-cyan-300">{jawApi.jawRadius.toFixed(3)}</span>
+                      </label>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {audio && (

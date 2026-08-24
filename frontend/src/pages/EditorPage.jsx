@@ -95,6 +95,7 @@ export default function EditorPage() {
   // Names of animation clips embedded in the currently loaded avatar GLB,
   // surfaced by SceneCanvas so the panel can offer them for direct selection.
   const [avatarClips, setAvatarClips] = useState([]);
+  const [jawApi, setJawApi] = useState(null);
 
   useEffect(() => {
     if (hadLocalAvatarOnInit()) {
@@ -102,6 +103,7 @@ export default function EditorPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [isSaving, setIsSaving] = useState(false);
+  const [isAddingScene, setIsAddingScene] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -154,8 +156,14 @@ export default function EditorPage() {
           autosaveEducatedRef.current = true;
           addToast(t('epAutosaveEducational'), 'info', 4000);
         }
-      } catch {
+      } catch (err) {
         setAutosaveStatus(null);
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          addToast(t('epAutosaveFailedAuth'), 'error', 7000);
+        } else {
+          addToast(t('epAutosaveFailed'), 'warning', 5000);
+        }
       }
     }, 5000);
     return () => clearTimeout(autosaveTimerRef.current);
@@ -311,6 +319,17 @@ export default function EditorPage() {
     return () => { active = false; };
   }, [storyScenes, sceneTitlesById, setSceneTitlesById]);
 
+  // ── Keep timeline in sync with live scene title edits ────────
+  useEffect(() => {
+    if (!currentSceneId) return;
+    setSceneTitlesById((prev) => {
+      const current = prev[currentSceneId];
+      const next = sceneTitle?.trim() || '';
+      if (current === next) return prev;
+      return { ...prev, [currentSceneId]: next };
+    });
+  }, [currentSceneId, sceneTitle, setSceneTitlesById]);
+
   // ── Handlers ─────────────────────────────────────────────────
   const handleSave = async () => {
     setIsSaving(true);
@@ -337,32 +356,59 @@ export default function EditorPage() {
   };
 
   const handleAddCurrentSceneToStory = async () => {
+    // Guard against double-click creating multiple blank entries
+    if (isAddingScene) return;
+    setIsAddingScene(true);
     setError('');
     try {
-      const result = await saveScene(buildScenePayload(undefined));
-      const sceneId = result?.sceneId;
-      if (!sceneId) throw new Error('Missing sceneId in save response');
-      const sceneCount = useSceneStore.getState().storyScenes.length;
-      // Capture the title *before* clearing it so the story-builder card shows
-      // the user-typed name instead of a truncated ID.
-      const titleForCard = useSceneStore.getState().sceneTitle || '';
-      useSceneStore.getState().addStoryScene(sceneId);
-      if (titleForCard) {
-        setSceneTitlesById({ [sceneId]: titleForCard });
+      const store = useSceneStore.getState();
+      const existingId = store.currentSceneId;
+      const hadAudio = !!store.narrativeAudioUrl;
+
+      // 1. Save current scene in-place (update, never create a copy).
+      //    Only bother if there is actual content worth preserving.
+      if (existingId || store.avatarUrl || store.speechText || store.sceneTitle) {
+        try {
+          const result = await saveScene(buildScenePayload(existingId || undefined));
+          const savedId = result?.sceneId;
+          // If this scene wasn't in the story yet, add it (first-time add).
+          if (savedId && !store.storyScenes.some((s) => s.sceneId === savedId)) {
+            store.addStoryScene(savedId);
+            store.setSceneTitlesById({ [savedId]: store.sceneTitle?.trim() || '' });
+          }
+        } catch {
+          // Best-effort — don't block new scene creation on a save failure.
+        }
       }
-      // Detach from this scene: further edits/autosave should create a new
-      // scene instead of overwriting the one we just added to the story.
-      // Also clear the title so the next scene doesn't get saved with the
-      // same name (which made it look like nothing new was created).
-      setCurrentSceneId('');
-      useSceneStore.getState().setSceneTitle('');
-      addToast(t('epSceneAddedClear', { n: sceneCount + 1 }), 'success', 4000);
-      if (!useSceneStore.getState().narrativeAudioUrl) {
+
+      // 2. Generate a fresh UUID for the new blank scene, reset editor.
+      const newSceneId = crypto.randomUUID();
+      store.resetSceneForNew();
+      store.setCurrentSceneId(newSceneId);
+      store.addStoryScene(newSceneId);
+      store.setSceneTitlesById({ [newSceneId]: '' });
+
+      // 3. Pre-mark as "loaded" so the scene-load effect doesn't try to GET
+      //    this UUID from the server (it doesn't exist yet — first edit/autosave
+      //    will create it via upsert).
+      loadedSceneIdRef.current = newSceneId;
+
+      // 4. Update URL so the address bar reflects the new scene and a refresh
+      //    lands back here (once it's been saved at least once).
+      const params = new URLSearchParams(searchParams);
+      params.set('sceneId', newSceneId);
+      setSearchParams(params, { replace: false });
+
+      const n = useSceneStore.getState().storyScenes.length;
+      addToast(t('epSceneAddedClear', { n }), 'success', 3000);
+      if (!hadAudio) {
         addToast(t('epSceneNoAudioWarning'), 'warning', 5000);
       }
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro: ${err.message}`, 'error');
+    } finally {
+      setIsAddingScene(false);
     }
   };
 
@@ -501,6 +547,7 @@ export default function EditorPage() {
           mobilePanelTab={mobilePanelTab}
           onMobilePanelClose={() => setMobilePanelTab(null)}
           avatarClips={avatarClips}
+          jawApi={jawApi}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center gap-3 px-4 py-2 border-b border-gray-800 bg-gray-950">
@@ -556,10 +603,11 @@ export default function EditorPage() {
                 vrmExpression={vrmExpression}
                 textDisplayMode={textDisplayMode}
                 onAvatarClips={setAvatarClips}
+                onJawApi={setJawApi}
               />
             </Suspense>
           </div>
-          <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} />
+          <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} isAddingScene={isAddingScene} />
         </div>
       </div>
 

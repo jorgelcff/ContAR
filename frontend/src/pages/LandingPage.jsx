@@ -390,6 +390,21 @@ export default function LandingPage() {
           <blockquote className="max-w-lg text-gray-400 text-sm italic leading-relaxed border-l-2 border-cyan-500/40 pl-4 text-left">
             {t('landingSocialQuote')}
           </blockquote>
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+              {t('landingInstitutionalLabel', 'Desenvolvido em parceria com')}
+            </p>
+            <div className="flex items-center gap-6">
+              <a href="https://portal.cin.ufpe.br" target="_blank" rel="noopener noreferrer"
+                className="rounded-xl bg-white/90 px-5 py-3 hover:bg-white transition-colors shadow-sm">
+                <img src="/logo-cin-ufpe.png" alt="Centro de Informática - UFPE" className="h-14 w-auto" />
+              </a>
+              <a href="https://www.cin.ufpe.br/~voxarlabs/" target="_blank" rel="noopener noreferrer"
+                className="rounded-xl bg-white/90 px-5 py-3 hover:bg-white transition-colors shadow-sm">
+                <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-14 w-auto" />
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -416,16 +431,26 @@ export default function LandingPage() {
 
       {/* ── Footer ──────────────────────────────────────────────── */}
       <footer className="border-t border-white/5 py-8 px-5">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
-          <div className="flex items-center gap-2">
-            <Icon name="scene" className="w-4 h-4" />
-            <span className="font-semibold text-gray-500">ContAR</span>
-            <span>· © {new Date().getFullYear()}</span>
+        <div className="max-w-6xl mx-auto flex flex-col items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="rounded-lg bg-white/90 px-3 py-2">
+              <img src="/logo-cin-ufpe.png" alt="CIn UFPE" className="h-8 w-auto" />
+            </div>
+            <div className="rounded-lg bg-white/90 px-3 py-2">
+              <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-8 w-auto" />
+            </div>
           </div>
-          <div className="flex gap-6">
-            <Link to="/login" className="hover:text-gray-400 transition-colors">{t('landingFooterEnter')}</Link>
-            <Link to="/ar"    className="hover:text-gray-400 transition-colors">{t('landingFooterAr')}</Link>
-            <Link to="/login" className="hover:text-gray-400 transition-colors">{t('landingFooterCreate')}</Link>
+          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
+            <div className="flex items-center gap-2">
+              <Icon name="scene" className="w-4 h-4" />
+              <span className="font-semibold text-gray-500">ContAR</span>
+              <span>· © {new Date().getFullYear()}</span>
+            </div>
+            <div className="flex gap-6">
+              <Link to="/login" className="hover:text-gray-400 transition-colors">{t('landingFooterEnter')}</Link>
+              <Link to="/ar"    className="hover:text-gray-400 transition-colors">{t('landingFooterAr')}</Link>
+              <Link to="/login" className="hover:text-gray-400 transition-colors">{t('landingFooterCreate')}</Link>
+            </div>
           </div>
         </div>
       </footer>

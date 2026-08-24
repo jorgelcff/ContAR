@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -11,6 +11,7 @@ import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
 import { applyPosePreset, captureRestPoseSnapshot } from '../../utils/posePresets';
+import { injectSyntheticJaw, repositionSyntheticJaw, createJawDebugVisuals, SYNTHETIC_JAW_NAME } from '../../utils/syntheticJaw';
 import { mapBones as mapBonesApi } from '../../api/sceneApi';
 
 const BONE_LABELS = {
@@ -64,6 +65,35 @@ const VISEME_GROUP_MAP = {
   X: { mbp: 0.3 },
 };
 
+// Azure TTS viseme IDs (0–21) → ARKit blendshape names (Avaturn / ReadyPlayerMe).
+// When the avatar has these blendshapes directly, we drive them instead of the
+// heuristic groups, producing accurate lip sync with Azure TTS.
+// Reference: https://learn.microsoft.com/azure/ai-services/speech-service/how-to-speech-synthesis-viseme
+const AZURE_VISEME_TO_ARKIT = {
+  0:  null,            // sil
+  1:  'viseme_PP',     // p, b, m
+  2:  'viseme_FF',     // f, v
+  3:  'viseme_TH',     // th
+  4:  'viseme_DD',     // t, d
+  5:  'viseme_kk',     // k, g
+  6:  'viseme_CH',     // tʃ, dʒ, ʃ
+  7:  'viseme_SS',     // s, z
+  8:  'viseme_nn',     // n, l
+  9:  'viseme_RR',     // r
+  10: 'viseme_aa',     // ɑ (father)
+  11: 'viseme_aa',     // æ (cat)
+  12: 'viseme_aa',     // ʌ (but)
+  13: 'viseme_O',      // ɔ (all)
+  14: 'viseme_U',      // ʊ (book)
+  15: 'viseme_O',      // oʊ (no)
+  16: 'viseme_U',      // uː (too)
+  17: 'viseme_aa',     // aɪ (my)
+  18: 'viseme_O',      // aʊ (cow)
+  19: 'viseme_I',      // ɪ (it)
+  20: 'viseme_E',      // eɪ (say)
+  21: 'viseme_I',      // iː (see)
+};
+
 const MOUTH_OPEN_PATTERNS = [
   /jaw.*open/i,
   /mouth.*open/i,
@@ -96,6 +126,7 @@ const JAW_BONE_PATTERNS = [
   /mixamorigjaw/i,
   /cc_base_jawroot/i,
   /head_jaw/i,
+  /^__synthetic_jaw$/,
 ];
 
 const VISEME_PATTERNS = {
@@ -160,6 +191,7 @@ export default function SceneCanvas({
   vrmExpression,
   textDisplayMode = "bubble",
   onAvatarClips,
+  onJawApi,
 }) {
   // Enable Three.js resource cache so reloading the same GLB/HDR skips a round-trip.
   THREE.Cache.enabled = true;
@@ -221,7 +253,15 @@ export default function SceneCanvas({
   const lastDebugCommitAtRef = useRef(0);
   const jawSmoothedOpenRef = useRef(0);
   const adaptiveNoiseFloorRef = useRef(0.005);
+  const syntheticJawRef = useRef(null);
+  const jawDebugVisualsRef = useRef(null);
+  const [jawPlacementMode, setJawPlacementMode] = useState(false);
+  const [jawOffset, setJawOffset] = useState({ x: 0, y: 0, z: 0 });
+  const [jawRadius, setJawRadius] = useState(0.05);
+  const [jawBaseWorldPos, setJawBaseWorldPos] = useState(null);
   const jawJitterPhaseRef = useRef(0);
+  const onJawApiRef = useRef(onJawApi);
+  onJawApiRef.current = onJawApi;
   // Reusable typed array for analyser reads (allocated once per fftSize)
   const lipSyncDataRef = useRef(null);
   const lipSyncFreqDataRef = useRef(null);
@@ -573,6 +613,7 @@ export default function SceneCanvas({
       const lipSyncController = lipSyncControllerRef.current;
       const jawBones = jawBonesRef.current;
       const hasMorphs = lipSyncController?.hasTargets;
+      const hasArkitVisemes = avatarRef.current?.userData.__hasArkitVisemes ?? false;
       const pseudoJawRig = isPseudoJawRig(jawBones);
       const effectiveConfig = pseudoJawRig
         ? {
@@ -593,11 +634,18 @@ export default function SceneCanvas({
         lipSyncController.resetGroups();
         if (timelineBlend) {
           timelineBlend.forEach(({ cue, weight }) => {
-            const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
-            if (blend) {
-              Object.entries(blend).forEach(([grp, w]) => {
-                lipSyncController.setGroupValue(grp, THREE.MathUtils.clamp(0.85 * weight * w, 0, 1));
-              });
+            const visemeId = Number(cue?.value);
+            if (hasArkitVisemes && !isNaN(visemeId)) {
+              // Direct Azure ID → ARKit blendshape for Avaturn / ReadyPlayerMe
+              const blendshape = AZURE_VISEME_TO_ARKIT[visemeId];
+              if (blendshape) lipSyncController.setMorphValue(blendshape, THREE.MathUtils.clamp(0.85 * weight, 0, 1));
+            } else {
+              const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
+              if (blend) {
+                Object.entries(blend).forEach(([grp, w]) => {
+                  lipSyncController.setGroupValue(grp, THREE.MathUtils.clamp(0.85 * weight * w, 0, 1));
+                });
+              }
             }
           });
         }
@@ -737,11 +785,17 @@ export default function SceneCanvas({
                 0,
                 1,
               );
-              const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
-              if (blend) {
-                Object.entries(blend).forEach(([grp, w]) => {
-                  lipSyncController.setGroupValue(grp, cueIntensity * w);
-                });
+              const visemeId = Number(cue?.value);
+              if (hasArkitVisemes && !isNaN(visemeId)) {
+                const blendshape = AZURE_VISEME_TO_ARKIT[visemeId];
+                if (blendshape) lipSyncController.setMorphValue(blendshape, cueIntensity);
+              } else {
+                const blend = VISEME_GROUP_MAP[String(cue?.value || "").toUpperCase()];
+                if (blend) {
+                  Object.entries(blend).forEach(([grp, w]) => {
+                    lipSyncController.setGroupValue(grp, cueIntensity * w);
+                  });
+                }
               }
             });
           } else {
@@ -819,6 +873,8 @@ export default function SceneCanvas({
           }`,
           analyserReady: true,
           hasMorphs,
+          hasArkitVisemes,
+          mouthTargetCount: lipSyncController?._mouthTargetCount ?? 0,
           jawBoneCount: jawBones.length,
         };
       } else {
@@ -850,6 +906,8 @@ export default function SceneCanvas({
               : "idle",
           analyserReady: hasAnalyser,
           hasMorphs,
+          hasArkitVisemes,
+          mouthTargetCount: lipSyncController?._mouthTargetCount ?? 0,
           jawBoneCount: jawBones.length,
         };
       }
@@ -1027,6 +1085,38 @@ export default function SceneCanvas({
         lipSyncControllerRef.current?.dispose();
         const lipSyncController = new LipSyncController(model);
         lipSyncControllerRef.current = lipSyncController;
+
+        // Detect ARKit blendshapes (Avaturn / ReadyPlayerMe) for direct Azure viseme mapping
+        const allMorphNames = new Set(lipSyncController.getAll().map((t) => t.name));
+        const hasArkitVisemes = AZURE_VISEME_TO_ARKIT[10] && allMorphNames.has(AZURE_VISEME_TO_ARKIT[10]);
+        avatarRef.current.userData.__hasArkitVisemes = hasArkitVisemes;
+        if (hasArkitVisemes && import.meta.env.DEV) {
+          console.log('[SceneCanvas] ARKit visemes detected — using direct Azure→ARKit mapping');
+        }
+
+        // Inject a synthetic jaw bone for avatars with no mouth control
+        syntheticJawRef.current = null;
+        jawDebugVisualsRef.current?.dispose();
+        jawDebugVisualsRef.current = null;
+        setJawBaseWorldPos(null);
+        setJawOffset({ x: 0, y: 0, z: 0 });
+        if (!lipSyncController.hasMouth) {
+          const result = injectSyntheticJaw(model, boneMapper);
+          if (result) {
+            syntheticJawRef.current = result.jawBone;
+            lipSyncController._jawBone = result.jawBone;
+            lipSyncController._jawRestQuat = result.jawBone.quaternion.clone();
+            setJawRadius(result.radius);
+            jawDebugVisualsRef.current = createJawDebugVisuals(
+              sceneRef.current, result.jawBone, result.radius,
+            );
+            onJawApiRef.current?.({ hasSyntheticJaw: true, radius: result.radius });
+          } else {
+            onJawApiRef.current?.(null);
+          }
+        } else {
+          onJawApiRef.current?.(null);
+        }
 
         const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
 
@@ -1318,12 +1408,126 @@ export default function SceneCanvas({
     }
   };
 
+  // ── Expose jaw control API to parent ────────────────────────────────
+  const jawRepositionHandler = useCallback((offset, radius) => {
+    const model = avatarRef.current;
+    const jawBone = syntheticJawRef.current;
+    const boneMapper = boneMapperRef.current;
+    const basePos = jawBaseWorldPos;
+    if (!model || !jawBone || !boneMapper || !basePos) return;
+    const newPos = basePos.clone().add(new THREE.Vector3(offset.x, offset.y, offset.z));
+    const result = repositionSyntheticJaw(model, jawBone, newPos, boneMapper, radius);
+    jawBone.updateWorldMatrix(true, false);
+    const lipSync = lipSyncControllerRef.current;
+    if (lipSync) lipSync._jawRestQuat = jawBone.quaternion.clone();
+    jawBone.userData.__jawRestQuat = jawBone.quaternion.clone();
+    jawDebugVisualsRef.current?.dispose();
+    jawDebugVisualsRef.current = createJawDebugVisuals(sceneRef.current, jawBone, result.radius);
+    const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
+    jawBonesRef.current = jawBones;
+    return result;
+  }, [jawBaseWorldPos, manualJawBoneName]);
+
+  useEffect(() => {
+    if (!syntheticJawRef.current) { onJawApiRef.current?.(null); return; }
+    onJawApiRef.current?.({
+      hasSyntheticJaw: true,
+      jawPlacementMode,
+      jawOffset,
+      jawRadius,
+      hasBasePos: !!jawBaseWorldPos,
+      startPlacement: () => setJawPlacementMode(true),
+      setOffset: (newOffset) => {
+        setJawOffset(newOffset);
+        jawRepositionHandler(newOffset, jawRadius);
+      },
+      setRadius: (newRadius) => {
+        setJawRadius(newRadius);
+        jawRepositionHandler(jawOffset, newRadius);
+      },
+    });
+  }, [jawPlacementMode, jawOffset, jawRadius, jawBaseWorldPos, jawRepositionHandler]);
+
+  // ── Jaw placement click handler ──────────────────────────────────────
+  useEffect(() => {
+    if (!jawPlacementMode) return;
+    const container = containerRef.current;
+    const camera = cameraRef.current;
+    if (!container || !camera) return;
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const handleClick = (e) => {
+      const rect = container.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const model = avatarRef.current;
+      if (!model) return;
+
+      const meshes = [];
+      model.traverse((n) => { if (n.isMesh) meshes.push(n); });
+      const hits = raycaster.intersectObjects(meshes, false);
+      if (!hits.length) return;
+
+      const hitPoint = hits[0].point;
+      const jawBone = syntheticJawRef.current;
+      const boneMapper = boneMapperRef.current;
+      if (!jawBone || !boneMapper) return;
+
+      const { radius, affected } = repositionSyntheticJaw(
+        model, jawBone, hitPoint, boneMapper,
+      );
+
+      // Store base position and reset sliders
+      setJawBaseWorldPos(hitPoint.clone());
+      setJawRadius(radius);
+      setJawOffset({ x: 0, y: 0, z: 0 });
+
+      // Update rest quat for lip sync
+      jawBone.updateWorldMatrix(true, false);
+      const lipSync = lipSyncControllerRef.current;
+      if (lipSync) {
+        lipSync._jawRestQuat = jawBone.quaternion.clone();
+      }
+      // Update jawBones ref for SceneCanvas animation loop
+      jawBone.userData.__jawRestQuat = jawBone.quaternion.clone();
+
+      // Rebuild debug visuals at new position
+      jawDebugVisualsRef.current?.dispose();
+      jawDebugVisualsRef.current = createJawDebugVisuals(
+        sceneRef.current, jawBone, radius,
+      );
+
+      // Re-resolve jaw bones so the animation loop uses the repositioned bone
+      const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
+      jawBonesRef.current = jawBones;
+
+      setJawPlacementMode(false);
+      if (import.meta.env.DEV) {
+        console.log(`[SyntheticJaw] placed at [${hitPoint.toArray().map(n => n.toFixed(4)).join(', ')}], ${affected} vertices`);
+      }
+    };
+
+    container.addEventListener('click', handleClick, { once: true });
+    return () => container.removeEventListener('click', handleClick);
+  }, [jawPlacementMode, manualJawBoneName]);
+
   return (
     <div
       ref={containerRef}
       className="relative flex-1 w-full h-full overflow-hidden"
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "none", cursor: jawPlacementMode ? "crosshair" : undefined }}
     >
+      {jawPlacementMode && (
+        <div className="absolute inset-x-0 top-0 z-30 flex justify-center pointer-events-none">
+          <div className="mt-4 rounded-lg bg-cyan-900/90 border border-cyan-400 px-6 py-3 text-sm text-cyan-100 shadow-lg animate-pulse">
+            Clique na boca do avatar para posicionar a mandíbula
+          </div>
+        </div>
+      )}
       {avatarLoading && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/75 pointer-events-none">
           <div className="flex flex-col items-center gap-4">
@@ -1506,6 +1710,20 @@ export default function SceneCanvas({
               </option>
             ))}
           </select>
+          {syntheticJawRef.current && (
+            <button
+              onClick={() => setJawPlacementMode(true)}
+              className={`mt-2 w-full rounded border px-2 py-1 text-xs ${
+                jawPlacementMode
+                  ? "border-green-400 bg-green-900/60 text-green-100 animate-pulse"
+                  : "border-cyan-600 bg-cyan-900/60 text-cyan-100 hover:bg-cyan-800/70"
+              }`}
+            >
+              {jawPlacementMode
+                ? "Clique na boca do avatar..."
+                : "Posicionar mandíbula (clique no modelo)"}
+            </button>
+          )}
           <p className="mt-2 text-[11px] text-amber-300">
             Todos os ossos detectados
           </p>
@@ -1805,6 +2023,7 @@ function buildRigReport({
   lines.push(`mode=${debugSnapshot.mode}`);
   lines.push(`analyserReady=${debugSnapshot.analyserReady}`);
   lines.push(`mouthTargets=${debugSnapshot.mouthTargetCount ?? 0}`);
+  lines.push(`arkitVisemes=${debugSnapshot.hasArkitVisemes ? 'yes' : 'no'}`);
   lines.push(`jawBones=${debugSnapshot.jawBoneCount ?? 0}`);
   lines.push(`manualJawBone=${manualJawBoneName || "(auto)"}`);
   lines.push(

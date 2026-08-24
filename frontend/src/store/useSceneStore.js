@@ -87,7 +87,7 @@ const createStorySlice = (set, get) => ({
     storyScenes: typeof scenesConfig === 'function' ? scenesConfig(state.storyScenes) : scenesConfig,
   })),
   addStoryScene: (sceneId, transitionText = '', durationSeconds = 8) => set((state) => ({
-    storyScenes: [...state.storyScenes, { sceneId, transitionText, durationSeconds }],
+    storyScenes: [...state.storyScenes, { sceneId, transitionText, durationSeconds, markerUrl: '' }],
   })),
   removeStoryScene: (index) => set((state) => ({
     storyScenes: state.storyScenes.filter((_, i) => i !== index),

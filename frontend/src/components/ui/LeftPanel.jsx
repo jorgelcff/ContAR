@@ -130,8 +130,12 @@ export default function LeftPanel({
 
   useEffect(() => () => {
     if (localBlobUrlRef.current) {
-      URL.revokeObjectURL(localBlobUrlRef.current);
-      localBlobUrlRef.current = '';
+      const activeBlobUrl = localBlobUrlRef.current;
+      const currentAvatarUrl = useSceneStore.getState().avatarUrl;
+      if (currentAvatarUrl !== activeBlobUrl) {
+        URL.revokeObjectURL(activeBlobUrl);
+        localBlobUrlRef.current = '';
+      }
     }
     if (vrmaBlobUrlRef.current) {
       URL.revokeObjectURL(vrmaBlobUrlRef.current);

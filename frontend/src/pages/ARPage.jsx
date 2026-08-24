@@ -20,6 +20,7 @@ import {
   disposeObject3D,
   fitModelToGround,
   loadAnimationManifest,
+  getArUsableAvatarUrl,
   normalizeAvatarUrl,
   readSavedScale,
   resolveSceneAvatarUrl,
@@ -700,10 +701,12 @@ export default function ARPage() {
   const storedPosePreset = useSceneStore((s) => s.posePreset);
   const storedTextDisplayMode = useSceneStore((s) => s.textDisplayMode);
 
-  // Resolve effective URL: query param → stored avatar (HTTP only) → default
+  // Resolve effective URL: query param → stored avatar (non-blob) → default
   const resolveUrl = (param, stored) => {
-    if (param) return param;
-    if (stored && !stored.startsWith('blob:') && /^https?:\/\//i.test(stored)) return stored;
+    const paramUrl = getArUsableAvatarUrl(param);
+    if (paramUrl) return paramUrl;
+    const storedUrl = getArUsableAvatarUrl(stored);
+    if (storedUrl) return storedUrl;
     return '/default_model.glb';
   };
 
@@ -746,9 +749,7 @@ export default function ARPage() {
   };
 
   const isUsingStoredAvatar =
-    storedAvatarUrl &&
-    !storedAvatarUrl.startsWith('blob:') &&
-    /^https?:\/\//i.test(storedAvatarUrl) &&
+    Boolean(getArUsableAvatarUrl(storedAvatarUrl)) &&
     !searchParams.get('modelUrl');
 
   const isBlobOnly =

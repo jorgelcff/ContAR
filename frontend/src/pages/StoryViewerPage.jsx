@@ -224,7 +224,10 @@ export default function StoryViewerPage() {
   // Sends the user to the /ar mode menu (Surface AR, Immersive/markerless AR,
   // Marker AR) instead of a single hardcoded mode — not every device
   // supports WebXR hit-test, so the user needs to pick what works for them.
-  const arHref = `/ar?storyId=${id}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}`;
+  // Carries the current scene's markerUrl (if set) so it's pre-filled if the
+  // user picks Marker AR from the menu.
+  const currentMarkerUrl = storyScenes[index]?.markerUrl || '';
+  const arHref = `/ar?storyId=${id}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}${currentMarkerUrl ? `&markerUrl=${encodeURIComponent(currentMarkerUrl)}` : ''}`;
 
   // First scene avatar for splash background hint
   const firstAvatarUrl = storyScenes[0] ? null : null; // reserved for future thumbnail

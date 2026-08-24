@@ -326,6 +326,8 @@ export default function SceneCanvas({
     source: "none",
     resolvedCount: 0,
   });
+  // Controls visibility of the bone-override panel for regular users
+  const [showBoneMapperPanel, setShowBoneMapperPanel] = useState(false);
 
   const mergedLipSyncConfig = {
     ...DEFAULT_LIP_SYNC_CONFIG,
@@ -1743,6 +1745,74 @@ export default function SceneCanvas({
             ))}
           </ul>
         </div>
+      )}
+      {/* ── Bone mapper panel — accessible to all users without ?dev ── */}
+      {!showDevTools && showBoneMapperPanel && boneCatalogSnapshot.length > 0 && (
+        <div className="absolute left-3 bottom-3 z-20 w-72 max-h-[70vh] overflow-y-auto rounded-md border border-indigo-700/70 bg-gray-950/95 px-3 py-2 text-xs text-gray-100 shadow-xl">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-semibold text-indigo-300 uppercase tracking-wide text-[11px]">
+              🦴 Mapeamento de Ossos
+            </p>
+            <button
+              onClick={() => setShowBoneMapperPanel(false)}
+              className="text-gray-500 hover:text-gray-200 text-base leading-none transition-colors"
+              title="Fechar"
+            >
+              ×
+            </button>
+          </div>
+          <p className="text-[11px] text-gray-400 mb-2">
+            Esqueleto detectado:{" "}
+            <span className="text-indigo-300 font-medium">{boneMapperInfo.source}</span>
+            {" "}({boneMapperInfo.resolvedCount} ossos mapeados automaticamente)
+          </p>
+          <p className="text-[11px] text-gray-500 mb-2">
+            Se as poses estiverem incorretas, associe manualmente cada parte do corpo ao osso correto. "Auto" usa a detecção automática como fallback.
+          </p>
+          {STANDARD_BONES.map((standard) => (
+            <div key={standard} className="flex items-center gap-1 mt-1">
+              <span className="w-28 shrink-0 text-gray-400">
+                {BONE_LABELS[standard] ?? standard}
+              </span>
+              <select
+                value={boneOverrides[standard] ?? ""}
+                onChange={(e) =>
+                  setBoneOverrides((prev) => ({
+                    ...prev,
+                    [standard]: e.target.value,
+                  }))
+                }
+                className="flex-1 rounded border border-gray-700 bg-gray-900 px-1 py-0.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">Auto</option>
+                {boneCatalogSnapshot.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+          {Object.values(boneOverrides).some(Boolean) && (
+            <button
+              onClick={() => setBoneOverrides({})}
+              className="mt-3 w-full rounded border border-red-700 bg-red-950/60 px-2 py-1 text-xs text-red-300 hover:bg-red-900/60 transition-colors"
+            >
+              Restaurar detecção automática
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Bone mapper toggle button — visible to all users when avatar has bones */}
+      {!showDevTools && !showBoneMapperPanel && boneCatalogSnapshot.length > 0 && (
+        <button
+          onClick={() => setShowBoneMapperPanel(true)}
+          className="absolute bottom-3 left-3 z-20 rounded-md border border-gray-600/60 bg-gray-900/80 px-2 py-1 text-xs text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors backdrop-blur-sm"
+          title="Configurar mapeamento de ossos (corrige poses incorretas)"
+        >
+          🦴 Ossos
+        </button>
       )}
       {mergedLipSyncConfig.showBlendshapeDebug && (
         <div className="absolute right-3 bottom-3 z-20 w-80 max-h-72 overflow-y-auto rounded-md border border-slate-600 bg-slate-950/90 px-3 py-2 text-xs text-slate-100">

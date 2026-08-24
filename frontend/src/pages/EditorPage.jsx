@@ -283,6 +283,7 @@ export default function EditorPage() {
                 sceneId: item?.sceneId || '',
                 transitionText: item?.transitionText || '',
                 durationSeconds: Number(item?.durationSeconds) || 0,
+                markerUrl: item?.markerUrl || '',
               }))
           : [];
         setStoryScenes(scenes);
@@ -448,6 +449,7 @@ export default function EditorPage() {
           order: index,
           transitionText: item.transitionText || '',
           durationSeconds: Number(item.durationSeconds) || 0,
+          markerUrl: item.markerUrl || '',
         })),
       };
       const result = await saveStory(payload);

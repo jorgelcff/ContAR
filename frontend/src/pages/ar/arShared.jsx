@@ -32,6 +32,19 @@ export function normalizeAvatarUrl(url) {
   return value;
 }
 
+// Returns a URL safe to use in AR route transitions. Blob URLs are excluded
+// because they're revoked/invalidated when leaving the page that created
+// them. Accepts HTTP(S), data URLs and relative paths like /uploads/models/x.glb
+// (local-disk fallback when Cloudinary isn't configured).
+export function getArUsableAvatarUrl(url) {
+  if (typeof url !== 'string') return '';
+  const value = url.trim();
+  if (!value || /^blob:/i.test(value)) return '';
+  if (/^https?:\/\//i.test(value) || /^data:/i.test(value)) return value;
+  if (/^(\/|\.\/|\.\.\/)/.test(value)) return value;
+  return '';
+}
+
 export function disposeObject3D(object) {
   if (!object) return;
   object.traverse((node) => {

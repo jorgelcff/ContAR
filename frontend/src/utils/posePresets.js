@@ -375,8 +375,9 @@ function applySpeakerPose(model, boneMapper = null) {
   rotateBoneDeg(neck, 2, 0, 0);
   rotateBoneDeg(leftUpperArm, -18, 0, 15);
   rotateBoneDeg(rightUpperArm, -18, 0, -15);
-  rotateBoneDeg(leftForeArm, -38, 0, -10);
-  rotateBoneDeg(rightForeArm, -38, 0, 10);
+  // Reduced forearm flex to prevent hand from clipping into the upper arm
+  rotateBoneDeg(leftForeArm, -25, 0, -8);
+  rotateBoneDeg(rightForeArm, -25, 0, 8);
 }
 
 function applyHandsOnHipsPose(model, boneMapper = null) {
@@ -384,11 +385,17 @@ function applyHandsOnHipsPose(model, boneMapper = null) {
   const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
   const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+  const leftHand      = getBone(model, boneMapper, 'leftHand',      [/lefthand/, /hand_l/, /mixamoriglefthand/]);
+  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
 
   rotateBoneDeg(leftUpperArm, 5, 0, 30);
   rotateBoneDeg(rightUpperArm, 5, 0, -30);
-  rotateBoneDeg(leftForeArm, -65, 0, -20);
-  rotateBoneDeg(rightForeArm, -65, 0, 20);
+  // Reduced inward Z to prevent hand mesh from clipping into upper arm
+  rotateBoneDeg(leftForeArm, -15, 0, -20);
+  rotateBoneDeg(rightForeArm, -15, 0, 20);
+  // Orient hands palm-inward so they rest naturally on the hips
+  rotateBoneDeg(leftHand, 0, -25, 0);
+  rotateBoneDeg(rightHand, 0, 25, 0);
 }
 
 function applySalutePose(model, boneMapper = null) {
@@ -409,11 +416,18 @@ function applyArmsCrossedPose(model, boneMapper = null) {
   const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
   const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
   const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
+  const leftHand      = getBone(model, boneMapper, 'leftHand',      [/lefthand/, /hand_l/, /mixamoriglefthand/]);
+  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
 
-  rotateBoneDeg(leftUpperArm, 0, 0, 20);
-  rotateBoneDeg(rightUpperArm, 0, 0, -20);
-  rotateBoneDeg(leftForeArm, -70, 0, -35);
-  rotateBoneDeg(rightForeArm, -70, 0, 35);
+  // Swing upper arms slightly forward so forearms can cross in front of the chest
+  rotateBoneDeg(leftUpperArm, -8, 0, 20);
+  rotateBoneDeg(rightUpperArm, -8, 0, -20);
+  // Reduced flex from -70° to -52° to prevent the hand from clipping into the arm
+  rotateBoneDeg(leftForeArm, -52, 0, -30);
+  rotateBoneDeg(rightForeArm, -52, 0, 30);
+  // Correct wrist rotation so hands align with the crossed-arms silhouette
+  rotateBoneDeg(leftHand, 0, 18, 0);
+  rotateBoneDeg(rightHand, 0, -18, 0);
 }
 
 function applyTPose(model, boneMapper = null) {

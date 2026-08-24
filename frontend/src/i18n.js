@@ -356,6 +356,7 @@ const en = {
   errorSaving: 'Error saving',
   errorLoading: 'Error loading',
   noAvatarHint: 'Paste a GLB URL or create an avatar above.',
+  markerUrlPlaceholder: 'Marker URL (.patt) for this scene',
   audio: 'Audio & Lip Sync',
 
   // ── AR page ────────────────────────────────────────────────────────────────
@@ -955,6 +956,7 @@ const pt = {
   errorSaving: "Erro ao salvar",
   errorLoading: "Erro ao carregar",
   noAvatarHint: "Cole uma URL GLB ou crie um avatar acima.",
+  markerUrlPlaceholder: "URL do marcador (.patt) para esta cena",
   audio: "Áudio & Lip Sync",
   arTitle: "Prévia AR",
   arControls: 'Controles',
@@ -1509,6 +1511,7 @@ const es = {
   errorSaving: 'Error al guardar',
   errorLoading: 'Error al cargar',
   noAvatarHint: 'Pega una URL GLB o crea un avatar arriba.',
+  markerUrlPlaceholder: 'URL del marcador (.patt) para esta escena',
   audio: 'Audio & Lip Sync',
   arTitle: 'Vista previa AR',
   arControls: 'Controles',
@@ -2061,6 +2064,7 @@ const fr = {
   errorSaving: "Erreur d'enregistrement",
   errorLoading: 'Erreur de chargement',
   noAvatarHint: "Collez une URL GLB ou créez un avatar ci-dessus.",
+  markerUrlPlaceholder: "URL du marqueur (.patt) pour cette scène",
   audio: 'Audio & Lip Sync',
   arTitle: 'Aperçu AR',
   arControls: 'Contrôles',

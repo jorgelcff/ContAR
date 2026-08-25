@@ -1,0 +1,18 @@
+# SPA fallback for Apache-based static hosting (e.g. a personal /~user/
+# directory on a shared server). React Router uses the HTML5 history API —
+# a direct visit or refresh on a route like /login is a real GET request to
+# the server, which has no such file, so without this it 404s.
+#
+# No RewriteBase is set on purpose: mod_rewrite's per-directory context uses
+# this file's own directory as the implicit base, so this works unmodified
+# whether the app is deployed at the domain root or under a subpath (e.g.
+# /~jlcf/) — see VITE_BASE_PATH in .env.example for the matching app-side
+# setting. Production (Docker/nginx) doesn't read this file at all — its
+# equivalent fallback lives in nginx.conf.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  RewriteRule ^ index.html [L]
+</IfModule>

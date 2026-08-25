@@ -347,7 +347,7 @@ export default function StoryViewerPage() {
             {/* Fullscreen toggle */}
             <button
               onClick={() => setFullscreen((v) => !v)}
-              className="md:hidden absolute top-3 right-3 z-30 rounded-full bg-black/60 border border-white/20 w-10 h-10 flex items-center justify-center text-white text-lg backdrop-blur-sm active:bg-black/80"
+              className="md:hidden absolute top-3 right-3 z-30 rounded-full bg-gray-900/60 border border-white/20 w-10 h-10 flex items-center justify-center text-white text-lg backdrop-blur-sm active:bg-gray-900/80"
               aria-label={fullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
             >
               {fullscreen

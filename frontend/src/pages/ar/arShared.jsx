@@ -124,7 +124,7 @@ export function ARNarration({ mode, text }) {
   // subtitle (default)
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-44 z-20 flex justify-center px-4">
-      <div className="max-w-lg rounded-lg bg-black/70 px-4 py-2 text-center text-sm font-medium text-white backdrop-blur-sm">
+      <div className="max-w-lg rounded-lg bg-gray-900/70 px-4 py-2 text-center text-sm font-medium text-white backdrop-blur-sm">
         {text}
       </div>
     </div>
@@ -366,8 +366,8 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
 
   if (!story.hasStarted) {
     return (
-      <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/65 backdrop-blur-sm">
-        <div className="mx-6 w-full max-w-sm rounded-2xl border border-white/10 bg-black/90 p-6 text-center">
+      <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/65 backdrop-blur-sm">
+        <div className="mx-6 w-full max-w-sm rounded-2xl border border-white/10 bg-gray-900/90 p-6 text-center">
           <p className="text-xs uppercase tracking-[0.2em] text-cyan-300 mb-2">{t('arStoryInAr')}</p>
           <h2 className="text-xl font-bold text-white mb-1">{story.story?.metadata?.title}</h2>
           <p className="text-sm text-gray-400 mb-5">{t('arScenesCount', { count: story.scenes.length })}</p>
@@ -383,7 +383,7 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
   }
 
   return (
-    <div className={`${compact ? 'absolute top-16 left-3 right-3 z-25' : ''} rounded-xl border border-white/10 bg-black/80 px-3 py-2.5 backdrop-blur-sm`}>
+    <div className={`${compact ? 'absolute top-16 left-3 right-3 z-25' : ''} rounded-xl border border-white/10 bg-gray-900/80 px-3 py-2.5 backdrop-blur-sm`}>
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-xs text-cyan-300 font-medium truncate max-w-[75%]">
           {story.currentScene?.content?.narrative?.text

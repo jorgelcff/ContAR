@@ -22,7 +22,7 @@ export default function Header() {
       <Link to={isAuthenticated ? '/stories' : '/login'} className="text-white font-bold text-lg tracking-tight">
         {t('appTitle')}
       </Link>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center flex-wrap justify-end gap-2">
         {isAuthenticated && (
           <>
             <Link to="/scenes" className={`text-xs font-medium px-3 py-1 rounded-full transition-colors hidden sm:inline-flex ${isActive('/scenes') ? 'bg-cyan-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>

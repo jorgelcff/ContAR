@@ -110,7 +110,7 @@ export default function ScenesPage() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {scenes.map((scene) => (
               <div
                 key={scene.sceneId}

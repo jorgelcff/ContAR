@@ -830,7 +830,7 @@ export default function ARPage() {
   });
 
   return (
-    <div className="flex flex-col h-dvh bg-linear-to-b from-gray-950 via-slate-950 to-black text-white overflow-hidden">
+    <div className="flex flex-col h-dvh bg-linear-to-b from-gray-950 via-slate-950 to-gray-950 text-white overflow-hidden">
       <Header />
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-3xl flex flex-col gap-5">
@@ -929,7 +929,7 @@ export default function ARPage() {
                   {t('pseudoArDescription')}
                 </p>
               </div>
-              <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
+              <div className="rounded-xl bg-gray-800/40 px-3 py-2 text-xs text-gray-400 space-y-1">
                 <p className="font-semibold text-gray-300 mb-1">{t('arRequirements')}</p>
                 <p>{t('arImmersiveReqDevice')}</p>
                 <p>{t('arImmersiveReqMotion')}</p>
@@ -949,7 +949,7 @@ export default function ARPage() {
                   {t('arSurfaceDesc')}
                 </p>
               </div>
-              <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
+              <div className="rounded-xl bg-gray-800/40 px-3 py-2 text-xs text-gray-400 space-y-1">
                 <p className="font-semibold text-gray-300 mb-1">{t('arRequirements')}</p>
                 <p>{t('arSurfaceReqDevice')}</p>
                 <p>{t('arReqHttps')}</p>
@@ -975,7 +975,7 @@ export default function ARPage() {
                   {t('arMarkerDesc')}
                 </p>
               </div>
-              <div className="rounded-xl bg-black/30 px-3 py-2 text-xs text-gray-400 space-y-1">
+              <div className="rounded-xl bg-gray-800/40 px-3 py-2 text-xs text-gray-400 space-y-1">
                 <p className="font-semibold text-gray-300 mb-1">{t('arRequirements')}</p>
                 <p>{t('arMarkerReqDevice')}</p>
                 <p>{t('arMarkerReqBrowsers')}</p>

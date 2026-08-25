@@ -291,7 +291,7 @@ export default function StoriesPage() {
 
           {/* Stories list */}
           {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
             </div>
           ) : stories.length === 0 ? (
@@ -317,7 +317,7 @@ export default function StoriesPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {stories.map((story) => (
                 <StoryCard
                   key={story.storyId}

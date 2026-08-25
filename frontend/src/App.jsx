@@ -16,6 +16,15 @@ import { useAuth } from './auth/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import './i18n';
 
+// Derives React Router's basename from Vite's own BASE_URL (set by the
+// VITE_BASE_PATH env var / vite.config.js — see there), so the two never
+// drift apart. BASE_URL is always trailing-slashed and "/" at the root;
+// React Router wants no trailing slash, and undefined (not "") at the root.
+const routerBasename = (() => {
+  const base = import.meta.env.BASE_URL;
+  return base === '/' ? undefined : base.replace(/\/$/, '');
+})();
+
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -34,7 +43,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <ToastProvider>
-      <BrowserRouter basename="/~jlcf">
+      <BrowserRouter basename={routerBasename}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />

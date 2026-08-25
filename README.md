@@ -23,7 +23,7 @@ ContAR already covers the main authoring flow:
 
 Important current limitations:
 
-- test coverage is still thin — unit tests exist for the API and a few core frontend modules, but most of the UI is untested;
+- test coverage is still thin — unit tests cover the API and a few core frontend modules, and E2E covers responsive layout, contrast, and auth, but most flows still lack an automated check;
 - parts of the mobile experience and onboarding are still being refined;
 - some AR flows depend on browser/device compatibility.
 
@@ -133,6 +133,7 @@ ContAR/
 - `npm run dev:backend`
 - `npm run dev:frontend`
 - `npm run install:all`
+- `npm run test:e2e` — Playwright, full stack (see [Testing](#testing) below)
 
 ### Frontend
 
@@ -164,12 +165,18 @@ Based on `backend/.env.example`:
 
 > Note: the backend also supports Azure Speech TTS when `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` are set.
 
+## Testing
+
+Three layers, all safe to run without touching the real (Atlas) database:
+
+- **Backend unit** — `npm test --prefix backend` (Vitest + Supertest). `backend/app.js` exports the Express app separately from `server.js` (which owns the real `mongoose.connect`); tests import only `app.js` and run against `mongodb-memory-server`.
+- **Frontend unit** — `npm test --prefix frontend` (Vitest). Scoped to pure logic — `BoneMapper` (rig detection) and `useSceneStore` — not full component rendering.
+- **E2E** — `npm run test:e2e` at the repo root (Playwright). Drives the real UI against a full stack: both the frontend dev server and a backend instance are started automatically, the backend pointed at its own in-memory MongoDB via `backend/scripts/serve-e2e.js`. Registers disposable test users per run — never touches a real account. Covers responsive layout (no horizontal overflow across mobile/tablet/desktop), light-theme contrast regressions, auth, and a couple of editor-flow regressions. See `e2e/`.
+
 ## Current validation status
 
 - `npm run lint --prefix frontend` → has pre-existing errors in the repository
 - `npm run build --prefix frontend` → builds successfully
-- `npm test --prefix backend` → Vitest + Supertest against an in-memory MongoDB (never touches the real database)
-- `npm test --prefix frontend` → Vitest, unit tests for core logic (rig detection, scene store)
 - `npm audit` (frontend and backend) → 0 known vulnerabilities
 - the backend refuses to start in production (`NODE_ENV=production`) without a real `AUTH_JWT_SECRET` set
 

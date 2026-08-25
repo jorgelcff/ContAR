@@ -5,3 +5,6 @@ dist/
 .DS_Store
 backend/uploads/
 .claude/
+test-results/
+playwright-report/
+blob-report/

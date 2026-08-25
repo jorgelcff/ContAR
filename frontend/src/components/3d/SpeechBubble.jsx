@@ -63,8 +63,12 @@ export default function SpeechBubble({ text, avatarRef, camera, renderer }) {
         maxWidth: 220,
       }}
     >
-      {/* Bubble body */}
-      <div className="bg-white text-gray-900 rounded-2xl px-3 py-2 text-sm shadow-xl leading-snug break-words">
+      {/* Bubble body — bg-white + text-black (not text-gray-900): the light-theme
+          remap turns --color-gray-900 into white for card surfaces, which would
+          make gray-900 text on a white bubble invisible in light mode. This
+          bubble is meant to look the same in both themes, so it avoids the
+          remapped token entirely. */}
+      <div data-testid="narration-bubble" className="bg-white text-black rounded-2xl px-3 py-2 text-sm shadow-xl leading-snug break-words">
         {text}
       </div>
       {/* Tail */}

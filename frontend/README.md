@@ -49,8 +49,10 @@ src/
 | `npm run dev` | Vite dev server with HMR |
 | `npm run build` | production build into `dist/` |
 | `npm run lint` | ESLint (config in `eslint.config.js`) |
+| `npm test` | `vitest run` — unit tests, colocated as `*.test.js` next to the code they cover |
 
 ## Notes
 
 - Internationalized in 4 languages (PT/EN/ES/FR) via `i18next`, configured in `src/i18n.js`.
 - `npm run lint` currently reports pre-existing errors (see "Current validation status" in the root README).
+- Unit test coverage is intentionally scoped to pure logic (`BoneMapper`, `useSceneStore`) rather than full component rendering — the 3D/Three.js layer isn't practical to unit test and is verified manually instead.

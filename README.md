@@ -23,7 +23,7 @@ ContAR already covers the main authoring flow:
 
 Important current limitations:
 
-- validation is mostly on the frontend; the backend has no real test suite yet;
+- test coverage is still thin — unit tests exist for the API and a few core frontend modules, but most of the UI is untested;
 - parts of the mobile experience and onboarding are still being refined;
 - some AR flows depend on browser/device compatibility.
 
@@ -168,7 +168,8 @@ Based on `backend/.env.example`:
 
 - `npm run lint --prefix frontend` → has pre-existing errors in the repository
 - `npm run build --prefix frontend` → builds successfully
-- `npm test --prefix backend` → placeholder script (fails by default)
+- `npm test --prefix backend` → Vitest + Supertest against an in-memory MongoDB (never touches the real database)
+- `npm test --prefix frontend` → Vitest, unit tests for core logic (rig detection, scene store)
 - `npm audit` (frontend and backend) → 0 known vulnerabilities
 - the backend refuses to start in production (`NODE_ENV=production`) without a real `AUTH_JWT_SECRET` set
 

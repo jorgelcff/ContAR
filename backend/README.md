@@ -54,9 +54,12 @@ All routes use `express-rate-limit`; routes that mutate user data (save/delete s
 |---|---|
 | `npm run dev` | `node --watch server.js` |
 | `npm start` | production |
-| `npm test` | placeholder — no test suite yet |
+| `npm test` | `vitest run` — API tests against an in-memory MongoDB |
+
+## Testing
+
+`app.js` exports the configured Express app separately from `server.js` (which owns the real `mongoose.connect` + `app.listen`), specifically so tests can `require('../app')` and drive it with Supertest without ever touching a real database. `test/setup.js` starts `mongodb-memory-server` for the run and wipes collections between tests — `MONGODB_URI` from `.env` is never read by anything the tests import.
 
 ## Notes
 
 - `npm audit` is clean (0 known vulnerabilities) — re-run after any dependency bump.
-- No automated test suite; validation today is manual + Mongoose's loose typing.

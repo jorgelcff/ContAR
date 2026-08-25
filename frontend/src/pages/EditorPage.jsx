@@ -11,7 +11,6 @@ import WalkthroughTour, { shouldShowTour } from '../components/ui/WalkthroughTou
 import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import { useSceneStore, hadLocalAvatarOnInit } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
-import useTTS from '../hooks/useTTS';
 import { useToast } from '../context/ToastContext';
 import { getScene, getStory, saveScene, saveStory, uploadAudio, deleteAudio } from '../api/sceneApi';
 
@@ -73,20 +72,6 @@ export default function EditorPage() {
   };
 
   const audio = useAudio({ onAudioBlob: persistGeneratedAudio });
-
-  const tts = useTTS({
-    onAudioReady: (file) => {
-      audio.loadFile(file);
-      addToast(t('epVoiceGenerated'), 'success');
-    },
-    // Prefer the provider's precise viseme timeline (Azure); fall
-    // back to the text heuristic only when it isn't available.
-    onVisemeReady: (text, visemeTimeline) => {
-      if (!visemeTimeline || !audio.applyVisemeTimeline(visemeTimeline)) {
-        audio.generateVisemeTimelineFromText(text);
-      }
-    },
-  });
 
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
   const [showTour, setShowTour] = useState(() => !shouldShowOnboarding() && shouldShowTour());
@@ -541,7 +526,6 @@ export default function EditorPage() {
           isStorySaving={isStorySaving}
           isStoryLinked={isStoryLinked}
           audio={audio}
-          tts={tts}
           vrmaUrl={vrmaUrl}
           onLoadVrma={setVrmaUrl}
           textDisplayMode={textDisplayMode}

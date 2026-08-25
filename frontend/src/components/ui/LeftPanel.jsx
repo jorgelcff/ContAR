@@ -28,7 +28,6 @@ export default function LeftPanel({
   isStorySaving,
   isStoryLinked,
   audio,
-  tts,
   vrmaUrl,
   onLoadVrma,
   mobilePanelTab,
@@ -626,25 +625,6 @@ export default function LeftPanel({
                   ))}
                 </div>
               </div>
-
-              {tts && (
-                <>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => tts.generate(speechInput)}
-                      disabled={tts.isGenerating || !speechInput.trim()}
-                      className="flex-1 py-3 rounded-xl bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white text-sm font-semibold transition-all shadow-md shadow-purple-900/30"
-                    >
-                      {tts.isGenerating
-                        ? <span className="flex items-center justify-center gap-1.5"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> {t('lpGeneratingVoice')}</span>
-                        : <span className="flex items-center justify-center gap-1.5"><Icon name="microphone" className="w-4 h-4" /> {t('lpGenerateVoice')}</span>
-                      }
-                    </button>
-                    <TooltipIcon text={t('lpTtsTooltip')} />
-                  </div>
-                  {tts.error && <p className="text-xs text-red-400">{tts.error}</p>}
-                </>
-              )}
 
               {/* Lip sync intensity slider */}
               {audio && (() => {

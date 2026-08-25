@@ -138,35 +138,43 @@ let _arManifestPromise = null;
 export function loadAnimationManifest(gltfLoader) {
   if (_arManifestPromise) return _arManifestPromise;
   const PRESETS = ['idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'speaker'];
-  _arManifestPromise = fetch('/animations/manifest.json')
+  _arManifestPromise = fetch(
+    `${import.meta.env.BASE_URL}animations/manifest.json`,
+  )
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null)
     .then((manifest) => {
       if (!Array.isArray(manifest?.animations)) return {};
       const external = {};
       return Promise.all(
-        manifest.animations.map((anim) => new Promise((resolve) => {
-          if (!anim.file) return resolve();
-          gltfLoader.load(
-            `/animations/${anim.file}`,
-            (g) => {
-              const clip = g.animations?.[0];
-              if (!clip) return resolve();
-              const preset = anim.preset || anim.name || '';
-              clip.name = preset || clip.name || anim.file;
-              const tags = Array.isArray(anim.tags) ? anim.tags : [];
-              if (preset && !external[preset]) external[preset] = clip;
-              for (const p of PRESETS) {
-                if (!external[p] && tags.some((tag) => String(tag).toLowerCase().includes(p))) {
-                  external[p] = clip;
-                }
-              }
-              resolve();
-            },
-            undefined,
-            () => resolve(), // skip missing/broken files
-          );
-        }))
+        manifest.animations.map(
+          (anim) =>
+            new Promise((resolve) => {
+              if (!anim.file) return resolve();
+              gltfLoader.load(
+                `${import.meta.env.BASE_URL}animations/${anim.file}`,
+                (g) => {
+                  const clip = g.animations?.[0];
+                  if (!clip) return resolve();
+                  const preset = anim.preset || anim.name || "";
+                  clip.name = preset || clip.name || anim.file;
+                  const tags = Array.isArray(anim.tags) ? anim.tags : [];
+                  if (preset && !external[preset]) external[preset] = clip;
+                  for (const p of PRESETS) {
+                    if (
+                      !external[p] &&
+                      tags.some((tag) => String(tag).toLowerCase().includes(p))
+                    ) {
+                      external[p] = clip;
+                    }
+                  }
+                  resolve();
+                },
+                undefined,
+                () => resolve(), // skip missing/broken files
+              );
+            }),
+        ),
       ).then(() => external);
     });
   return _arManifestPromise;
@@ -222,7 +230,11 @@ export class ARPoseRig {
 }
 
 export function buildQueryUrl(path, params) {
-  const url = new URL(path, window.location.origin);
+  const basePath = import.meta.env.BASE_URL || "/";
+  const url = new URL(
+    `${basePath}${path.replace(/^\/+/, "")}`,
+    window.location.origin,
+  );
   Object.entries(params).forEach(([key, value]) => {
     if (value) url.searchParams.set(key, value);
   });

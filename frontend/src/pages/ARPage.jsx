@@ -768,36 +768,42 @@ export default function ARPage() {
     [markerUrl, modelUrl, initialScale, storyId]
   );
 
-  if (mode === 'surface') {
-    const scaleParam = parseFloat(searchParams.get('scale'));
-    const startScale = Number.isFinite(scaleParam) && scaleParam > 0 ? scaleParam : readSavedScale();
+  if (mode === "surface") {
+    const scaleParam = parseFloat(searchParams.get("scale"));
+    const startScale =
+      Number.isFinite(scaleParam) && scaleParam > 0
+        ? scaleParam
+        : readSavedScale();
     return (
       <SurfaceARScene
         modelUrl={modelUrl}
         initialScale={startScale}
-        storyId={searchParams.get('storyId') || ''}
+        storyId={searchParams.get("storyId") || ""}
         narrativeAudioUrl={storedNarrativeAudioUrl}
         narrativeText={storedSpeechText}
         posePreset={storedPosePreset}
         displayMode={storedTextDisplayMode}
-        onBack={() => window.location.assign('/ar')}
+        onBack={() => window.location.assign(`${import.meta.env.BASE_URL}ar`)}
       />
     );
   }
 
-  if (mode === 'pseudo') {
-    const scaleParam = parseFloat(searchParams.get('scale'));
-    const startScale = Number.isFinite(scaleParam) && scaleParam > 0 ? scaleParam : readSavedScale();
+  if (mode === "pseudo") {
+    const scaleParam = parseFloat(searchParams.get("scale"));
+    const startScale =
+      Number.isFinite(scaleParam) && scaleParam > 0
+        ? scaleParam
+        : readSavedScale();
     return (
       <PseudoARScene
         modelUrl={modelUrl}
         initialScale={startScale}
-        storyId={searchParams.get('storyId') || ''}
+        storyId={searchParams.get("storyId") || ""}
         narrativeAudioUrl={storedNarrativeAudioUrl}
         narrativeText={storedSpeechText}
         posePreset={storedPosePreset}
         displayMode={storedTextDisplayMode}
-        onBack={() => window.location.assign('/ar')}
+        onBack={() => window.location.assign(`${import.meta.env.BASE_URL}ar`)}
       />
     );
   }

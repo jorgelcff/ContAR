@@ -2344,11 +2344,40 @@ const resources = {
   fr: { translation: fr },
 };
 
+const LANGUAGE_STORAGE_KEY = "contar:language";
+const SUPPORTED_LANGUAGES = Object.keys(resources);
+
+function getInitialLanguage() {
+  try {
+    const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (SUPPORTED_LANGUAGES.includes(savedLanguage)) return savedLanguage;
+  } catch {
+    // Ignore unavailable localStorage (for example, restricted browser modes).
+  }
+
+  const browserLanguage =
+    typeof navigator !== "undefined"
+      ? String(navigator.language || "")
+          .split("-")[0]
+          .toLowerCase()
+      : "";
+
+  return SUPPORTED_LANGUAGES.includes(browserLanguage) ? browserLanguage : "pt";
+}
+
 i18n.use(initReactI18next).init({
   resources,
-  lng: 'pt',
-  fallbackLng: 'pt',
+  lng: getInitialLanguage(),
+  fallbackLng: "pt",
   interpolation: { escapeValue: false },
+});
+
+i18n.on("languageChanged", (language) => {
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  } catch {
+    // Ignore unavailable localStorage.
+  }
 });
 
 export default i18n;

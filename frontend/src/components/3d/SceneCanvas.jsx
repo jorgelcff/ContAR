@@ -526,7 +526,7 @@ export default function SceneCanvas({
     // applyPosePreset is only called when the newly loaded clip matches the CURRENT pose
     // — calling it for every clip would stopAll()+resetToRestPose() on every file arrival,
     // causing T-pose flashes for each of the 8 animation files in the manifest.
-    fetch("/animations/manifest.json")
+    fetch(`${import.meta.env.BASE_URL}animations/manifest.json`)
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
       .then((manifest) => {

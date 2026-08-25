@@ -181,34 +181,40 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-dvh bg-gray-950 text-white flex flex-col">
-
       {/* ── Navbar ──────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-gray-950/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Icon name="scene" className="w-5 h-5 text-cyan-400" />
-            <span className="text-lg font-bold tracking-tight text-white">ContAR</span>
+            <span className="text-lg font-bold tracking-tight text-white">
+              ContAR
+            </span>
           </div>
           <div className="flex items-center gap-3">
-            {!isLoading && (
-              isAuthenticated ? (
-                <Link to="/stories"
-                  className="rounded-full bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition-colors">
-                  {t('landingNavMyStories')}
+            {!isLoading &&
+              (isAuthenticated ? (
+                <Link
+                  to="/stories"
+                  className="rounded-full bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition-colors"
+                >
+                  {t("landingNavMyStories")}
                 </Link>
               ) : (
                 <>
-                  <Link to="/login"
-                    className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-2 hidden sm:inline">
-                    {t('landingNavEnter')}
+                  <Link
+                    to="/login"
+                    className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-2 hidden sm:inline"
+                  >
+                    {t("landingNavEnter")}
                   </Link>
-                  <Link to="/login"
-                    className="rounded-full bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition-colors">
-                    {t('landingNavCreate')}
+                  <Link
+                    to="/login"
+                    className="rounded-full bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition-colors"
+                  >
+                    {t("landingNavCreate")}
                   </Link>
                 </>
-              )
-            )}
+              ))}
           </div>
         </div>
       </nav>
@@ -216,29 +222,37 @@ export default function LandingPage() {
       {/* ── Hero ────────────────────────────────────────────────── */}
       <section className="px-5 pt-18 pb-12 border-b border-white/5">
         <div className="max-w-4xl mx-auto">
-          <p className="text-sm text-cyan-300 font-medium">{t('landingHeroBadge')}</p>
+          <p className="text-sm text-cyan-300 font-medium">
+            {t("landingHeroBadge")}
+          </p>
           <h1 className="mt-4 text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-            {t('landingHeroTitle')}{' '}
+            {t("landingHeroTitle")}{" "}
             <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-purple-400">
-              {t('landingHeroTitleHighlight')}
-            </span>{' '}
-            {t('landingHeroTitleSuffix')}
+              {t("landingHeroTitleHighlight")}
+            </span>{" "}
+            {t("landingHeroTitleSuffix")}
           </h1>
-          <p className="mt-5 text-lg text-gray-300 max-w-3xl leading-relaxed">{t('landingHeroSubtitle')}</p>
+          <p className="mt-5 text-lg text-gray-300 max-w-3xl leading-relaxed">
+            {t("landingHeroSubtitle")}
+          </p>
           <ul className="mt-6 space-y-2 text-sm text-gray-400">
-            <li>• {t('landingHeroPoint1')}</li>
-            <li>• {t('landingHeroPoint2')}</li>
-            <li>• {t('landingHeroPoint3')}</li>
+            <li>• {t("landingHeroPoint1")}</li>
+            <li>• {t("landingHeroPoint2")}</li>
+            <li>• {t("landingHeroPoint3")}</li>
           </ul>
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
-            <Link to={primaryHref}
-              className="inline-flex items-center justify-center rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-7 py-3 text-base font-semibold text-white shadow-lg shadow-blue-900/30 transition-all active:scale-95">
+            <Link
+              to={primaryHref}
+              className="inline-flex items-center justify-center rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-7 py-3 text-base font-semibold text-white shadow-lg shadow-blue-900/30 transition-all active:scale-95"
+            >
               {primaryLabel}
             </Link>
             {!isAuthenticated && (
-              <Link to="/login"
-                className="inline-flex items-center justify-center rounded-xl border border-gray-700 hover:border-gray-500 px-7 py-3 text-base font-medium text-gray-300 hover:text-white transition-all active:scale-95">
-                {t('landingCtaSecondary')}
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center rounded-xl border border-gray-700 hover:border-gray-500 px-7 py-3 text-base font-medium text-gray-300 hover:text-white transition-all active:scale-95"
+              >
+                {t("landingCtaSecondary")}
               </Link>
             )}
           </div>
@@ -250,15 +264,17 @@ export default function LandingPage() {
       <section className="py-12 px-5 border-b border-white/5 bg-white/2">
         <div className="max-w-3xl mx-auto grid grid-cols-3 gap-6 text-center">
           {[
-            { value: 3,   suffix: ' min',  label: t('landingStatsMinLabel') },
-            { value: 100, suffix: '%',     label: t('landingStatsBrowserLabel') },
-            { value: 0,   suffix: ' apps', label: t('landingStatsAppsLabel') },
+            { value: 3, suffix: " min", label: t("landingStatsMinLabel") },
+            { value: 100, suffix: "%", label: t("landingStatsBrowserLabel") },
+            { value: 0, suffix: " apps", label: t("landingStatsAppsLabel") },
           ].map(({ value, suffix, label }) => (
             <div key={label} className="flex flex-col gap-1">
               <span className="text-3xl sm:text-4xl font-extrabold text-cyan-400">
                 <Counter target={value} suffix={suffix} />
               </span>
-              <span className="text-xs text-gray-500 leading-snug">{label}</span>
+              <span className="text-xs text-gray-500 leading-snug">
+                {label}
+              </span>
             </div>
           ))}
         </div>
@@ -267,9 +283,13 @@ export default function LandingPage() {
       {/* ── Caso de uso ─────────────────────────────────────────── */}
       <section className="py-14 px-5 border-b border-white/5">
         <div className="max-w-4xl mx-auto rounded-2xl border border-white/10 bg-gray-900/60 p-6 sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-cyan-300">{t('landingCaseLabel')}</p>
-          <h2 className="mt-3 text-2xl font-bold">{t('landingCaseTitle')}</h2>
-          <p className="mt-3 text-gray-300 leading-relaxed">{t('landingCaseDescription')}</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-cyan-300">
+            {t("landingCaseLabel")}
+          </p>
+          <h2 className="mt-3 text-2xl font-bold">{t("landingCaseTitle")}</h2>
+          <p className="mt-3 text-gray-300 leading-relaxed">
+            {t("landingCaseDescription")}
+          </p>
           <ol className="mt-6 space-y-3 text-sm text-gray-300">
             {CASE_STEPS.map((step, index) => (
               <li key={step} className="flex gap-3">
@@ -280,22 +300,30 @@ export default function LandingPage() {
               </li>
             ))}
           </ol>
-          <p className="mt-5 text-sm text-cyan-200">{t('landingCaseResult')}</p>
+          <p className="mt-5 text-sm text-cyan-200">{t("landingCaseResult")}</p>
         </div>
       </section>
 
       {/* ── Features ────────────────────────────────────────────── */}
       <section className="py-16 px-5 border-b border-white/5 bg-gray-900/25">
         <div className="max-w-5xl mx-auto">
-          <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400 mb-2">{t('landingFeaturesLabel')}</p>
-          <h2 className="text-3xl font-bold mb-10">{t('landingFeaturesTitle')}</h2>
+          <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400 mb-2">
+            {t("landingFeaturesLabel")}
+          </p>
+          <h2 className="text-3xl font-bold mb-10">
+            {t("landingFeaturesTitle")}
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {FEATURES.map((f) => (
-              <div key={f.title}
-                className={`rounded-2xl border ${f.border} bg-linear-to-b ${f.color} p-6 flex flex-col gap-3 hover:scale-[1.02] transition-transform`}>
+              <div
+                key={f.title}
+                className={`rounded-2xl border ${f.border} bg-linear-to-b ${f.color} p-6 flex flex-col gap-3 hover:scale-[1.02] transition-transform`}
+              >
                 <Icon name={f.icon} className="w-6 h-6 text-cyan-300" />
                 <p className="font-semibold text-white">{f.title}</p>
-                <p className="text-sm text-gray-400 leading-relaxed">{f.desc}</p>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  {f.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -306,16 +334,22 @@ export default function LandingPage() {
       <section className="py-20 px-5 border-b border-white/5">
         <div className="max-w-5xl mx-auto">
           <p className="text-center text-xs font-semibold uppercase tracking-widest text-purple-400 mb-3">
-            {t('landingAudienceLabel')}
+            {t("landingAudienceLabel")}
           </p>
-          <h2 className="text-center text-3xl font-bold mb-12">{t('landingAudienceTitle')}</h2>
+          <h2 className="text-center text-3xl font-bold mb-12">
+            {t("landingAudienceTitle")}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {AUDIENCES.map((a) => (
-              <div key={a.title}
-                className="rounded-2xl border border-white/5 bg-gray-900/60 p-6 flex flex-col gap-3 hover:border-purple-500/30 transition-colors">
+              <div
+                key={a.title}
+                className="rounded-2xl border border-white/5 bg-gray-900/60 p-6 flex flex-col gap-3 hover:border-purple-500/30 transition-colors"
+              >
                 <Icon name={a.icon} className="w-8 h-8 text-purple-300" />
                 <p className="font-semibold text-white text-lg">{a.title}</p>
-                <p className="text-sm text-gray-400 leading-relaxed">{a.desc}</p>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  {a.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -326,12 +360,17 @@ export default function LandingPage() {
       <section className="py-20 px-5 border-b border-white/5 bg-gray-900/25">
         <div className="max-w-4xl mx-auto">
           <p className="text-center text-xs font-semibold uppercase tracking-widest text-cyan-400 mb-3">
-            {t('landingStepsLabel')}
+            {t("landingStepsLabel")}
           </p>
-          <h2 className="text-center text-3xl font-bold mb-14">{t('landingStepsTitle')}</h2>
+          <h2 className="text-center text-3xl font-bold mb-14">
+            {t("landingStepsTitle")}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {STEPS.map((s, i) => (
-              <div key={s.n} className="flex flex-col items-center text-center gap-4">
+              <div
+                key={s.n}
+                className="flex flex-col items-center text-center gap-4"
+              >
                 <div className="relative">
                   <div className="w-16 h-16 rounded-full bg-linear-to-br from-cyan-600 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-900/30">
                     <Icon name={s.icon} className="w-7 h-7 text-white" />
@@ -344,7 +383,9 @@ export default function LandingPage() {
                   )}
                 </div>
                 <p className="font-semibold text-lg">{s.title}</p>
-                <p className="text-sm text-gray-400 leading-relaxed">{s.desc}</p>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  {s.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -356,22 +397,22 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300 mb-4">
-              {t('landingCurrentScopeTitle')}
+              {t("landingCurrentScopeTitle")}
             </p>
             <ul className="space-y-2 text-sm text-gray-300">
-              <li>• {t('landingCurrentScopeItem1')}</li>
-              <li>• {t('landingCurrentScopeItem2')}</li>
-              <li>• {t('landingCurrentScopeItem3')}</li>
+              <li>• {t("landingCurrentScopeItem1")}</li>
+              <li>• {t("landingCurrentScopeItem2")}</li>
+              <li>• {t("landingCurrentScopeItem3")}</li>
             </ul>
           </div>
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-amber-300 mb-4">
-              {t('landingRoadmapTitle')}
+              {t("landingRoadmapTitle")}
             </p>
             <ul className="space-y-2 text-sm text-gray-300">
-              <li>• {t('landingRoadmapItem1')}</li>
-              <li>• {t('landingRoadmapItem2')}</li>
-              <li>• {t('landingRoadmapItem3')}</li>
+              <li>• {t("landingRoadmapItem1")}</li>
+              <li>• {t("landingRoadmapItem2")}</li>
+              <li>• {t("landingRoadmapItem3")}</li>
             </ul>
           </div>
         </div>
@@ -381,27 +422,50 @@ export default function LandingPage() {
       <section className="py-16 px-5 border-b border-white/5 bg-white/2">
         <div className="max-w-3xl mx-auto flex flex-col items-center gap-6 text-center">
           <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-gray-900 px-6 py-4">
-            <Icon name="graduation" className="w-8 h-8 text-amber-300 shrink-0" />
+            <Icon
+              name="graduation"
+              className="w-8 h-8 text-amber-300 shrink-0"
+            />
             <div className="text-left">
-              <p className="text-sm font-semibold text-white">{t('landingSocialBadgeTitle')}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{t('landingSocialBadgeDesc')}</p>
+              <p className="text-sm font-semibold text-white">
+                {t("landingSocialBadgeTitle")}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {t("landingSocialBadgeDesc")}
+              </p>
             </div>
           </div>
           <blockquote className="max-w-lg text-gray-400 text-sm italic leading-relaxed border-l-2 border-cyan-500/40 pl-4 text-left">
-            {t('landingSocialQuote')}
+            {t("landingSocialQuote")}
           </blockquote>
           <div className="mt-4 flex flex-col items-center gap-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
-              {t('landingInstitutionalLabel', 'Desenvolvido em parceria com')}
+              {t("landingInstitutionalLabel", "Desenvolvido em parceria com")}
             </p>
             <div className="flex items-center gap-6">
-              <a href="https://portal.cin.ufpe.br" target="_blank" rel="noopener noreferrer"
-                className="rounded-xl bg-white/90 px-5 py-3 hover:bg-white transition-colors shadow-sm">
-                <img src="/logo-cin-ufpe.png" alt="Centro de Informática - UFPE" className="h-14 w-auto" />
+              <a
+                href="https://portal.cin.ufpe.br"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl bg-white/90 px-5 py-3 hover:bg-white transition-colors shadow-sm"
+              >
+                <img
+                  src={`${import.meta.env.BASE_URL}logo-cin-ufpe.png`}
+                  alt="Centro de Informática - UFPE"
+                  className="h-14 w-auto"
+                />
               </a>
-              <a href="https://www.cin.ufpe.br/~voxarlabs/" target="_blank" rel="noopener noreferrer"
-                className="rounded-xl bg-white/90 px-5 py-3 hover:bg-white transition-colors shadow-sm">
-                <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-14 w-auto" />
+              <a
+                href="https://www.cin.ufpe.br/~voxarlabs/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl bg-white/90 px-5 py-3 hover:bg-white transition-colors shadow-sm"
+              >
+                <img
+                  src={`${import.meta.env.BASE_URL}logo-voxar-labs.png`}
+                  alt="Voxar Labs"
+                  className="h-14 w-auto"
+                />
               </a>
             </div>
           </div>
@@ -412,17 +476,24 @@ export default function LandingPage() {
       <section className="py-24 px-5 text-center">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-5">
           <Icon name="scene" className="w-10 h-10 text-cyan-400" />
-          <h2 className="text-3xl font-bold">{t('landingCtaFinalTitle')}</h2>
-          <p className="text-gray-400 max-w-md leading-relaxed">{t('landingCtaFinalSubtitle')}</p>
-          <Link to={primaryHref}
-            className="inline-flex items-center justify-center rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-10 py-4 text-base font-semibold text-white shadow-xl shadow-blue-900/30 transition-all active:scale-95">
+          <h2 className="text-3xl font-bold">{t("landingCtaFinalTitle")}</h2>
+          <p className="text-gray-400 max-w-md leading-relaxed">
+            {t("landingCtaFinalSubtitle")}
+          </p>
+          <Link
+            to={primaryHref}
+            className="inline-flex items-center justify-center rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-10 py-4 text-base font-semibold text-white shadow-xl shadow-blue-900/30 transition-all active:scale-95"
+          >
             {primaryLabel}
           </Link>
           {!isAuthenticated && (
             <p className="text-xs text-gray-600">
-              {t('landingAlreadyHaveAccount')}{' '}
-              <Link to="/login" className="text-gray-400 hover:text-white transition-colors underline underline-offset-2">
-                {t('landingEnterLink')}
+              {t("landingAlreadyHaveAccount")}{" "}
+              <Link
+                to="/login"
+                className="text-gray-400 hover:text-white transition-colors underline underline-offset-2"
+              >
+                {t("landingEnterLink")}
               </Link>
             </p>
           )}
@@ -434,10 +505,18 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto flex flex-col items-center gap-6">
           <div className="flex items-center gap-4">
             <div className="rounded-lg bg-white/90 px-3 py-2">
-              <img src="/logo-cin-ufpe.png" alt="CIn UFPE" className="h-8 w-auto" />
+              <img
+                src={`${import.meta.env.BASE_URL}logo-cin-ufpe.png`}
+                alt="CIn UFPE"
+                className="h-8 w-auto"
+              />
             </div>
             <div className="rounded-lg bg-white/90 px-3 py-2">
-              <img src="/logo-voxar-labs.png" alt="Voxar Labs" className="h-8 w-auto" />
+              <img
+                src={`${import.meta.env.BASE_URL}logo-voxar-labs.png`}
+                alt="Voxar Labs"
+                className="h-8 w-auto"
+              />
             </div>
           </div>
           <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
@@ -447,9 +526,21 @@ export default function LandingPage() {
               <span>· © {new Date().getFullYear()}</span>
             </div>
             <div className="flex gap-6">
-              <Link to="/login" className="hover:text-gray-400 transition-colors">{t('landingFooterEnter')}</Link>
-              <Link to="/ar"    className="hover:text-gray-400 transition-colors">{t('landingFooterAr')}</Link>
-              <Link to="/login" className="hover:text-gray-400 transition-colors">{t('landingFooterCreate')}</Link>
+              <Link
+                to="/login"
+                className="hover:text-gray-400 transition-colors"
+              >
+                {t("landingFooterEnter")}
+              </Link>
+              <Link to="/ar" className="hover:text-gray-400 transition-colors">
+                {t("landingFooterAr")}
+              </Link>
+              <Link
+                to="/login"
+                className="hover:text-gray-400 transition-colors"
+              >
+                {t("landingFooterCreate")}
+              </Link>
             </div>
           </div>
         </div>

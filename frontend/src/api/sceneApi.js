@@ -1,9 +1,14 @@
 import axios from 'axios';
 
+// VITE_API_BASE_URL is the backend's origin (e.g. https://host.example.com),
+// not its full API root — every backend route lives under /api (see
+// backend/app.js), so that's appended here rather than trusted to already be
+// part of the configured value. Getting this wrong silently 404s every
+// request ("Cannot POST /auth/login" instead of /api/auth/login).
 const configuredApiBase = String(import.meta.env.VITE_API_BASE_URL || '')
   .trim()
   .replace(/\/+$/, '');
-const apiBaseUrl = configuredApiBase || '/api';
+const apiBaseUrl = configuredApiBase ? `${configuredApiBase}/api` : '/api';
 
 const api = axios.create({ baseURL: apiBaseUrl });
 export const AUTH_TOKEN_KEY = 'auth:token';

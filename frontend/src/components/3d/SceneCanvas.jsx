@@ -8,7 +8,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import SpeechBubble from './SpeechBubble';
-import { AnimationController } from '../../controllers/AnimationController';
+import { AnimationController, attachSourceRestPose } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
 import { applyPosePreset, captureRestPoseSnapshot } from '../../utils/posePresets';
@@ -510,7 +510,7 @@ export default function SceneCanvas({
       "/animation.glb",
       (gltf) => {
         if (gltf.animations?.length) {
-          idleClipRef.current = gltf.animations[0];
+          idleClipRef.current = attachSourceRestPose(gltf.animations[0], gltf.scene);
           if (avatarRef.current && animControllerRef.current) {
             animControllerRef.current.addClips([idleClipRef.current]);
             applyPosePreset(
@@ -556,6 +556,7 @@ export default function SceneCanvas({
             (gltf) => {
               const clip = gltf.animations?.[0];
               if (!clip) return;
+              attachSourceRestPose(clip, gltf.scene);
               const preset = anim.preset || anim.name || "";
               clip.name = preset || clip.name || anim.file;
 

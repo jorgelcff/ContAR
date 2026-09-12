@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
@@ -26,7 +26,7 @@ export default function ScenesPage() {
   const [error, setError]     = useState('');
   const [deleting, setDeleting] = useState(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -37,7 +37,7 @@ export default function ScenesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   const handleNewScene = () => {
     useSceneStore.getState().resetSceneForNew();
@@ -57,7 +57,7 @@ export default function ScenesPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
@@ -101,7 +101,7 @@ export default function ScenesPage() {
           <div className="rounded-2xl border border-gray-700 bg-gray-800/60 p-10 text-center flex flex-col items-center gap-4">
             <Icon name="scene" className="w-12 h-12 text-cyan-400" />
             <p className="text-gray-300 font-medium">{t('scenesEmptyTitle')}</p>
-            <p className="text-sm text-gray-500">{t('scenesEmptyDesc')}</p>
+            <p className="text-sm text-gray-400">{t('scenesEmptyDesc')}</p>
             <button
               onClick={handleNewScene}
               className="mt-2 px-5 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors"
@@ -140,7 +140,7 @@ export default function ScenesPage() {
                 <div className="flex gap-2">
                   <Link
                     to={`/editor?sceneId=${encodeURIComponent(scene.sceneId)}`}
-                    className="flex-1 text-center py-1.5 rounded-lg bg-blue-700 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
+                    className="flex-1 text-center py-1.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-medium transition-colors"
                   >
                     {t('scenesCardEdit')}
                   </Link>

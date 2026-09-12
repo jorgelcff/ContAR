@@ -385,7 +385,7 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
           <p className="text-sm text-gray-400 mb-5">{t('arScenesCount', { count: story.scenes.length })}</p>
           <button
             onClick={onStart}
-            className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-[0.98] text-white font-semibold transition-all"
+            className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:scale-[0.98] text-white font-semibold transition-all"
           >
             ▶ {t('arStartStory')}
           </button>

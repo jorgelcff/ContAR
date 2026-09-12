@@ -17,6 +17,9 @@ export default function SpeechBubble({ text, avatarRef, camera, renderer }) {
 
   useEffect(() => {
     if (!text || !avatarRef || !camera || !renderer) {
+      // Clears a stale position so a later re-mount with a fresh camera/renderer
+      // doesn't briefly render the bubble at its last known screen coordinates.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPos(null);
       return;
     }

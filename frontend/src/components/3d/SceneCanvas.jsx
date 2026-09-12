@@ -14,6 +14,11 @@ import { applyPosePreset, captureRestPoseSnapshot } from '../../utils/posePreset
 import { injectSyntheticJaw, repositionSyntheticJaw, createJawDebugVisuals, SYNTHETIC_JAW_NAME } from '../../utils/syntheticJaw';
 import { mapBones as mapBonesApi } from '../../api/sceneApi';
 
+// Enable Three.js's resource cache once, at module load — so reloading the
+// same GLB/HDR skips a round-trip. This is global THREE state, not component
+// state, so it belongs here rather than reassigned on every render.
+THREE.Cache.enabled = true;
+
 const BONE_LABELS = {
   hips: 'Quadril', spine: 'Coluna', chest: 'Tórax', upperChest: 'Tórax superior',
   neck: 'Pescoço', head: 'Cabeça', jaw: 'Mandíbula',
@@ -193,9 +198,6 @@ export default function SceneCanvas({
   onAvatarClips,
   onJawApi,
 }) {
-  // Enable Three.js resource cache so reloading the same GLB/HDR skips a round-trip.
-  THREE.Cache.enabled = true;
-
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -229,18 +231,7 @@ export default function SceneCanvas({
   const mouthMarkerRef = useRef(null);
   const mouthMarkerInfoRef = useRef({ source: "none", name: "" });
 
-  // Lip-sync: discovered mouth morph targets on the current avatar
-  const mouthMorphsRef = useRef([]);
-  const faceBlendshapesRef = useRef([]);
-  const visemeMorphGroupsRef = useRef({
-    aa: [],
-    oh: [],
-    ee: [],
-    fv: [],
-    mbp: [],
-  });
   const jawBonesRef = useRef([]);
-  const blendshapeCatalogRef = useRef([]);
   const lipSyncTelemetryRef = useRef({
     mouthOpen: 0,
     rms: 0,
@@ -254,6 +245,10 @@ export default function SceneCanvas({
   const jawSmoothedOpenRef = useRef(0);
   const adaptiveNoiseFloorRef = useRef(0.005);
   const syntheticJawRef = useRef(null);
+  // Mirrors syntheticJawRef.current for the JSX below — refs can't be read
+  // during render (React has no way to know to re-render when one changes),
+  // so this state is what the "jaw placement" button's visibility reacts to.
+  const [hasSyntheticJaw, setHasSyntheticJaw] = useState(false);
   const jawDebugVisualsRef = useRef(null);
   const [jawPlacementMode, setJawPlacementMode] = useState(false);
   const [jawOffset, setJawOffset] = useState({ x: 0, y: 0, z: 0 });
@@ -261,7 +256,9 @@ export default function SceneCanvas({
   const [jawBaseWorldPos, setJawBaseWorldPos] = useState(null);
   const jawJitterPhaseRef = useRef(0);
   const onJawApiRef = useRef(onJawApi);
-  onJawApiRef.current = onJawApi;
+  useEffect(() => {
+    onJawApiRef.current = onJawApi;
+  }, [onJawApi]);
   // Reusable typed array for analyser reads (allocated once per fftSize)
   const lipSyncDataRef = useRef(null);
   const lipSyncFreqDataRef = useRef(null);
@@ -329,10 +326,20 @@ export default function SceneCanvas({
   // Controls visibility of the bone-override panel for regular users
   const [showBoneMapperPanel, setShowBoneMapperPanel] = useState(false);
 
-  const mergedLipSyncConfig = {
-    ...DEFAULT_LIP_SYNC_CONFIG,
-    ...(lipSyncConfig || {}),
-  };
+  const mergedLipSyncConfig = useMemo(
+    () => ({
+      ...DEFAULT_LIP_SYNC_CONFIG,
+      ...(lipSyncConfig || {}),
+    }),
+    [lipSyncConfig],
+  );
+  // The render loop below lives inside a mount-once effect and reads this
+  // via a ref (not the closed-over variable) so changing lip-sync settings
+  // mid-session takes effect immediately instead of needing a remount.
+  const mergedLipSyncConfigRef = useRef(mergedLipSyncConfig);
+  useEffect(() => {
+    mergedLipSyncConfigRef.current = mergedLipSyncConfig;
+  }, [mergedLipSyncConfig]);
 
   // Dev tools only visible when ?dev is present in the URL
   const showDevTools = useMemo(() => {
@@ -394,7 +401,7 @@ export default function SceneCanvas({
       effective,
       externalClipsRef.current,
     );
-  }, [boneOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [boneOverrides]);
 
   /* ── Scene initialisation (once) ─────────────────────────────────── */
   useEffect(() => {
@@ -619,10 +626,10 @@ export default function SceneCanvas({
       const pseudoJawRig = isPseudoJawRig(jawBones);
       const effectiveConfig = pseudoJawRig
         ? {
-            ...mergedLipSyncConfig,
+            ...mergedLipSyncConfigRef.current,
             ...NO_RIG_SAFE_PRESET,
           }
-        : mergedLipSyncConfig;
+        : mergedLipSyncConfigRef.current;
       // No analyser (e.g. browser Web Speech, which speaks directly and never
       // routes through Web Audio): drive the mouth straight from the viseme
       // timeline so lip sync still plays. audioCurrentTime is advanced by the
@@ -1032,6 +1039,10 @@ export default function SceneCanvas({
         skeletonHelperRef.current = null;
       }
       mouthMarkerInfoRef.current = { source: "none", name: "" };
+      // mouthMarkerInfo (state, for the debug-panel text) intentionally
+      // mirrors the ref above (read synchronously by the render loop) —
+      // resetting both together when the avatar changes is correct here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMouthMarkerInfo({ source: "none", name: "" });
       if (mouthMarkerRef.current) {
         mouthMarkerRef.current.visible = false;
@@ -1098,6 +1109,7 @@ export default function SceneCanvas({
 
         // Inject a synthetic jaw bone for avatars with no mouth control
         syntheticJawRef.current = null;
+        setHasSyntheticJaw(false);
         jawDebugVisualsRef.current?.dispose();
         jawDebugVisualsRef.current = null;
         setJawBaseWorldPos(null);
@@ -1106,6 +1118,7 @@ export default function SceneCanvas({
           const result = injectSyntheticJaw(model, boneMapper);
           if (result) {
             syntheticJawRef.current = result.jawBone;
+            setHasSyntheticJaw(true);
             lipSyncController._jawBone = result.jawBone;
             lipSyncController._jawRestQuat = result.jawBone.quaternion.clone();
             setJawRadius(result.radius);
@@ -1714,12 +1727,12 @@ export default function SceneCanvas({
               </option>
             ))}
           </select>
-          {syntheticJawRef.current && (
+          {hasSyntheticJaw && (
             <button
               onClick={() => setJawPlacementMode(true)}
               className={`mt-2 w-full rounded border px-2 py-1 text-xs ${
                 jawPlacementMode
-                  ? "border-green-400 bg-green-900/60 text-green-100 animate-pulse"
+                  ? "border-cyan-400 bg-cyan-500 text-white animate-pulse"
                   : "border-cyan-600 bg-cyan-900/60 text-cyan-100 hover:bg-cyan-800/70"
               }`}
             >
@@ -1750,9 +1763,9 @@ export default function SceneCanvas({
       )}
       {/* ── Bone mapper panel — accessible to all users without ?dev ── */}
       {!showDevTools && showBoneMapperPanel && boneCatalogSnapshot.length > 0 && (
-        <div className="absolute left-3 bottom-3 z-20 w-72 max-h-[70vh] overflow-y-auto rounded-md border border-indigo-700/70 bg-gray-950/95 px-3 py-2 text-xs text-gray-100 shadow-xl">
+        <div className="absolute left-3 bottom-3 z-20 w-72 max-h-[70vh] overflow-y-auto rounded-md border border-gray-700/70 bg-gray-950/95 px-3 py-2 text-xs text-gray-100 shadow-xl">
           <div className="flex items-center justify-between mb-2">
-            <p className="font-semibold text-indigo-300 uppercase tracking-wide text-[11px]">
+            <p className="font-semibold text-gray-300 uppercase tracking-wide text-[11px]">
               🦴 Mapeamento de Ossos
             </p>
             <button
@@ -1765,7 +1778,7 @@ export default function SceneCanvas({
           </div>
           <p className="text-[11px] text-gray-400 mb-2">
             Esqueleto detectado:{" "}
-            <span className="text-indigo-300 font-medium">{boneMapperInfo.source}</span>
+            <span className="text-cyan-300 font-medium">{boneMapperInfo.source}</span>
             {" "}({boneMapperInfo.resolvedCount} ossos mapeados automaticamente)
           </p>
           <p className="text-[11px] text-gray-500 mb-2">
@@ -1784,7 +1797,7 @@ export default function SceneCanvas({
                     [standard]: e.target.value,
                   }))
                 }
-                className="flex-1 rounded border border-gray-700 bg-gray-900 px-1 py-0.5 text-xs text-gray-100 focus:outline-none focus:border-indigo-500"
+                className="flex-1 rounded border border-gray-700 bg-gray-900 px-1 py-0.5 text-xs text-gray-100 focus:outline-none focus:border-cyan-500"
               >
                 <option value="">Auto</option>
                 {boneCatalogSnapshot.map((name) => (

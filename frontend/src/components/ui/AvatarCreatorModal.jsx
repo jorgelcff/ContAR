@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import AvaturnEmbed from './AvaturnEmbed';
 import AvatarGallery from './AvatarGallery';
+import ValidAvatarGallery from './ValidAvatarGallery';
 import CharacterStudioEmbed from './CharacterStudioEmbed';
 import Icon from './Icon';
 
@@ -9,6 +10,7 @@ const CREATORS = {
   avaturn:         { label: 'Criar Avatar — Avaturn',    icon: 'avatar' },
   characterstudio: { label: 'CharacterStudio',           icon: 'palette' },
   gallery:         { label: 'Galeria de Avatares (CC0)', icon: 'folder' },
+  valid:           { label: 'VALID (Google)',            icon: 'avatar' },
 };
 
 export default function AvatarCreatorModal({ creator, onExport, onClose }) {
@@ -64,6 +66,14 @@ export default function AvatarCreatorModal({ creator, onExport, onClose }) {
 
           {creator === 'gallery' && (
             <AvatarGallery
+              onSelect={(url) => { onExport(url); onClose(); }}
+              onClose={onClose}
+              fullHeight
+            />
+          )}
+
+          {creator === 'valid' && (
+            <ValidAvatarGallery
               onSelect={(url) => { onExport(url); onClose(); }}
               onClose={onClose}
               fullHeight

@@ -6,12 +6,21 @@ import AudioPanel from './AudioPanel';
 import SceneProgressBar from './SceneProgressBar';
 import Icon from './Icon';
 import StoryQrModal from './StoryQrModal';
+import MobileStoryScenes from './MobileStoryScenes';
 import { TooltipIcon } from './Tooltip';
 import { useSceneStore } from '../../store/useSceneStore';
 import { listAvaturnAvatars, uploadModel } from '../../api/sceneApi';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../auth/AuthContext';
 
 const AVATURN_USER_ID_KEY = 'avaturn:userId';
+
+const AVATAR_CREATORS = [
+  { id: 'avaturn',         labelKey: 'acAvaturn',         icon: 'avatar' },
+  { id: 'characterstudio', labelKey: 'acCharacterStudio', icon: 'palette' },
+  { id: 'gallery',         labelKey: 'acGallery',         icon: 'folder' },
+  { id: 'valid',           labelKey: 'acValid',           icon: 'avatar' },
+];
 
 const TAB_DEFS = [
   { id: 'avatar',   labelKey: 'tabAvatar',   icon: 'avatar' },
@@ -25,8 +34,10 @@ export default function LeftPanel({
   onAddSceneIdToStory,
   onSaveStory,
   onPublishStory,
+  onUnpublishStory,
   isStorySaving,
   isStoryLinked,
+  isStoryPublic,
   audio,
   vrmaUrl,
   onLoadVrma,
@@ -39,7 +50,9 @@ export default function LeftPanel({
 }) {
   const { t } = useTranslation();
   const { addToast } = useToast();
+  const { user } = useAuth();
   const TABS = TAB_DEFS.map((tab) => ({ ...tab, label: t(tab.labelKey) }));
+  const CREATORS = AVATAR_CREATORS.map((c) => ({ ...c, label: t(c.labelKey) }));
 
   const {
     avatarUrl, setAvatarUrl,
@@ -51,7 +64,6 @@ export default function LeftPanel({
     storyDescription, setStoryDescription,
     currentSceneId,
     currentStoryId: linkedStoryId,
-    publishedStoryId,
     animSpeed, setAnimSpeed,
     animLoopOnce, setAnimLoopOnce,
     vrmExpression, setVrmExpression,
@@ -103,7 +115,8 @@ export default function LeftPanel({
 
   // Avatar tab state
   const [urlInput, setUrlInput] = useState(avatarUrl);
-  const [showAvaturn, setShowAvaturn]             = useState(false);
+  const [showCreatorModal, setShowCreatorModal]             = useState(false);
+  const [selectedCreator, setSelectedCreator]     = useState('avaturn');
   const [savedAvatars, setSavedAvatars] = useState([]);
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(false);
   const [avatarListError, setAvatarListError] = useState('');
@@ -149,12 +162,15 @@ export default function LeftPanel({
     const bust = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
     setUrlInput(url);
     setAvatarUrl(bust);
-    setShowAvaturn(false);
+    setShowCreatorModal(false);
   };
 
   const handleLoadSavedAvatars = async () => {
     const configuredUserId = String(import.meta.env.VITE_AVATURN_USER_ID || '').trim();
-    const avaturnUserId = localStorage.getItem(AVATURN_USER_ID_KEY) || configuredUserId || '';
+    // Prefer the id linked to the ContAR account — it follows the user across
+    // devices/browsers. Fall back to this browser's local copy, then the
+    // shared dev/test id from env, for anonymous or pre-migration sessions.
+    const avaturnUserId = user?.avaturnUserId || localStorage.getItem(AVATURN_USER_ID_KEY) || configuredUserId || '';
     if (!avaturnUserId) {
       setAvatarListError(t('openAvaturnFirst'));
       setSavedAvatars([]);
@@ -264,9 +280,8 @@ export default function LeftPanel({
   const handleClearSpeech = () => { setSpeechInput(''); setSpeechText(''); };
 
   // ── Story handlers ──────────────────────────────────────────
-  const storyIdForShare = linkedStoryId || publishedStoryId || '';
-  const storyShareUrl = storyIdForShare
-    ? `${window.location.origin}/story/${encodeURIComponent(storyIdForShare)}`
+  const storyShareUrl = linkedStoryId
+    ? `${window.location.origin}/story/${encodeURIComponent(linkedStoryId)}`
     : '';
 
   const copyStoryLink = async () => {
@@ -298,7 +313,7 @@ export default function LeftPanel({
             className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[11px] font-medium transition-colors ${
               activeTab === tab.id
                 ? 'text-cyan-400 border-b-2 border-cyan-400 bg-gray-750'
-                : 'text-gray-500 hover:text-gray-300 border-b-2 border-transparent'
+                : 'text-gray-400 hover:text-gray-300 border-b-2 border-transparent'
             }`}
           >
             <Icon name={tab.icon} className="w-4 h-4" />
@@ -313,28 +328,44 @@ export default function LeftPanel({
         {/* ══ AVATAR TAB ══════════════════════════════════════ */}
         {activeTab === 'avatar' && (
           <>
-            {/* Primary creator — Avaturn */}
+            {/* Creator picker */}
+            <div className="grid grid-cols-2 gap-1.5">
+              {CREATORS.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCreator(c.id)}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl border py-2 px-2 text-xs font-medium transition-all ${
+                    selectedCreator === c.id
+                      ? 'border-cyan-500/60 bg-cyan-500/15 text-white'
+                      : 'border-white/8 bg-gray-800 text-gray-400 hover:text-gray-200 hover:border-white/15'
+                  }`}
+                >
+                  <Icon name={c.icon} className="w-3.5 h-3.5" /> {c.label}
+                </button>
+              ))}
+            </div>
+
             <button
               data-tour="avatar-upload"
-              onClick={() => setShowAvaturn((v) => !v)}
-              className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
+              onClick={() => setShowCreatorModal((v) => !v)}
+              className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors"
             >
-              {avatarUrl ? t('editAvatar') : t('openAvaturn')}
+              {avatarUrl ? t('editAvatar') : t('openAvatarCreator')}
             </button>
 
             {/* File upload + my avatars row */}
             <div className="flex gap-2">
               <button
                 onClick={handleLoadSavedAvatars}
-                disabled={isLoadingAvatars || showAvaturn}
-                className="flex-1 py-2 rounded-xl bg-slate-600 hover:bg-slate-500 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                disabled={isLoadingAvatars || showCreatorModal}
+                className="flex-1 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-xs font-medium transition-colors"
               >
                 {isLoadingAvatars ? t('loadingAvatars') : t('loadMyAvatars')}
               </button>
               <button
                 onClick={handlePickLocalGlb}
                 disabled={isUploadingGlb}
-                className="flex-1 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-medium transition-colors"
+                className="flex-1 py-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 disabled:opacity-60 text-white text-xs font-medium transition-colors"
               >
                 {isUploadingGlb ? t('uploading') : 'GLB / VRM'}
               </button>
@@ -344,7 +375,7 @@ export default function LeftPanel({
 
             {savedAvatars.length > 0 && (
               <select onChange={handleSelectSavedAvatar} defaultValue=""
-                className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-blue-500">
+                className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-cyan-500">
                 <option value="" disabled>{t('chooseAvatar')}</option>
                 {savedAvatars.map((a) => {
                   const url = a?.url || a?.modelUrl || a?.glbUrl || '';
@@ -354,16 +385,16 @@ export default function LeftPanel({
               </select>
             )}
             {hasLoadedAvatars && !isLoadingAvatars && !avatarListError && savedAvatars.length === 0 && (
-              <p className="text-xs text-gray-500">{t('noSavedAvatars')}</p>
+              <p className="text-xs text-gray-400">{t('noSavedAvatars')}</p>
             )}
             {avatarListError && <p className="text-xs text-red-400">{avatarListError}</p>}
 
-            {/* Avaturn opens in a full-screen modal (SDK needs a sizable container) */}
-            {showAvaturn && (
+            {/* Opens in a full-screen modal (Avaturn's SDK needs a sizable container) */}
+            {showCreatorModal && (
               <AvatarCreatorModal
-                creator="avaturn"
+                creator={selectedCreator}
                 onExport={handleAvaturnExport}
-                onClose={() => setShowAvaturn(false)}
+                onClose={() => setShowCreatorModal(false)}
               />
             )}
 
@@ -371,10 +402,10 @@ export default function LeftPanel({
               <input type="text" value={urlInput}
                 onChange={(e) => { setUrlInput(e.target.value); setAvatarUrl(e.target.value); }}
                 placeholder={t('avatarUrl')}
-                className="flex-1 min-w-0 rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="flex-1 min-w-0 rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
               />
               <button onClick={handleLoad}
-                className="shrink-0 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors">
+                className="shrink-0 px-3 py-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-medium transition-colors">
                 {t('loadAvatar')}
               </button>
             </div>
@@ -389,7 +420,7 @@ export default function LeftPanel({
                 <div className="flex gap-2">
                   <button
                     onClick={() => vrmaInputRef.current?.click()}
-                    className="flex-1 py-2 rounded-xl bg-violet-700 hover:bg-violet-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                    className="flex-1 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1"
                   >
                     <Icon name="upload" className="w-3.5 h-3.5" /> {t('lpLoadVrma')}
                   </button>
@@ -411,13 +442,13 @@ export default function LeftPanel({
                   className="hidden"
                 />
                 {vrmaUrl ? (
-                  <p className="text-xs text-violet-300 flex items-center gap-1">
+                  <p className="text-xs text-emerald-400 flex items-center gap-1">
                     <Icon name="check" className="w-3.5 h-3.5" /> {t('lpVrmAnimApplied')}
                   </p>
                 ) : (
-                  <p className="text-[10px] text-gray-600">
+                  <p className="text-[10px] text-gray-400">
                     {t('lpDownloadVrmaAt')}{' '}
-                    <a href="https://hub.vroid.com" target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">hub.vroid.com</a>
+                    <a href="https://hub.vroid.com" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">hub.vroid.com</a>
                     {' '}→ Animations
                   </p>
                 )}
@@ -431,7 +462,7 @@ export default function LeftPanel({
                 <TooltipIcon text={t('lpPoseTooltip')} />
               </div>
               <select value={posePreset} onChange={(e) => handlePoseChange(e.target.value)}
-                className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-blue-500">
+                className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-cyan-500">
                 {/* When a model's embedded animation is active, posePreset is
                     "clip:<name>", which matches none of the options below — the
                     browser would then show the first option (idle), making it
@@ -486,7 +517,7 @@ export default function LeftPanel({
                         title={name}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-left transition-colors ${
                           active
-                            ? 'bg-cyan-600 text-white'
+                            ? 'bg-cyan-700 text-white'
                             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         }`}
                       >
@@ -544,7 +575,7 @@ export default function LeftPanel({
                     onClick={() => setVrmExpression(value)}
                     className={`py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       (vrmExpression ?? '') === value
-                        ? 'bg-cyan-600 text-white'
+                        ? 'bg-cyan-700 text-white'
                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     }`}
                   >
@@ -587,11 +618,11 @@ export default function LeftPanel({
                 value={speechInput}
                 onChange={(e) => setSpeechInput(e.target.value)}
                 placeholder={t('speechPlaceholder')}
-                className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+                className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-cyan-500 resize-none"
               />
               <div className="flex gap-2">
                 <button onClick={handleAddSpeech}
-                  className="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors">
+                  className="flex-1 py-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-medium transition-colors">
                   {t('addSpeech')}
                 </button>
                 {speechText && (
@@ -616,8 +647,8 @@ export default function LeftPanel({
                       onClick={() => onTextDisplayModeChange?.(value)}
                       className={`py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         textDisplayMode === value
-                          ? 'bg-cyan-600 text-white'
-                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'
+                          ? 'bg-cyan-700 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
                       }`}
                     >
                       {label}
@@ -651,7 +682,7 @@ export default function LeftPanel({
                       }}
                       className="w-full accent-cyan-400 cursor-pointer"
                     />
-                    <div className="flex justify-between text-[10px] text-gray-600 select-none">
+                    <div className="flex justify-between text-[10px] text-gray-400 select-none">
                       <span>{t('lpIntensitySoft')}</span><span>{t('lpIntensityNormal')}</span><span>{t('lpIntensityIntense')}</span>
                     </div>
                   </div>
@@ -668,7 +699,7 @@ export default function LeftPanel({
                     onClick={() => jawApi.startPlacement()}
                     className={`w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
                       jawApi.jawPlacementMode
-                        ? 'bg-green-700 text-green-100 animate-pulse'
+                        ? 'bg-cyan-500 text-white animate-pulse'
                         : 'bg-cyan-800 hover:bg-cyan-700 text-cyan-100'
                     }`}
                   >
@@ -713,7 +744,6 @@ export default function LeftPanel({
                 isTTSLoading={audio.isTTSLoading}
                 error={audio.error}
                 audioMetrics={audio.audioMetrics}
-                audioProcessing={audio.audioProcessing}
                 lipSyncConfig={audio.lipSyncConfig}
                 visemeTimeline={audio.visemeTimeline}
                 isSpeaking={audio.isSpeaking}
@@ -729,7 +759,6 @@ export default function LeftPanel({
                 onStop={audio.stop}
                 onStartRec={audio.startRecording}
                 onStopRec={audio.stopRecording}
-                onAudioProcessingChange={audio.updateAudioProcessing}
                 onLipSyncConfigChange={audio.updateLipSyncConfig}
               />
             )}
@@ -756,12 +785,12 @@ export default function LeftPanel({
               value={sceneTitle}
               onChange={(e) => setSceneTitle(e.target.value)}
               placeholder={t('sceneTitlePlaceholder')}
-              className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
             />
 
             <button onClick={onAddCurrentSceneToStory}
               title={t('lpAddSceneToStoryTooltip')}
-              className="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+              className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
               <Icon name="check" className="w-4 h-4" />
               {t('lpFinishAndAddScene')}
             </button>
@@ -798,40 +827,62 @@ export default function LeftPanel({
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('story')}</p>
 
             {isStoryLinked && (
-              <div className="rounded-xl border border-emerald-700/60 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-200 break-all">
-                {t('lpStoryLinked', { id: linkedStoryId.slice(0, 8) })}
+              <div className={`rounded-xl border px-3 py-2 text-xs break-all flex items-center gap-1.5 ${
+                isStoryPublic
+                  ? 'border-emerald-700/40 bg-emerald-950/30 text-emerald-200'
+                  : 'border-gray-600 bg-gray-700/40 text-gray-300'
+              }`}>
+                <Icon name={isStoryPublic ? 'unlock' : 'lock'} className="w-3.5 h-3.5 shrink-0" />
+                {isStoryPublic ? t('lpStoryPublicBadge') : t('lpStoryLinked', { id: linkedStoryId.slice(0, 8) })}
               </div>
             )}
             <input type="text" value={storyTitle} onChange={(e) => setStoryTitle(e.target.value)}
               placeholder={t('storyTitlePlaceholder')}
-              className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
             />
             <textarea rows={2} value={storyDescription} onChange={(e) => setStoryDescription(e.target.value)}
               placeholder={t('storyDescriptionPlaceholder')}
-              className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
+              className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-sm px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-cyan-500 resize-none"
             />
 
             <div className="flex gap-2">
               <input type="text" value={manualSceneId} onChange={(e) => setManualSceneId(e.target.value)}
                 placeholder={t('sceneId')}
-                className="flex-1 min-w-0 rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="flex-1 min-w-0 rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
               />
               <button onClick={() => { const v = manualSceneId.trim(); if (!v) return; onAddSceneIdToStory(v); setManualSceneId(''); }}
-                className="shrink-0 px-3 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-medium transition-colors">
+                className="shrink-0 px-3 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors">
                 {t('addSceneById')}
               </button>
             </div>
 
+            <MobileStoryScenes />
+
             <button onClick={onSaveStory} disabled={isStorySaving}
-              className="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
+              className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white text-sm font-semibold transition-colors">
               {isStorySaving ? t('savingStory') : <span className="flex items-center justify-center gap-1.5"><Icon name="edit" className="w-4 h-4" />{isStoryLinked ? t('updateStory') : t('saveStory')}</span>}
             </button>
-            <button onClick={onPublishStory} disabled={isStorySaving}
-              className="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
-              <Icon name="rocket" className="w-4 h-4" /> {t('publish')}
-            </button>
 
-            {storyShareUrl && (
+            {isStoryPublic ? (
+              <div className="flex gap-2">
+                <div className="flex-1 rounded-xl border border-emerald-700/40 bg-emerald-950/30 px-3 py-3 text-sm font-semibold text-emerald-200 flex items-center justify-center gap-1.5">
+                  <Icon name="check" className="w-4 h-4" /> {t('lpPublished')}
+                </div>
+                <button onClick={onUnpublishStory} disabled={isStorySaving}
+                  title={t('lpUnpublishTooltip')}
+                  className="px-3 py-3 rounded-xl border border-gray-600 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors">
+                  {t('lpUnpublish')}
+                </button>
+              </div>
+            ) : (
+              <button onClick={onPublishStory} disabled={isStorySaving}
+                title={t('lpPublishTooltip')}
+                className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+                <Icon name="rocket" className="w-4 h-4" /> {t('publish')}
+              </button>
+            )}
+
+            {isStoryPublic && storyShareUrl && (
               <a
                 href={storyShareUrl}
                 target="_blank"
@@ -842,9 +893,9 @@ export default function LeftPanel({
               </a>
             )}
 
-            {storyShareUrl && (
+            {isStoryPublic && storyShareUrl && (
               <>
-                <div className="rounded-xl bg-gray-900 px-3 py-2 text-xs text-blue-300 break-all">{storyShareUrl}</div>
+                <div className="rounded-xl bg-gray-900 px-3 py-2 text-xs text-cyan-300 break-all">{storyShareUrl}</div>
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={copyStoryLink}
                     className="py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors flex items-center justify-center gap-1.5">

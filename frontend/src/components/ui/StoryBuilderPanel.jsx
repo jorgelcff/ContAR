@@ -48,7 +48,7 @@ export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
         <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{t('storyScenesTitle')}</p>
 
         {storyScenes.length === 0 && (
-          <p className="text-xs text-gray-500">{t('noStoryScenes')}</p>
+          <p className="text-xs text-gray-400">{t('noStoryScenes')}</p>
         )}
 
         {/* Right-edge fade hints that the row scrolls horizontally when the
@@ -115,14 +115,14 @@ export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
                       value={item.transitionText}
                       onChange={(e) => updateStoryScene(index, 'transitionText', e.target.value)}
                       placeholder={t('transitionText')}
-                      className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                      className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
                     />
                     <input
                       type="text"
                       value={item.markerUrl || ''}
                       onChange={(e) => updateStoryScene(index, 'markerUrl', e.target.value)}
                       placeholder={t('markerUrlPlaceholder')}
-                      className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-fuchsia-500"
+                      className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
                     />
                     <div className="flex gap-2 items-center">
                       <input
@@ -131,11 +131,11 @@ export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
                         value={item.durationSeconds}
                         onChange={(e) => updateStoryScene(index, 'durationSeconds', e.target.value)}
                         placeholder={t('durationSeconds')}
-                        className="w-20 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        className="w-20 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
                       />
                       <button
                         onClick={() => handleEditScene(item.sceneId)}
-                        className="ml-auto px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 text-xs text-white"
+                        className="ml-auto px-2 py-1 rounded bg-cyan-700 hover:bg-cyan-600 text-xs text-white"
                         title={t('editSceneTitle')}
                       >
                         <Icon name="edit" className="w-3.5 h-3.5" />

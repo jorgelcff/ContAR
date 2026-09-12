@@ -1,11 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AvaturnSDK } from '@avaturn/sdk';
 import {
   AVATURN_LAST_SESSION_TOKEN_KEY,
   AVATURN_LAST_SESSION_URL_KEY,
   createAvaturnSession,
+  getStoredAuthToken,
+  linkAvaturnUserId,
 } from '../../api/sceneApi';
+import { useAuth } from '../../auth/AuthContext';
 
 const AVATURN_USER_ID_KEY = 'avaturn:userId';
 
@@ -125,6 +128,7 @@ function extractAvaturnUserId(payload) {
  */
 export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) {
   const { t } = useTranslation();
+  const { user, refreshUser } = useAuth();
   const containerRef = useRef(null);
   const sdkRef = useRef(null);
   const onExportRef = useRef(onExport);
@@ -135,6 +139,17 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
     onExportRef.current = onExport;
   }, [onExport]);
 
+  // Remembers the Avaturn user id locally (works immediately, any device) and,
+  // when signed in, also links it to the ContAR account so "load my avatars"
+  // keeps working after switching browsers or devices.
+  const persistAvaturnUserId = useCallback((userId) => {
+    if (!userId) return;
+    localStorage.setItem(AVATURN_USER_ID_KEY, userId);
+    if (getStoredAuthToken()) {
+      linkAvaturnUserId(userId).then(refreshUser).catch(() => {});
+    }
+  }, [refreshUser]);
+
   React.useEffect(() => {
     let active = true;
     const containerEl = containerRef.current;
@@ -142,7 +157,7 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
     const handleExport = (data) => {
       const maybeUserId = extractAvaturnUserId(data);
       if (maybeUserId) {
-        localStorage.setItem(AVATURN_USER_ID_KEY, maybeUserId);
+        persistAvaturnUserId(maybeUserId);
       }
 
       const avatarUrl = extractAvatarUrl(data);
@@ -162,7 +177,7 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
       const message = event?.data;
       const maybeUserId = extractAvaturnUserId(message);
       if (maybeUserId) {
-        localStorage.setItem(AVATURN_USER_ID_KEY, maybeUserId);
+        persistAvaturnUserId(maybeUserId);
       }
 
       const eventType = String(message?.event || message?.type || '').toLowerCase();
@@ -184,7 +199,7 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
           String(import.meta.env.VITE_AVATURN_DISABLE_BACKEND_FALLBACK || '').toLowerCase() === 'true';
         const configuredUserId = getConfiguredAvaturnUserId();
         if (configuredUserId) {
-          localStorage.setItem(AVATURN_USER_ID_KEY, configuredUserId);
+          persistAvaturnUserId(configuredUserId);
         }
         const initWithUrl = async (url, mode) => {
           localStorage.setItem(AVATURN_LAST_SESSION_URL_KEY, url);
@@ -225,7 +240,7 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
           }
         }
 
-        const storedUserId = localStorage.getItem(AVATURN_USER_ID_KEY) || '';
+        const storedUserId = user?.avaturnUserId || localStorage.getItem(AVATURN_USER_ID_KEY) || '';
         const session = await createAvaturnSession({
           avaturnUserId: storedUserId,
           sessionType: 'create_or_edit_existing',
@@ -235,7 +250,7 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
         const responseUserId = session?.avaturnUserId;
 
         if (responseUserId) {
-          localStorage.setItem(AVATURN_USER_ID_KEY, responseUserId);
+          persistAvaturnUserId(responseUserId);
         }
 
         if (!sessionUrl) {
@@ -263,6 +278,10 @@ export default function AvaturnEmbed({ onExport, onClose, fullHeight = false }) 
         containerEl.innerHTML = '';
       }
     };
+    // Intentionally mount-once: the SDK is initialized a single time per
+    // embed, so re-running this on every persistAvaturnUserId identity
+    // change (which tracks the AuthContext user) would re-init it needlessly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

@@ -65,6 +65,13 @@ export async function saveStory(payload) {
   return data;
 }
 
+/** Publish or unpublish a story — only this makes it reachable via its
+ * public share link; saving content never changes it. Returns { storyId, isPublic }. */
+export async function publishStory(storyId, isPublic) {
+  const { data } = await api.put(`/story/${encodeURIComponent(storyId)}/publish`, { isPublic });
+  return data;
+}
+
 /** Load a scene by ID. */
 export async function getScene(id) {
   const { data } = await api.get(`/scene/${id}`);
@@ -89,9 +96,10 @@ export async function listStories() {
   return data;
 }
 
-/** Store an avatar URL reference. Returns { avatarId }. */
-export async function saveAvatar(modelUrl) {
-  const { data } = await api.post('/avatar', { modelUrl });
+/** Link this account to its Avaturn SDK user id, so "load my avatars" works
+ * from any device/browser instead of only the one that created them. */
+export async function linkAvaturnUserId(avaturnUserId) {
+  const { data } = await api.put('/avatar/user-link', { avaturnUserId });
   return data;
 }
 

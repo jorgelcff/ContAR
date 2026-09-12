@@ -103,7 +103,7 @@ async function listStories(_req, res) {
 
     const stories = await Story.find(
       { ownerId },
-      { _id: 0, storyId: 1, metadata: 1, scenes: 1, createdAt: 1, updatedAt: 1 }
+      { _id: 0, storyId: 1, metadata: 1, scenes: 1, isPublic: 1, createdAt: 1, updatedAt: 1 }
     )
       .sort({ updatedAt: -1 })
       .limit(100);
@@ -113,6 +113,7 @@ async function listStories(_req, res) {
         storyId:    s.storyId,
         metadata:   s.metadata,
         sceneCount: Array.isArray(s.scenes) ? s.scenes.length : 0,
+        isPublic:   Boolean(s.isPublic),
         createdAt:  s.createdAt,
         updatedAt:  s.updatedAt,
       })),
@@ -132,9 +133,11 @@ async function getPublicStory(req, res) {
 
     const story = await Story.findOne(
       { storyId },
-      { _id: 0, storyId: 1, metadata: 1, scenes: 1, createdAt: 1, updatedAt: 1 }
+      { _id: 0, storyId: 1, metadata: 1, scenes: 1, isPublic: 1, createdAt: 1, updatedAt: 1 }
     );
-    if (!story) {
+    // Same "not found" response whether the story doesn't exist or is just
+    // not published yet — this must not leak which of the two is true.
+    if (!story || !story.isPublic) {
       return res.status(404).json({ error: 'Story not found' });
     }
 
@@ -142,6 +145,39 @@ async function getPublicStory(req, res) {
   } catch (err) {
     console.error('getPublicStory error:', err);
     return res.status(500).json({ error: 'Failed to load story' });
+  }
+}
+
+// PUT /api/story/:id/publish — owner-only visibility toggle. Separate from
+// saveStory on purpose: editing content should never silently change whether
+// the story is reachable via its public link.
+async function setStoryPublished(req, res) {
+  try {
+    const ownerId = String(req.user?.userId || '');
+    if (!ownerId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const storyId = safeString(req.params?.id);
+    if (!storyId || !UUID_RE.test(storyId)) {
+      return res.status(400).json({ error: 'Invalid story ID' });
+    }
+
+    const isPublic = Boolean(req.body?.isPublic);
+
+    const story = await Story.findOneAndUpdate(
+      { storyId, ownerId },
+      { isPublic },
+      { returnDocument: 'after' }
+    );
+    if (!story) {
+      return res.status(404).json({ error: 'Story not found or not yours' });
+    }
+
+    return res.json({ storyId: story.storyId, isPublic: story.isPublic });
+  } catch (err) {
+    console.error('setStoryPublished error:', err);
+    return res.status(500).json({ error: 'Failed to update story visibility' });
   }
 }
 
@@ -160,4 +196,4 @@ async function deleteStory(req, res) {
   }
 }
 
-module.exports = { saveStory, getStory, listStories, getPublicStory, deleteStory };
+module.exports = { saveStory, getStory, listStories, getPublicStory, setStoryPublished, deleteStory };

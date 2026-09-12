@@ -56,7 +56,9 @@ const createStorySlice = (set, get) => ({
   sceneTitlesById: {},
   currentSceneId: '',
   currentStoryId: '',
-  publishedStoryId: '',
+  // Whether the current story is reachable via its public share link — set
+  // from the server (loaded story / after a publish call), never assumed.
+  isStoryPublic: false,
   timelineBlocks: [],
   timelineDuration: 10,
 
@@ -112,7 +114,7 @@ const createStorySlice = (set, get) => ({
   })),
   setCurrentSceneId: (id) => set({ currentSceneId: id }),
   setCurrentStoryId: (id) => set({ currentStoryId: id }),
-  setPublishedStoryId: (id) => set({ publishedStoryId: id }),
+  setIsStoryPublic: (v) => set({ isStoryPublic: Boolean(v) }),
 
   // Clears the avatar/speech/scene fields left over from whatever was being
   // edited before, so "new scene" / "new story" entry points start from a
@@ -192,6 +194,7 @@ export const useSceneStore = create(
         storyTitle: state.storyTitle,
         storyDescription: state.storyDescription,
         currentStoryId: state.currentStoryId,
+        isStoryPublic: state.isStoryPublic,
         storyScenes: state.storyScenes,
         sceneTitlesById: state.sceneTitlesById,
         timelineBlocks: state.timelineBlocks,

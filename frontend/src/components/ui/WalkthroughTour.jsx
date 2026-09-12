@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const TOUR_KEY = 'contar:tour-done';
@@ -86,7 +87,7 @@ function computeTooltipStyle(spotlight, prefer, vw, vh) {
 
 export default function WalkthroughTour({ isOpen, onClose }) {
   const { t } = useTranslation();
-  const STEPS = getSteps(t);
+  const STEPS = useMemo(() => getSteps(t), [t]);
 
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState(null);
@@ -105,6 +106,9 @@ export default function WalkthroughTour({ isOpen, onClose }) {
 
   useEffect(() => {
     if (!isOpen) return;
+    // Measures the current step's target immediately on open/step-change,
+    // instead of waiting for the first resize/scroll event.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     measure();
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
@@ -207,7 +211,7 @@ export default function WalkthroughTour({ isOpen, onClose }) {
             )}
             <button
               onClick={next}
-              className="px-4 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition-colors"
+              className="px-4 py-1.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-semibold transition-colors"
             >
               {step === STEPS.length - 1 ? t('tourStart') : t('tourNext')}
             </button>

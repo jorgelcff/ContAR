@@ -306,15 +306,15 @@ export class AnimationController {
     }
 
     if (_dbg) {
-      // eslint-disable-next-line no-console
+       
       console.groupCollapsed(`[AnimCtrl] retarget "${clip.name}" — mapper: ${this._boneMapper.source} (${this._boneMapper.resolvedCount} bones)`);
-      // eslint-disable-next-line no-console
+       
       console.log(`tracks: ${trackCountBefore} total → ${retargetedClip.tracks.length} surviving`);
-      // eslint-disable-next-line no-console
+       
       console.log('surviving tracks:', retargetedClip.tracks.map((t) => t.name));
-      // eslint-disable-next-line no-console
+       
       console.log('avatar bones:', [...boneNameSet].sort().join(', '));
-      // eslint-disable-next-line no-console
+       
       console.groupEnd();
     }
 
@@ -552,7 +552,7 @@ export class AnimationController {
     if (isIdentity) return null;
 
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
+       
       console.log(
         `[AnimCtrl] hips parent "${node.name}" has non-identity internal rotation`,
         offsetQ,

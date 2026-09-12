@@ -1,8 +1,9 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
+const { requireAuth } = require('../middleware/authMiddleware');
 const {
-  saveAvatar,
+  linkAvaturnUser,
   createAvaturnSession,
   createAvaturnUser,
   deleteAvaturnUser,
@@ -22,7 +23,7 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.post('/', limiter, saveAvatar);
+router.put('/user-link', limiter, requireAuth, linkAvaturnUser);
 router.post('/user/new', limiter, createAvaturnUser);
 router.delete('/user/:userId', limiter, deleteAvaturnUser);
 router.post('/session', limiter, createAvaturnSession);

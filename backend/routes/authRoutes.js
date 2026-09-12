@@ -4,7 +4,10 @@ const router = express.Router();
 const { register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification, updateAccount, changePassword } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
-const limiter       = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+// Configurable via env so the E2E backend (which registers a fresh disposable
+// user per test — dozens per run) can raise the ceiling without touching the
+// production default (see backend/scripts/serve-e2e.js).
+const limiter       = rateLimit({ windowMs: 15 * 60 * 1000, max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 100, standardHeaders: true, legacyHeaders: false });
 const strictLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,  standardHeaders: true, legacyHeaders: false });
 
 router.post('/register',        limiter,       register);

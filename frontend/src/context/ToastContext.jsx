@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -20,7 +21,7 @@ function ToastItem({ toast, onRemove }) {
   return (
     <div
       role="alert"
-      className={`relative flex items-start gap-3 w-80 rounded-xl border shadow-2xl px-4 py-3 overflow-hidden ${s.bg}`}
+      className={`relative flex items-start gap-3 w-80 max-w-[calc(100vw-2rem)] rounded-xl border shadow-2xl px-4 py-3 overflow-hidden ${s.bg}`}
       style={{ animation: 'toast-in 0.22s ease-out' }}
     >
       {/* coloured progress bar */}
@@ -55,7 +56,7 @@ function ToastContainer({ toasts, onRemove }) {
           to   { width: 0%; }
         }
       `}</style>
-      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-20 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
         {toasts.map((t) => (
           <div key={t.id} className="pointer-events-auto">
             <ToastItem toast={t} onRemove={onRemove} />

@@ -1,10 +1,18 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const { getAuthSecret } = require('../config/auth');
+
+// bcrypt's cost factor is deliberately CPU-expensive (that's what makes it
+// brute-force resistant) — fine for real traffic, but the E2E suite creates
+// a fresh user per test and was overwhelming the single-threaded dev backend
+// under parallelism, causing slow/reset connections. Configurable so the E2E
+// backend can run cheaper hashing (see backend/scripts/serve-e2e.js) without
+// touching the production cost factor.
+const BCRYPT_COST = Number(process.env.BCRYPT_COST) || 10;
 
 function signToken(user) {
   return jwt.sign(
@@ -20,6 +28,7 @@ function sanitizeUser(user) {
     name: user.name || '',
     email: user.email,
     emailVerified: Boolean(user.emailVerified),
+    avaturnUserId: user.avaturnUserId || '',
     createdAt: user.createdAt,
   };
 }
@@ -92,7 +101,7 @@ async function register(req, res) {
     if (existing)
       return res.status(409).json({ error: "Email already registered" });
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
     const emailVerificationToken = crypto.randomBytes(32).toString("hex");
     const user = await User.create({
       name,
@@ -227,7 +236,7 @@ async function resetPassword(req, res) {
 
     if (!user) return res.status(400).json({ error: 'Link inválido ou expirado. Solicite um novo.' });
 
-    user.passwordHash      = await bcrypt.hash(password, 10);
+    user.passwordHash      = await bcrypt.hash(password, BCRYPT_COST);
     user.resetToken        = null;
     user.resetTokenExpiry  = null;
     await user.save();
@@ -314,7 +323,7 @@ async function changePassword(req, res) {
     const ok = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Senha atual incorreta' });
 
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST);
     await user.save();
     return res.json({ message: 'Senha alterada com sucesso' });
   } catch (err) {

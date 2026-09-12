@@ -51,7 +51,7 @@ function ProductPreview() {
             <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
             <div className="w-3 h-3 rounded-full bg-green-500/70" />
           </div>
-          <div className="flex-1 mx-4 rounded-full bg-gray-700/60 px-3 py-1 text-[10px] text-gray-500 text-center">
+          <div className="flex-1 mx-4 rounded-full bg-gray-700/60 px-3 py-1 text-[10px] text-gray-400 text-center">
             contar.app/story/...
           </div>
         </div>
@@ -77,7 +77,7 @@ function ProductPreview() {
             <div className="flex-1 h-1 rounded-full bg-white/10 overflow-hidden">
               <div className="w-2/5 h-full bg-cyan-400 rounded-full" />
             </div>
-            <span className="text-[10px] text-gray-500">2/3</span>
+            <span className="text-[10px] text-gray-400">2/3</span>
             <div className="w-7 h-7 rounded bg-cyan-700/80 flex items-center justify-center text-[10px] text-white font-bold">AR</div>
           </div>
           <div className="absolute top-3 right-3 rounded-full bg-purple-600/80 px-2 py-0.5 text-[10px] text-white font-semibold backdrop-blur-sm flex items-center gap-1">
@@ -88,7 +88,7 @@ function ProductPreview() {
       </div>
       <div className="flex justify-center gap-6 mt-4">
         {['Avatar 3D', 'Voz com IA', 'Lip Sync'].map((label) => (
-          <div key={label} className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div key={label} className="flex items-center gap-1.5 text-xs text-gray-400">
             <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
             {label}
           </div>
@@ -195,7 +195,7 @@ export default function LandingPage() {
               (isAuthenticated ? (
                 <Link
                   to="/stories"
-                  className="rounded-full bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition-colors"
+                  className="rounded-full bg-cyan-700 hover:bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition-colors"
                 >
                   {t("landingNavMyStories")}
                 </Link>
@@ -209,7 +209,7 @@ export default function LandingPage() {
                   </Link>
                   <Link
                     to="/login"
-                    className="rounded-full bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-sm font-semibold text-white transition-colors"
+                    className="rounded-full bg-cyan-700 hover:bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition-colors"
                   >
                     {t("landingNavCreate")}
                   </Link>
@@ -243,7 +243,7 @@ export default function LandingPage() {
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
             <Link
               to={primaryHref}
-              className="inline-flex items-center justify-center rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-7 py-3 text-base font-semibold text-white shadow-lg shadow-blue-900/30 transition-all active:scale-95"
+              className="inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-7 py-3 text-base font-semibold text-white shadow-lg shadow-cyan-900/30 transition-all active:scale-95"
             >
               {primaryLabel}
             </Link>
@@ -272,7 +272,7 @@ export default function LandingPage() {
               <span className="text-3xl sm:text-4xl font-extrabold text-cyan-400">
                 <Counter target={value} suffix={suffix} />
               </span>
-              <span className="text-xs text-gray-500 leading-snug">
+              <span className="text-xs text-gray-400 leading-snug">
                 {label}
               </span>
             </div>
@@ -333,7 +333,7 @@ export default function LandingPage() {
       {/* ── Para quem é ─────────────────────────────────────────── */}
       <section className="py-20 px-5 border-b border-white/5">
         <div className="max-w-5xl mx-auto">
-          <p className="text-center text-xs font-semibold uppercase tracking-widest text-purple-400 mb-3">
+          <p className="text-center text-xs font-semibold uppercase tracking-widest text-cyan-400 mb-3">
             {t("landingAudienceLabel")}
           </p>
           <h2 className="text-center text-3xl font-bold mb-12">
@@ -439,7 +439,7 @@ export default function LandingPage() {
             {t("landingSocialQuote")}
           </blockquote>
           <div className="mt-4 flex flex-col items-center gap-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
               {t("landingInstitutionalLabel", "Desenvolvido em parceria com")}
             </p>
             <div className="flex items-center gap-6">
@@ -482,12 +482,12 @@ export default function LandingPage() {
           </p>
           <Link
             to={primaryHref}
-            className="inline-flex items-center justify-center rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-10 py-4 text-base font-semibold text-white shadow-xl shadow-blue-900/30 transition-all active:scale-95"
+            className="inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-10 py-4 text-base font-semibold text-white shadow-xl shadow-cyan-900/30 transition-all active:scale-95"
           >
             {primaryLabel}
           </Link>
           {!isAuthenticated && (
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-400">
               {t("landingAlreadyHaveAccount")}{" "}
               <Link
                 to="/login"
@@ -519,10 +519,10 @@ export default function LandingPage() {
               />
             </div>
           </div>
-          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
+          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
             <div className="flex items-center gap-2">
               <Icon name="scene" className="w-4 h-4" />
-              <span className="font-semibold text-gray-500">ContAR</span>
+              <span className="font-semibold text-gray-400">ContAR</span>
               <span>· © {new Date().getFullYear()}</span>
             </div>
             <div className="flex gap-6">

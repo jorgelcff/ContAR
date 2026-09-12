@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import { QRCodeCanvas } from 'qrcode.react';
 import Header from '../components/ui/Header';
-import SceneCanvas from '../components/3d/SceneCanvas';
 import Icon from '../components/ui/Icon';
 import { useSceneStore } from '../store/useSceneStore';
 import { LipSyncController } from '../controllers/LipSyncController';
@@ -29,6 +28,8 @@ import {
   saveScale,
   useARStory,
 } from './ar/arShared';
+
+const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
 function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
@@ -928,9 +929,9 @@ export default function ARPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 
             {/* Pseudo AR (markerless, camera + gyroscope) — primary recommendation */}
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-950/20 p-5 flex flex-col gap-4">
+            <div className="rounded-2xl border border-gray-700/40 bg-gray-800/40 p-5 flex flex-col gap-4">
               <div>
-                <h2 className="text-lg font-bold text-emerald-200">{t('arImmersiveTitle')}</h2>
+                <h2 className="text-lg font-bold text-white">{t('arImmersiveTitle')}</h2>
                 <p className="mt-1 text-sm text-gray-300">
                   {t('pseudoArDescription')}
                 </p>
@@ -942,15 +943,15 @@ export default function ARPage() {
                 <p>{t('arReqHttps')}</p>
               </div>
               <Link to={pseudoHref}
-                className="mt-auto inline-flex items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                className="mt-auto inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
                 {t('openPseudoAr')} →
               </Link>
             </div>
 
             {/* Surface AR */}
-            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-950/20 p-5 flex flex-col gap-4">
+            <div className="rounded-2xl border border-gray-700/40 bg-gray-800/40 p-5 flex flex-col gap-4">
               <div>
-                <h2 className="text-lg font-bold text-cyan-200">{t('arSurfaceTitle')}</h2>
+                <h2 className="text-lg font-bold text-white">{t('arSurfaceTitle')}</h2>
                 <p className="mt-1 text-sm text-gray-300">
                   {t('arSurfaceDesc')}
                 </p>
@@ -974,9 +975,9 @@ export default function ARPage() {
             </div>
 
             {/* Marker AR */}
-            <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-950/20 p-5 flex flex-col gap-4">
+            <div className="rounded-2xl border border-gray-700/40 bg-gray-800/40 p-5 flex flex-col gap-4">
               <div>
-                <h2 className="text-lg font-bold text-fuchsia-200">{t('arMarkerTitle')}</h2>
+                <h2 className="text-lg font-bold text-white">{t('arMarkerTitle')}</h2>
                 <p className="mt-1 text-sm text-gray-300">
                   {t('arMarkerDesc')}
                 </p>
@@ -989,7 +990,7 @@ export default function ARPage() {
               </div>
               <div className="mt-auto flex flex-col gap-2">
                 <Link to={hiroHref}
-                  className="inline-flex items-center justify-center rounded-xl bg-fuchsia-700 hover:bg-fuchsia-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                  className="inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
                   {t('arMarkerDemoBtn')}
                 </Link>
                 {markerUrl ? (
@@ -1010,16 +1011,16 @@ export default function ARPage() {
           <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
             <p className="text-sm font-semibold text-white mb-3">{t('arHiroHowTitle')}</p>
             <ol className="space-y-2 text-sm text-gray-300">
-              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">1.</span> {t('arHiroStep1')}</li>
-              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">2.</span> {t('arHiroStep2')}
+              <li className="flex gap-2"><span className="text-gray-400 font-bold shrink-0">1.</span> {t('arHiroStep1')}</li>
+              <li className="flex gap-2"><span className="text-gray-400 font-bold shrink-0">2.</span> {t('arHiroStep2')}
                 <a href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
                   target="_blank" rel="noreferrer"
                   className="text-cyan-400 hover:text-cyan-300 underline ml-1">
                   {t('arHiroStep2Link')}
                 </a>
               </li>
-              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">3.</span> {t('arHiroStep3')}</li>
-              <li className="flex gap-2"><span className="text-fuchsia-400 font-bold shrink-0">4.</span> {t('arHiroStep4')}</li>
+              <li className="flex gap-2"><span className="text-gray-400 font-bold shrink-0">3.</span> {t('arHiroStep3')}</li>
+              <li className="flex gap-2"><span className="text-gray-400 font-bold shrink-0">4.</span> {t('arHiroStep4')}</li>
             </ol>
           </div>
 
@@ -1215,7 +1216,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
           <p className="text-xs text-gray-400 mt-0.5">{t('arNotAvailableDesc')}</p>
           {!storyId && (
             <p className="text-xs text-gray-500 mt-1">
-              {t('arTryHiroPre')} <a href={hiroHref} className="text-fuchsia-400 hover:underline">{t('arHiroDemoName')}</a> {t('arTryHiroPost')}
+              {t('arTryHiroPre')} <a href={hiroHref} className="text-cyan-400 hover:underline">{t('arHiroDemoName')}</a> {t('arTryHiroPost')}
             </p>
           )}
         </div>
@@ -1232,7 +1233,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
             <h2 className="text-xl font-bold text-white mb-1">{storyMeta?.metadata?.title}</h2>
             <p className="text-sm text-gray-400 mb-5">{t('arScenesCount', { count: scenes.length })}</p>
             <button onClick={handleStart}
-              className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold">
+              className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white font-semibold">
               ▶ {t('arStartStory')}
             </button>
           </div>
@@ -1240,16 +1241,26 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
       )}
 
       <div className="flex-1 overflow-hidden">
-        <SceneCanvas
-          avatarUrl={avatarUrl}
-          transform={transform}
-          posePreset={posePreset}
-          speechText={speechText}
-          textDisplayMode={currentScene?.content?.narrative?.displayMode || 'bubble'}
-          visemeTimeline={audio.visemeTimeline}
-          audioCurrentTime={audio.audioCurrentTime}
-          lipSyncConfig={audio.lipSyncConfig}
-        />
+        <Suspense fallback={
+          <div className="flex h-full items-center justify-center bg-gray-900">
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+              <p className="text-sm text-cyan-200 font-medium">Preparando o palco 3D...</p>
+              <p className="text-xs text-gray-500">Isso pode levar alguns segundos</p>
+            </div>
+          </div>
+        }>
+          <SceneCanvas
+            avatarUrl={avatarUrl}
+            transform={transform}
+            posePreset={posePreset}
+            speechText={speechText}
+            textDisplayMode={currentScene?.content?.narrative?.displayMode || 'bubble'}
+            visemeTimeline={audio.visemeTimeline}
+            audioCurrentTime={audio.audioCurrentTime}
+            lipSyncConfig={audio.lipSyncConfig}
+          />
+        </Suspense>
       </div>
 
       {/* Story controls */}

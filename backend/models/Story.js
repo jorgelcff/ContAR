@@ -20,6 +20,9 @@ const StorySchema = new mongoose.Schema({
     language: { type: String, default: 'en' },
   },
   scenes: { type: [StorySceneSchema], default: [] },
+  // A story is only reachable via its public share link once this is true —
+  // saving/editing a story never implies publishing it.
+  isPublic: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

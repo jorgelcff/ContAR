@@ -1,5 +1,10 @@
 import React from 'react';
 
+// \u{FE0F} (variation selector) and \u{200D} (zero-width joiner) are emoji
+// *modifiers*, not standalone glyphs — they're included here so multi-codepoint
+// emoji (flags, skin tones, ZWJ sequences) are stripped down to nothing rather
+// than leaving orphaned joiner characters behind.
+// eslint-disable-next-line no-misleading-character-class
 const EMOJI_REGEX = /[\u{1F000}-\u{1FFFF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu;
 const URL_PATTERN = /(https?:\/\/[^\s<>"]+)/g;
 

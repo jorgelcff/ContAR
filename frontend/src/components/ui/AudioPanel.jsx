@@ -32,7 +32,6 @@ export default function AudioPanel({
   isSpeaking,
   error,
   audioMetrics,
-  audioProcessing,
   lipSyncConfig,
   visemeTimeline,
   onGenerateTTS,
@@ -47,7 +46,6 @@ export default function AudioPanel({
   onStop,
   onStartRec,
   onStopRec,
-  onAudioProcessingChange,
   onLipSyncConfigChange,
 }) {
   const { t } = useTranslation();
@@ -90,14 +88,14 @@ export default function AudioPanel({
             onClick={() => setProvider(p.id)}
             className={`flex flex-col items-center gap-1 rounded-xl border py-2 px-2 text-center transition-all ${
               provider === p.id
-                ? 'border-violet-500/60 bg-violet-500/15 text-white'
+                ? 'border-cyan-500/60 bg-cyan-500/15 text-white'
                 : 'border-white/8 bg-gray-800 text-gray-400 hover:text-gray-200 hover:border-white/15'
             }`}
           >
             <span className="flex items-center gap-1.5 text-xs font-semibold">
               <Icon name={p.icon} className="w-3.5 h-3.5" /> {t(p.labelKey)}
             </span>
-            <span className="text-[10px] text-gray-500 leading-tight">{t(p.descKey)}</span>
+            <span className={`text-[10px] leading-tight ${provider === p.id ? 'text-gray-200' : 'text-gray-400'}`}>{t(p.descKey)}</span>
           </button>
         ))}
       </div>
@@ -111,7 +109,7 @@ export default function AudioPanel({
             "{speechText}"
           </p>
         ) : (
-          <p className="text-xs text-amber-400/80 flex items-center gap-1.5">
+          <p className="text-xs text-amber-400 flex items-center gap-1.5">
             <Icon name="warning" className="w-3.5 h-3.5" /> {t('apWriteTextFirst')}
           </p>
         )}
@@ -121,7 +119,7 @@ export default function AudioPanel({
           <select
             value={selectedVoice}
             onChange={(e) => setSelectedVoice(e.target.value)}
-            className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-violet-400"
+            className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
           >
             {AZURE_VOICES.map((v) => (
               <option key={v.id} value={v.id}>{v.label}</option>
@@ -134,7 +132,7 @@ export default function AudioPanel({
           <select
             value={selectedLang}
             onChange={(e) => setSelectedLang(e.target.value)}
-            className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
           >
             {WEB_LANGS.map((l) => (
               <option key={l.code} value={l.code}>{l.label}</option>
@@ -147,7 +145,7 @@ export default function AudioPanel({
           <button
             onClick={() => onGenerateTTS(speechText, selectedVoice)}
             disabled={isTTSLoading || !hasSpeechText}
-            className="w-full py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
           >
             {isTTSLoading ? (
               <>
@@ -162,7 +160,7 @@ export default function AudioPanel({
           isSpeaking ? (
             <button
               onClick={onStopWebSpeech}
-              className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-lg bg-gray-600 hover:bg-gray-500 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
             >
               <Icon name="stop" className="w-4 h-4" /> {t('apStopSpeech')}
             </button>
@@ -170,7 +168,7 @@ export default function AudioPanel({
             <button
               onClick={() => onSpeakWebSpeech(speechText, selectedLang)}
               disabled={!hasSpeechText}
-              className="w-full py-3 min-h-12 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
+              className="w-full py-3 min-h-12 rounded-lg bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
             >
               <span className="flex items-center justify-center gap-1.5"><Icon name="volume" className="w-4 h-4" /> {t('apSpeakNow')}</span>
             </button>
@@ -196,7 +194,7 @@ export default function AudioPanel({
           <button
             onClick={isPlaying ? onPause : onPlay}
             disabled={isRecording}
-            className="flex-1 py-2.5 min-h-12 rounded-lg bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 min-h-12 rounded-lg bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
           >
             <Icon name={isPlaying ? 'pause' : 'play'} className="w-4 h-4" />
             {isPlaying ? t('audioPause') : t('audioPlay')}
@@ -243,10 +241,10 @@ export default function AudioPanel({
 
         {/* Lip sync for uploaded/recorded audio: estimate visemes from text */}
         {hasAudio && (
-          <div className="rounded-lg border border-indigo-700/40 bg-indigo-950/20 p-2.5 flex flex-col gap-1.5">
+          <div className="rounded-lg border border-gray-700/40 bg-gray-800/40 p-2.5 flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
-              <Icon name="waveform" className="w-3.5 h-3.5 text-indigo-300" />
-              <p className="text-xs font-semibold text-indigo-200">{t('apVisemeByText')}</p>
+              <Icon name="waveform" className="w-3.5 h-3.5 text-gray-300" />
+              <p className="text-xs font-semibold text-gray-200">{t('apVisemeByText')}</p>
               <TooltipIcon text={t('apVisemeByTextHelp')} />
             </div>
             <textarea
@@ -254,13 +252,13 @@ export default function AudioPanel({
               value={visemeTextInput}
               onChange={(e) => setVisemeTextInput(e.target.value)}
               placeholder={t('apEstimatedTiming')}
-              className="w-full rounded border border-indigo-700 bg-indigo-950/60 px-2 py-1 text-xs text-indigo-100 placeholder-indigo-400/60"
+              className="w-full rounded border border-gray-700 bg-gray-900/60 px-2 py-1 text-xs text-gray-100 placeholder-gray-500"
             />
             <div className="flex gap-2">
               <button
                 onClick={() => onGenerateVisemeFromText(visemeTextInput)}
                 disabled={!visemeTextInput.trim()}
-                className="flex-1 rounded-lg bg-indigo-700 px-2 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                className="flex-1 rounded-lg bg-cyan-700 px-2 py-1.5 text-xs font-medium text-white hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
               >
                 <Icon name="sparkles" className="w-3.5 h-3.5" /> {t('apGenLocalTimeline')}
               </button>
@@ -307,7 +305,7 @@ export default function AudioPanel({
 
           {/* Viseme JSON import */}
           <div className="flex gap-2">
-            <button onClick={() => visemeInputRef.current?.click()} className="flex-1 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+            <button onClick={() => visemeInputRef.current?.click()} className="flex-1 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
               <Icon name="upload" className="w-3.5 h-3.5" /> {t('apImportVisemeJson')}
             </button>
           </div>

@@ -89,7 +89,7 @@ export default function ViewerPage() {
           {audio.audioUrl && (
             <button
               onClick={() => audio.isPlaying ? audio.pause() : audio.play().catch(() => {})}
-              className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold text-white transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs font-semibold text-white transition-colors"
             >
               {audio.isPlaying ? 'Pausar' : 'Play'}
             </button>

@@ -8,6 +8,10 @@ const UserSchema = new mongoose.Schema({
   emailVerificationToken:  { type: String,  default: null },
   resetToken:              { type: String,  default: null },
   resetTokenExpiry:        { type: Date,    default: null },
+  // Links this account to its Avaturn SDK user id, so "load my avatars"
+  // works from any device/browser instead of only the one that created them
+  // (the SDK itself only ever hands back an id — it has no per-account concept).
+  avaturnUserId:           { type: String,  default: '' },
   createdAt:               { type: Date,    default: Date.now },
 });
 

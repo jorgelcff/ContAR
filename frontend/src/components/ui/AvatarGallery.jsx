@@ -32,9 +32,6 @@ export default function AvatarGallery({ onSelect, onClose, fullHeight = false })
 
   // Load collection list, then first collection's avatars
   useEffect(() => {
-    setLoading(true);
-    setError('');
-
     fetch(COLLECTIONS_URL)
       .then((r) => r.json())
       .then((data) => {

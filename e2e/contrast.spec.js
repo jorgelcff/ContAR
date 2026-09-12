@@ -37,3 +37,32 @@ test.describe('light theme contrast regressions', () => {
     expect(ratio, 'contrast ratio of the editor narration caption').toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
   });
 });
+
+// Regression tests for the design-system consolidation: interactive elements
+// were flattened down to a single cyan primary accent (from 13 uncoordinated
+// color families), which is fully covered by index.css's light-theme remap —
+// these guard against a future unmapped accent color sneaking back in.
+test.describe('design-system primary-accent contrast', () => {
+  test.use({ theme: 'light' });
+
+  test('AR mode-selection primary button is legible (cyan-700, was per-card emerald/cyan/fuchsia)', async ({ page }) => {
+    await page.goto('/ar');
+    await page.waitForLoadState('networkidle');
+
+    const openImmersive = page.getByRole('link', { name: /Abrir AR Imersiva/i });
+    await expect(openImmersive).toBeVisible();
+    const ratio = await contrastRatioOf(openImmersive);
+    expect(ratio, 'contrast ratio of the AR mode card primary button').toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+  });
+
+  test('Fala tab primary button is legible (cyan-700, was green-600)', async ({ authedPage }) => {
+    await authedPage.goto('/editor');
+    await authedPage.locator('[data-tour="tab-fala"]').waitFor();
+    await authedPage.locator('[data-tour="tab-fala"]').click();
+
+    const addSpeech = authedPage.getByRole('button', { name: 'Definir texto da fala' });
+    await expect(addSpeech).toBeVisible();
+    const ratio = await contrastRatioOf(addSpeech);
+    expect(ratio, 'contrast ratio of the Fala tab primary button').toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+  });
+});

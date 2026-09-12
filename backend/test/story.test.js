@@ -62,12 +62,28 @@ describe('GET /api/story/:id (private)', () => {
 });
 
 describe('GET /api/story/public/:id', () => {
-  it('is public and returns the story without requiring the owner', async () => {
+  it('returns 404 for a saved story that has not been published yet', async () => {
     const user = await createAuthedUser();
     const created = await request(app)
       .post('/api/story')
       .set('Authorization', user.authHeader)
       .send(sampleStory);
+
+    const res = await request(app).get(`/api/story/public/${created.body.storyId}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('is public and returns the story without requiring the owner, once published', async () => {
+    const user = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send(sampleStory);
+
+    await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: true });
 
     const res = await request(app).get(`/api/story/public/${created.body.storyId}`);
     expect(res.status).toBe(200);
@@ -77,6 +93,73 @@ describe('GET /api/story/public/:id', () => {
   it('returns 404 for an unknown story', async () => {
     const res = await request(app).get('/api/story/public/22222222-2222-4222-8222-222222222222');
     expect(res.status).toBe(404);
+  });
+});
+
+describe('PUT /api/story/:id/publish', () => {
+  it('rejects unauthenticated requests', async () => {
+    const res = await request(app).put('/api/story/11111111-1111-4111-8111-111111111111/publish').send({ isPublic: true });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects publishing another user's story", async () => {
+    const owner = await createAuthedUser();
+    const intruder = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', owner.authHeader)
+      .send(sampleStory);
+
+    const res = await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', intruder.authHeader)
+      .send({ isPublic: true });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('can be toggled back to private, hiding it from the public route again', async () => {
+    const user = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send(sampleStory);
+
+    await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: true });
+
+    const unpublish = await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: false });
+    expect(unpublish.body.isPublic).toBe(false);
+
+    const publicRes = await request(app).get(`/api/story/public/${created.body.storyId}`);
+    expect(publicRes.status).toBe(404);
+  });
+
+  it('saving the story again afterwards does not reset its publish state', async () => {
+    const user = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send(sampleStory);
+
+    await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: true });
+
+    await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send({ ...sampleStory, storyId: created.body.storyId, metadata: { title: 'Edited title' } });
+
+    const publicRes = await request(app).get(`/api/story/public/${created.body.storyId}`);
+    expect(publicRes.status).toBe(200);
+    expect(publicRes.body.metadata.title).toBe('Edited title');
   });
 });
 

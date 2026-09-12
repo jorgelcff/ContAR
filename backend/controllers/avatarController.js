@@ -1,5 +1,4 @@
-const { v4: uuidv4 } = require('uuid');
-const Avatar = require('../models/Avatar');
+const User = require('../models/User');
 
 function getAvaturnApiBaseCandidates() {
   const raw = (process.env.AVATURN_API_BASE_URL || '').trim();
@@ -114,18 +113,24 @@ function normalizeSessionType(sessionType) {
   return map[raw] || 'create_or_edit_existing';
 }
 
-// POST /api/avatar — store an avatar URL
-async function saveAvatar(req, res) {
+// PUT /api/avatar/user-link — associate this account with its Avaturn SDK user id,
+// so "load my avatars" works from any device instead of only the browser that
+// created them (the Avaturn SDK only ever hands back an id, never an account).
+async function linkAvaturnUser(req, res) {
   try {
-    const { modelUrl } = req.body;
-    if (!modelUrl) return res.status(400).json({ error: 'modelUrl is required' });
+    const avaturnUserId = String(req.body?.avaturnUserId || '').trim();
+    if (!avaturnUserId) return res.status(400).json({ error: 'avaturnUserId is required' });
 
-    const avatarId = uuidv4();
-    const avatar = await Avatar.create({ avatarId, modelUrl });
-    res.status(201).json({ avatarId: avatar.avatarId });
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { avaturnUserId },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ avaturnUserId: user.avaturnUserId });
   } catch (err) {
-    console.error('saveAvatar error:', err);
-    res.status(500).json({ error: 'Failed to save avatar' });
+    console.error('linkAvaturnUser error:', err);
+    res.status(500).json({ error: 'Failed to link Avaturn user' });
   }
 }
 
@@ -326,7 +331,7 @@ async function createExportTask(req, res) {
 }
 
 module.exports = {
-  saveAvatar,
+  linkAvaturnUser,
   createAvaturnSession,
   createAvaturnUser,
   deleteAvaturnUser,

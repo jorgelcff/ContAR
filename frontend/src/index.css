@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+/* ── Color system ──────────────────────────────────────────────────── *
+ * Interactive elements use only these four color families. Every one   *
+ * of them has an explicit light-theme remap below — introducing a new  *
+ * accent family for an interactive element means it silently breaks    *
+ * light-theme contrast until someone adds a remap for it here, so      *
+ * don't: reuse one of these roles instead.                             *
+ *                                                                       *
+ *   Primary / brand   cyan    Primary CTAs, active tab/nav state,      *
+ *                              selected chips, links                   *
+ *   Neutral            gray    Secondary buttons, info/container       *
+ *                              boxes, non-primary card accents          *
+ *   Danger              red    Delete / destructive actions, errors    *
+ *   Warning            amber   Caution messages, missing-input nudges  *
+ *   Success           emerald  Confirmations, "saved" feedback         *
+ *                                                                       *
+ * The cyan→purple/indigo gradient is permitted ONLY on non-interactive *
+ * decorative surfaces (hero titles, marketing background blobs) —      *
+ * never on a button, menu, or anything else a user clicks.             *
+ * ──────────────────────────────────────────────────────────────────── */
+
 /* ── Default: dark ────────────────────────────────────────────────── */
 :root {
   color-scheme: dark;

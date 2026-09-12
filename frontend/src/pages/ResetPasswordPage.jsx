@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
               {t('resetPwSuccessMsg')}
             </div>
             <Link to="/login"
-              className="w-full text-center py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors">
+              className="w-full text-center py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-medium transition-colors">
               {t('resetPwGoToLogin')}
             </Link>
           </div>
@@ -79,7 +79,7 @@ export default function ResetPasswordPage() {
               className="w-full rounded-lg bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
             <button type="submit" disabled={submitting}
-              className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">
+              className="w-full py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white text-sm font-medium transition-colors">
               {submitting ? t('resetPwSubmitting') : t('resetPwSubmit')}
             </button>
           </form>

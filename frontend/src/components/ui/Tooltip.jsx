@@ -8,7 +8,6 @@ function usePortalPosition(anchorRef, visible, position = 'top') {
     const el = anchorRef.current;
     if (!el || !visible) return;
     const rect = el.getBoundingClientRect();
-    const pad = 8;
     let top, left;
     left = rect.left + rect.width / 2;
     if (position === 'bottom') {
@@ -26,7 +25,14 @@ function usePortalPosition(anchorRef, visible, position = 'top') {
   }, [anchorRef, visible, position]);
 
   useEffect(() => {
-    if (!visible) { setStyle(s => ({ ...s, opacity: 0 })); return; }
+    if (!visible) {
+      // Fades the tooltip out immediately when it's hidden, instead of
+      // waiting for the next recalc (which never comes, since it's gated
+      // on `visible`).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStyle(s => ({ ...s, opacity: 0 }));
+      return;
+    }
     requestAnimationFrame(recalc);
   }, [visible, recalc]);
 

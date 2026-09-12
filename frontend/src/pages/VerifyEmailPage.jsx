@@ -14,7 +14,12 @@ export default function VerifyEmailPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (!token) { setStatus('error'); setMessage(t('verifyEmailNoToken')); return; }
+    if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStatus('error');
+      setMessage(t('verifyEmailNoToken'));
+      return;
+    }
 
     verifyEmail(token)
       .then((data) => {

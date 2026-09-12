@@ -35,12 +35,12 @@ export default function SceneProgressBar({ avatarUrl, speechText, audioUrl, scen
               className={`flex items-center justify-center w-7 h-7 rounded-full text-sm transition-all duration-300 ${
                 done[step.key]
                   ? 'bg-cyan-500 text-white shadow-md shadow-cyan-900/40'
-                  : 'bg-gray-700 text-gray-500 group-hover:bg-gray-600'
+                  : 'bg-gray-700 text-gray-400 group-hover:bg-gray-600'
               }`}
             >
               {done[step.key] ? <Icon name="check" className="w-4 h-4" /> : <Icon name={step.icon} className="w-4 h-4" />}
             </span>
-            <span className={`text-[10px] font-medium transition-colors ${done[step.key] ? 'text-cyan-400' : 'text-gray-500'}`}>
+            <span className={`text-[10px] font-medium transition-colors ${done[step.key] ? 'text-cyan-400' : 'text-gray-400'}`}>
               {step.label}
             </span>
           </button>

@@ -15,7 +15,7 @@ const TABS = [
 export default function BottomNav({ activeTab, onTabChange }) {
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-gray-900 border-t border-gray-700 flex"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-700 flex"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       {TABS.map((tab) => {
@@ -25,7 +25,7 @@ export default function BottomNav({ activeTab, onTabChange }) {
             key={tab.id}
             onClick={() => onTabChange(isActive ? null : tab.id)}
             className={`relative flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors active:bg-gray-800 ${
-              isActive ? 'text-cyan-400' : 'text-gray-500'
+              isActive ? 'text-cyan-400' : 'text-gray-400'
             }`}
           >
             {isActive && (

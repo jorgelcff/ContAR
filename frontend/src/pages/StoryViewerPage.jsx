@@ -229,9 +229,6 @@ export default function StoryViewerPage() {
   const currentMarkerUrl = storyScenes[index]?.markerUrl || '';
   const arHref = `/ar?storyId=${id}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}${currentMarkerUrl ? `&markerUrl=${encodeURIComponent(currentMarkerUrl)}` : ''}`;
 
-  // First scene avatar for splash background hint
-  const firstAvatarUrl = storyScenes[0] ? null : null; // reserved for future thumbnail
-
   // ── Render ────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
@@ -262,12 +259,12 @@ export default function StoryViewerPage() {
             </div>
             <div className="hidden md:flex items-center gap-2">
               <Link to={arHref}
-                className="px-3 py-2 min-h-12 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold flex items-center gap-1.5">
+                className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center gap-1.5">
                 <Icon name="cube" className="w-4 h-4" />
                 {t('viewerOpenAr')}
               </Link>
               <button onClick={() => setIsPlaying((p) => !p)} disabled={!hasStarted}
-                className="px-3 py-2 min-h-12 rounded bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-xs flex items-center">
+                className="px-3 py-2 min-h-12 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-xs flex items-center">
                 {isPlaying ? t('pause') : t('play')}
               </button>
               <button onClick={() => setIndex((p) => Math.max(0, p - 1))} disabled={index <= 0 || !hasStarted}
@@ -316,7 +313,7 @@ export default function StoryViewerPage() {
 
                   <button
                     onClick={handleStart}
-                    className="w-24 h-24 rounded-full bg-cyan-600 hover:bg-cyan-500 active:scale-95 flex items-center justify-center transition-all duration-150 shadow-2xl shadow-cyan-900/60 hover:shadow-cyan-600/40 hover:scale-105"
+                    className="w-24 h-24 rounded-full bg-cyan-700 hover:bg-cyan-600 active:scale-95 flex items-center justify-center transition-all duration-150 shadow-2xl shadow-cyan-900/60 hover:shadow-cyan-600/40 hover:scale-105"
                     aria-label={t('viewerStart')}
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 ml-1 text-white">
@@ -324,7 +321,7 @@ export default function StoryViewerPage() {
                     </svg>
                   </button>
 
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-400">
                     {t('viewerSceneCount', { count: storyScenes.length })}
                     {' · '}
                     {t('viewerAudioNote')}
@@ -361,18 +358,18 @@ export default function StoryViewerPage() {
             <div className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-gray-700 bg-gray-950/95 px-4 py-3 backdrop-blur-sm">
               <div className="flex items-center gap-2">
                 <Link to={arHref}
-                  className="px-3 py-2 min-h-12 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold flex items-center gap-1.5">
+                  className="px-3 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold flex items-center gap-1.5">
                   <Icon name="cube" className="w-4 h-4" />
                   {t('viewerOpenAr')}
                 </Link>
                 {!hasStarted ? (
                   <button onClick={handleStart}
-                    className="flex-1 px-4 py-2 min-h-12 rounded bg-cyan-600 hover:bg-cyan-500 text-sm font-bold flex items-center justify-center gap-2">
+                    className="flex-1 px-4 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-sm font-bold flex items-center justify-center gap-2">
                     {t('viewerStart')}
                   </button>
                 ) : (
                   <button onClick={() => setIsPlaying((p) => !p)}
-                    className="px-4 py-2 min-h-12 flex-1 rounded bg-emerald-700 hover:bg-emerald-600 text-sm font-medium flex items-center justify-center">
+                    className="px-4 py-2 min-h-12 flex-1 rounded bg-gray-700 hover:bg-gray-600 text-sm font-medium flex items-center justify-center">
                     {isPlaying ? t('pause') : t('play')}
                   </button>
                 )}
@@ -415,7 +412,7 @@ export default function StoryViewerPage() {
                       <div className="flex flex-col items-center gap-4">
                         <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
                         <p className="text-sm text-cyan-200 font-medium">{t('viewerPreparing')}</p>
-                        <p className="text-xs text-gray-500">{t('viewerWait')}</p>
+                        <p className="text-xs text-gray-400">{t('viewerWait')}</p>
                       </div>
                     </div>
                   }>
@@ -435,7 +432,7 @@ export default function StoryViewerPage() {
                   <div className="h-full flex flex-col items-center justify-center bg-gray-900 gap-4 px-6 text-center">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14 text-gray-600"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 7a7 7 0 0 1 14 0"/></svg>
                     <p className="text-gray-300 font-medium">{t('noAvatarInScene')}</p>
-                    <p className="text-xs text-gray-500 max-w-xs">
+                    <p className="text-xs text-gray-400 max-w-xs">
                       Abra esta cena no editor, selecione um avatar e salve novamente.
                     </p>
                   </div>

@@ -235,7 +235,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-1 w-full py-3 rounded-xl bg-linear-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-60 text-white text-sm font-semibold transition-all active:scale-[0.98] shadow-lg shadow-blue-900/30"
+              className="mt-1 w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 disabled:opacity-60 text-white text-sm font-semibold transition-all active:scale-[0.98] shadow-lg shadow-cyan-900/30"
             >
               {submitting ? <Spinner /> : view === 'register' ? t('registerSubmit') : t('loginSubmit')}
             </button>
@@ -254,7 +254,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 rounded-xl bg-linear-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-60 text-white text-sm font-semibold transition-all active:scale-[0.98]"
+              className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 disabled:opacity-60 text-white text-sm font-semibold transition-all active:scale-[0.98]"
             >
               {submitting ? <Spinner /> : t('forgotSubmit')}
             </button>
@@ -278,7 +278,7 @@ export default function LoginPage() {
                 {t('loginToggleToRegister')}
               </button>
               <button onClick={() => switchView('forgot')}
-                className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-left py-1">
+                className="text-sm text-gray-400 hover:text-gray-300 transition-colors text-left py-1">
                 {t('loginForgotLink')}
               </button>
             </>

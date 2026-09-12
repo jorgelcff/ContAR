@@ -14,6 +14,14 @@ async function registerUser(request) {
     data: { name: 'E2E User', email, password: 'password123' },
   });
   const body = await res.json();
+  if (!res.ok() || !body?.token) {
+    // A silently-missing token used to get written to localStorage as the
+    // literal string "undefined", making every subsequent request 401 and
+    // every test in the run look like an unrelated "redirected to /login"
+    // failure — fail loudly here instead, with the real cause (e.g. the auth
+    // rate limiter being exhausted by a long full-suite run).
+    throw new Error(`registerUser failed: ${res.status()} ${JSON.stringify(body)}`);
+  }
   return { email, password: 'password123', token: body.token, userId: body.user?.id };
 }
 
@@ -28,6 +36,11 @@ const test = base.test.extend({
   page: async ({ page, theme }, use) => {
     await page.addInitScript((t) => {
       localStorage.setItem('contar:theme', t);
+      // Pin the UI language regardless of the browser's locale — i18n falls
+      // back to navigator.language when unset, and Playwright's Chromium
+      // defaults to en-US, which would silently switch every test off the
+      // Portuguese text these specs assert against.
+      localStorage.setItem('contar:language', 'pt');
     }, theme);
     await use(page);
   },
@@ -38,6 +51,7 @@ const test = base.test.extend({
       ({ key, token, t }) => {
         localStorage.setItem(key, token);
         localStorage.setItem('contar:theme', t);
+        localStorage.setItem('contar:language', 'pt');
         // A brand-new user would otherwise see the onboarding + tour modals on
         // first editor visit — irrelevant to what these tests check.
         localStorage.setItem('avaturn:onboarding:done', '1');

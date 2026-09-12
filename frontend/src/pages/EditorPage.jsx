@@ -12,7 +12,7 @@ import StoryBuilderPanel from '../components/ui/StoryBuilderPanel';
 import { useSceneStore, hadLocalAvatarOnInit } from '../store/useSceneStore';
 import useAudio from '../hooks/useAudio';
 import { useToast } from '../context/ToastContext';
-import { getScene, getStory, saveScene, saveStory, uploadAudio, deleteAudio } from '../api/sceneApi';
+import { getScene, getStory, saveScene, saveStory, publishStory, uploadAudio, deleteAudio } from '../api/sceneApi';
 
 const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 
@@ -33,19 +33,19 @@ export default function EditorPage() {
   const [sceneLoading, setSceneLoading] = useState(false);
 
   const {
-    avatarUrl, setAvatarUrl,
-    transform, setTransform,
-    posePreset, setPosePreset,
-    speechText, setSpeechText,
+    avatarUrl,
+    transform,
+    posePreset,
+    speechText,
     textDisplayMode, setTextDisplayMode,
-    sceneTitle, setSceneTitle,
+    sceneTitle,
     storyTitle, setStoryTitle,
     storyDescription, setStoryDescription,
     storyScenes, setStoryScenes,
     sceneTitlesById, setSceneTitlesById,
-    currentSceneId, setCurrentSceneId,
+    currentSceneId,
     currentStoryId, setCurrentStoryId,
-    publishedStoryId, setPublishedStoryId,
+    isStoryPublic, setIsStoryPublic,
     narrativeAudioUrl,
     buildScenePayload,
     timelineBlocks,
@@ -87,7 +87,6 @@ export default function EditorPage() {
       addToast(t('epLocalAvatarRemoved'), 'info', 5000);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [isSaving, setIsSaving] = useState(false);
   const [isAddingScene, setIsAddingScene] = useState(false);
   const [isStorySaving, setIsStorySaving] = useState(false);
   const [error, setError] = useState('');
@@ -162,7 +161,7 @@ export default function EditorPage() {
     if (pendingPayloadRef.current) {
       saveScene(pendingPayloadRef.current).catch(() => {});
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const isStoryLinked = Boolean(currentStoryId);
   // Route to the /ar mode menu (not straight to Surface AR) so the user can pick
@@ -261,6 +260,7 @@ export default function EditorPage() {
       .then((data) => {
         setStoryTitle(data?.metadata?.title || '');
         setStoryDescription(data?.metadata?.description || '');
+        setIsStoryPublic(Boolean(data?.isPublic));
         const scenes = Array.isArray(data?.scenes)
           ? [...data.scenes]
               .sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0))
@@ -317,30 +317,6 @@ export default function EditorPage() {
   }, [currentSceneId, sceneTitle, setSceneTitlesById]);
 
   // ── Handlers ─────────────────────────────────────────────────
-  const handleSave = async () => {
-    setIsSaving(true);
-    setError('');
-    try {
-      const result = await saveScene(buildScenePayload(currentSceneId || undefined));
-      if (result?.sceneId) setCurrentSceneId(result.sceneId);
-      // Mark clean so the toolbar reflects the manual save (and autosave doesn't
-      // re-fire a redundant save for the now-identical state).
-      const savedId = result?.sceneId || currentSceneId || undefined;
-      lastSavedSigRef.current = JSON.stringify(
-        useSceneStore.getState().buildScenePayload(savedId),
-      );
-      pendingPayloadRef.current = null;
-      setIsDirty(false);
-      setAutosaveStatus(new Date());
-      addToast(t('epSceneSaved'), 'success');
-    } catch (err) {
-      setError(`${t('errorSaving')}: ${err.message}`);
-      addToast(`Erro ao salvar: ${err.message}`, 'error');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleAddCurrentSceneToStory = async () => {
     // Guard against double-click creating multiple blank entries
     if (isAddingScene) return;
@@ -368,11 +344,16 @@ export default function EditorPage() {
       }
 
       // 2. Generate a fresh UUID for the new blank scene, reset editor.
+      //    Deliberately NOT added to storyScenes yet — it has no content and
+      //    was never saved to the backend. Adding it here used to leave a
+      //    phantom, unloadable scene reference in the story the moment this
+      //    button was clicked once and the user stopped (e.g. a one-scene
+      //    story): step 1's logic above already adds a scene correctly (only
+      //    once it has real, saved content), and this new blank scene will
+      //    go through that same path the next time this button is clicked.
       const newSceneId = crypto.randomUUID();
       store.resetSceneForNew();
       store.setCurrentSceneId(newSceneId);
-      store.addStoryScene(newSceneId);
-      store.setSceneTitlesById({ [newSceneId]: '' });
 
       // 3. Pre-mark as "loaded" so the scene-load effect doesn't try to GET
       //    this UUID from the server (it doesn't exist yet — first edit/autosave
@@ -438,20 +419,42 @@ export default function EditorPage() {
         })),
       };
       const result = await saveStory(payload);
-      const savedStoryId = result?.storyId || '';
-      setPublishedStoryId(savedStoryId);
+      const savedStoryId = result?.storyId || currentStoryId || '';
       if (savedStoryId && !currentStoryId) setCurrentStoryId(savedStoryId);
       addToast(t('epStorySaved'), 'success');
+      return savedStoryId;
     } catch (err) {
       setError(`${t('errorSaving')}: ${err.message}`);
       addToast(`Erro ao salvar história: ${err.message}`, 'error');
+      return '';
     } finally {
       setIsStorySaving(false);
     }
   };
 
+  // Publishing always saves first, so the public link never shows stale
+  // content relative to what's currently in the editor.
   const handlePublishStory = async () => {
-    await handleSaveStory();
+    const storyId = await handleSaveStory();
+    if (!storyId) return;
+    try {
+      await publishStory(storyId, true);
+      setIsStoryPublic(true);
+      addToast(t('epStoryPublished'), 'success');
+    } catch (err) {
+      addToast(`${t('errorSaving')}: ${err.message}`, 'error');
+    }
+  };
+
+  const handleUnpublishStory = async () => {
+    if (!currentStoryId) return;
+    try {
+      await publishStory(currentStoryId, false);
+      setIsStoryPublic(false);
+      addToast(t('epStoryUnpublished'), 'info');
+    } catch (err) {
+      addToast(`${t('errorSaving')}: ${err.message}`, 'error');
+    }
   };
 
   // Save status shown in the editor toolbar: unsaved (amber) → saving → saved.
@@ -511,7 +514,7 @@ export default function EditorPage() {
         >
           ? Tour
         </button>
-        <Link to={arHref} className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 flex items-center gap-1">
+        <Link to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600 flex items-center gap-1">
           <Icon name="cube" className="w-3.5 h-3.5" />
           {t('viewerOpenAr')}
         </Link>
@@ -523,8 +526,10 @@ export default function EditorPage() {
           onAddSceneIdToStory={handleAddSceneIdToStory}
           onSaveStory={handleSaveStory}
           onPublishStory={handlePublishStory}
+          onUnpublishStory={handleUnpublishStory}
           isStorySaving={isStorySaving}
           isStoryLinked={isStoryLinked}
+          isStoryPublic={isStoryPublic}
           audio={audio}
           vrmaUrl={vrmaUrl}
           onLoadVrma={setVrmaUrl}
@@ -552,7 +557,7 @@ export default function EditorPage() {
               >
                 ? Tour
               </button>
-              <Link data-tour="ar-btn" to={arHref} className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 flex items-center gap-1">
+              <Link data-tour="ar-btn" to={arHref} className="rounded-full bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-600 flex items-center gap-1">
                 <Icon name="cube" className="w-3.5 h-3.5" />
                 {t('openSurfaceAr')}
               </Link>

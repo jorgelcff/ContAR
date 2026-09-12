@@ -64,7 +64,7 @@ export default function Header() {
           )}
           <Link
             to="/ar"
-            className={`text-xs font-medium px-3 py-1 rounded-full transition-colors hidden sm:inline-flex items-center gap-1 ${isActive("/ar") ? "bg-indigo-500 text-white ring-2 ring-indigo-400/50" : "bg-indigo-600 hover:bg-indigo-500 text-white"}`}
+            className={`text-xs font-medium px-3 py-1 rounded-full transition-colors hidden sm:inline-flex items-center gap-1 ${isActive("/ar") ? "bg-cyan-700 text-white" : "bg-gray-700 hover:bg-gray-600 text-gray-200"}`}
           >
             <Icon name="cube" className="w-3.5 h-3.5" />
             {t("ar")}

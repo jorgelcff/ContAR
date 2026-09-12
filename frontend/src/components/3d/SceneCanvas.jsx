@@ -933,6 +933,7 @@ export default function SceneCanvas({
           lipSyncController?._morphTargets || [],
           mouthMarkerInfoRef,
           pseudoJawRig,
+          mergedLipSyncConfigRef.current.showBlendshapeDebug,
         );
         setDebugSnapshot(lipSyncTelemetryRef.current);
         if (lipSyncController) {
@@ -1765,8 +1766,11 @@ export default function SceneCanvas({
         </div>
       )}
       {/* ── Bone mapper panel — accessible to all users without ?dev ── */}
+      {/* Panel height is capped against the canvas, not the viewport: at 70vh it
+          grew up past the top of the 3D view and its header ended up out of
+          reach underneath the toolbar. */}
       {!showDevTools && showBoneMapperPanel && boneCatalogSnapshot.length > 0 && (
-        <div className="absolute left-3 bottom-3 z-20 w-72 max-h-[70vh] overflow-y-auto rounded-md border border-gray-700/70 bg-gray-950/95 px-3 py-2 text-xs text-gray-100 shadow-xl">
+        <div className="absolute left-3 bottom-3 z-20 w-72 max-h-[calc(100%-1.5rem)] overflow-y-auto rounded-md border border-gray-700/70 bg-gray-950/95 px-3 py-2 text-xs text-gray-100 shadow-xl">
           <div className="flex items-center justify-between mb-2">
             <p className="font-semibold text-gray-300 uppercase tracking-wide text-[11px]">
               🦴 Mapeamento de Ossos
@@ -2060,18 +2064,23 @@ function isPseudoJawRig(jawBones) {
   });
 }
 
+// `show` keeps the orange sphere itself out of the viewer and AR — it is a
+// rigging aid, and was rendering on every avatar's face everywhere. The
+// detection still runs regardless, because the rig report reads markerInfoRef
+// to say where the mouth was found.
 function updateMouthDebugMarker(
   marker,
   jawBones,
   morphs,
   markerInfoRef,
   pseudoJawRig,
+  show,
 ) {
   if (!marker) return;
 
   if (jawBones.length > 0) {
     jawBones[0].getWorldPosition(marker.position);
-    marker.visible = true;
+    marker.visible = show;
     markerInfoRef.current = {
       source: pseudoJawRig ? "pseudo-jaw" : "jaw-bone",
       name: String(jawBones[0].name || ""),
@@ -2082,7 +2091,7 @@ function updateMouthDebugMarker(
   if (morphs.length > 0) {
     morphs[0].mesh.getWorldPosition(marker.position);
     marker.position.y -= 0.03;
-    marker.visible = true;
+    marker.visible = show;
     markerInfoRef.current = {
       source: "mouth-morph-mesh",
       name: String(morphs[0].mesh?.name || ""),

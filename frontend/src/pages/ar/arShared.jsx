@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { getPublicStory, getScene } from '../../api/sceneApi';
 import { BoneMapper } from '../../utils/BoneMapper';
@@ -248,6 +249,7 @@ export function createAvatarGLTFLoader() {
   dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
   const gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
+  gltfLoader.setMeshoptDecoder(MeshoptDecoder);
   gltfLoader.setCrossOrigin('anonymous');
   gltfLoader.register((parser) => new VRMLoaderPlugin(parser)); // VRM support
   return gltfLoader;

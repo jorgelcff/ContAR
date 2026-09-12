@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import SpeechBubble from './SpeechBubble';
@@ -499,6 +500,7 @@ export default function SceneCanvas({
     );
     const gltfLoader = new GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
+    gltfLoader.setMeshoptDecoder(MeshoptDecoder);
     gltfLoader.setCrossOrigin("anonymous");
     loaderRef.current = createAvatarLoader(dracoLoader);
     vrmaLoaderRef.current = createVRMALoader();
@@ -1890,6 +1892,7 @@ export default function SceneCanvas({
 function createAvatarLoader(dracoLoader) {
   const loader = new GLTFLoader();
   loader.setDRACOLoader(dracoLoader);
+  loader.setMeshoptDecoder(MeshoptDecoder);
   loader.setCrossOrigin("anonymous");
   loader.register((parser) => new VRMLoaderPlugin(parser));
   return loader;

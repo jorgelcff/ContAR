@@ -248,6 +248,16 @@ export default function EditorPage() {
   // ── Load story from URL ──────────────────────────────────────
   useEffect(() => {
     const routeStoryId = searchParams.get('storyId') || '';
+    // Captured before setCurrentStoryId below: whether the store was already
+    // holding this same story, and scenes for it. "Concluir cena e adicionar à
+    // história" only updates the store — nothing reaches the database until the
+    // story is saved — so a remount (opening a scene from the scenes list, or a
+    // reload) would otherwise overwrite those pending scenes with the database
+    // copy that does not have them yet, and the user's work silently vanishes.
+    const storeBefore = useSceneStore.getState();
+    const hasPendingScenes =
+      storeBefore.currentStoryId === routeStoryId && storeBefore.storyScenes.length > 0;
+
     if (routeStoryId !== currentStoryId) setCurrentStoryId(routeStoryId);
     if (!routeStoryId) return;
     // Only load each story from the DB once per mount. Without this, navigating
@@ -271,7 +281,18 @@ export default function EditorPage() {
                 markerUrl: item?.markerUrl || '',
               }))
           : [];
-        setStoryScenes(scenes);
+        // Merge rather than replace: keep any scene the store already has for
+        // this story that the database has not caught up with, appended after
+        // the saved ones so the saved order still wins.
+        if (hasPendingScenes) {
+          const saved = new Set(scenes.map((s) => s.sceneId));
+          const pending = storeBefore.storyScenes.filter(
+            (s) => s.sceneId && !saved.has(s.sceneId),
+          );
+          setStoryScenes([...scenes, ...pending]);
+        } else {
+          setStoryScenes(scenes);
+        }
         // Open the story's first scene for editing when entering a story
         // directly (no sceneId in the URL), so the editor isn't blank. The
         // scene-load effect picks up the added sceneId param.

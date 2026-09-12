@@ -1,0 +1,36 @@
+# Production override for a single VPS (e.g. Hostinger) deploy:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Puts Caddy in front for automatic HTTPS on $DOMAIN (see .env.example) and
+# stops publishing mongo/backend/frontend directly on the host — only Caddy
+# is reachable from outside; everything else talks over the internal Compose
+# network exactly as it does in local `docker compose up`.
+services:
+  mongo:
+    ports: !reset []
+
+  backend:
+    ports: !reset []
+
+  frontend:
+    ports: !reset []
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: avaturn-caddy
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

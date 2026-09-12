@@ -1,0 +1,6 @@
+# Reverse proxy + automatic HTTPS (Let's Encrypt) for a single-domain deploy.
+# Requires DOMAIN to be set (see .env.example) and its DNS A record already
+# pointing at this machine before Caddy starts, or the cert issuance fails.
+{$DOMAIN} {
+	reverse_proxy frontend:80
+}

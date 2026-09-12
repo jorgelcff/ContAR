@@ -5,6 +5,7 @@ ACTION="up"
 BUILD="false"
 DETACH="true"
 REMOVE_VOLUMES="false"
+PROD="false"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -28,6 +29,10 @@ while [ "$#" -gt 0 ]; do
       REMOVE_VOLUMES="true"
       shift
       ;;
+    -Prod)
+      PROD="true"
+      shift
+      ;;
     *)
       ACTION="$1"
       shift
@@ -36,7 +41,11 @@ while [ "$#" -gt 0 ]; do
 done
 
 compose() {
-  docker compose "$@"
+  if [ "$PROD" = "true" ]; then
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml "$@"
+  else
+    docker compose "$@"
+  fi
 }
 
 case "$ACTION" in
@@ -73,6 +82,24 @@ case "$ACTION" in
     ;;
   logs)
     compose logs -f
+    ;;
+  # VPS redeploy: pull latest main, rebuild what changed, recreate, prune old
+  # images. Requires backend/.env and .env (DOMAIN=..., see .env.example) to
+  # already exist on the server. Implies -Prod (Caddy + closed-off ports).
+  deploy)
+    PROD="true"
+    if [ ! -f backend/.env ]; then
+      echo "backend/.env missing — copy backend/.env.example, fill in real secrets, and re-run." >&2
+      exit 1
+    fi
+    if [ ! -f .env ]; then
+      echo ".env missing — copy .env.example and set at least DOMAIN, then re-run." >&2
+      exit 1
+    fi
+    git pull --ff-only
+    compose build
+    compose up -d --remove-orphans
+    docker image prune -f
     ;;
   *)
     echo "Unknown action: $ACTION" >&2

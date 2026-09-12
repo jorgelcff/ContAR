@@ -168,6 +168,58 @@ function resetToRestPose(model) {
   });
 }
 
+const _aimFrom = new THREE.Vector3();
+const _aimPivot = new THREE.Vector3();
+const _aimTo = new THREE.Vector3();
+const _aimDelta = new THREE.Quaternion();
+const _aimParent = new THREE.Quaternion();
+const _aimParentInv = new THREE.Quaternion();
+const _aimModel = new THREE.Quaternion();
+
+/**
+ * Points the segment from `bone` to `childBone` along `dir`, wherever the bone
+ * happens to rest.
+ *
+ * rotateBoneDeg() applies a fixed offset *relative to the rest pose*, which
+ * only lands where intended if every avatar rests the same way. They don't:
+ * these rigs bind in a T-pose (arms already horizontal), so offsets authored
+ * against an arms-down rest overshoot — that is why "t_pose" raised the arms
+ * overhead and "hands_on_hips" barely moved them. Aiming at an absolute
+ * direction instead is rig-agnostic: the result is the same pose whether the
+ * avatar binds in a T-pose, an A-pose or with its arms down.
+ *
+ * `dir` is given in the model's own frame, so the pose is unaffected by how
+ * the model is rotated in the scene.
+ */
+function aimBone(model, bone, childBone, dir) {
+  if (!bone || !childBone) return;
+
+  bone.updateWorldMatrix(true, false);
+  childBone.updateWorldMatrix(true, false);
+  _aimFrom
+    .setFromMatrixPosition(childBone.matrixWorld)
+    .sub(_aimPivot.setFromMatrixPosition(bone.matrixWorld));
+  if (_aimFrom.lengthSq() < 1e-12) return;
+  _aimFrom.normalize();
+
+  model.getWorldQuaternion(_aimModel);
+  _aimTo.copy(dir).normalize().applyQuaternion(_aimModel);
+
+  // Shortest-arc rotation in world space, conjugated into the bone's parent
+  // frame so it can be stored as a local rotation:
+  //   q_local' = W_parent⁻¹ · delta · W_parent · q_local
+  _aimDelta.setFromUnitVectors(_aimFrom, _aimTo);
+  if (bone.parent) bone.parent.getWorldQuaternion(_aimParent);
+  else _aimParent.identity();
+  _aimParentInv.copy(_aimParent).invert();
+  bone.quaternion.premultiply(
+    _aimParentInv.multiply(_aimDelta).multiply(_aimParent),
+  );
+
+  // Children read their parent's world matrix on the next aim, so refresh now.
+  bone.updateMatrixWorld(true);
+}
+
 function findBone(model, patterns) {
   let result = null;
 
@@ -184,6 +236,18 @@ function findBone(model, patterns) {
 
 function getBone(model, boneMapper, standardName, patterns) {
   return boneMapper?.get(standardName) ?? findBone(model, patterns);
+}
+
+/** Both arm chains, resolved once — shoulder → elbow → hand on each side. */
+function getArmChain(model, boneMapper) {
+  return {
+    leftUpperArm:  getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]),
+    leftForeArm:   getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]),
+    leftHand:      getBone(model, boneMapper, 'leftHand',      [/lefthand/, /hand_l/, /mixamoriglefthand/]),
+    rightUpperArm: getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]),
+    rightForeArm:  getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]),
+    rightHand:     getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]),
+  };
 }
 
 function rotateBoneDeg(bone, x = 0, y = 0, z = 0) {
@@ -381,21 +445,13 @@ function applySpeakerPose(model, boneMapper = null) {
 }
 
 function applyHandsOnHipsPose(model, boneMapper = null) {
-  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-  const leftHand      = getBone(model, boneMapper, 'leftHand',      [/lefthand/, /hand_l/, /mixamoriglefthand/]);
-  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
-
-  rotateBoneDeg(leftUpperArm, 5, 0, 30);
-  rotateBoneDeg(rightUpperArm, 5, 0, -30);
-  // Reduced inward Z to prevent hand mesh from clipping into upper arm
-  rotateBoneDeg(leftForeArm, -15, 0, -20);
-  rotateBoneDeg(rightForeArm, -15, 0, 20);
-  // Orient hands palm-inward so they rest naturally on the hips
-  rotateBoneDeg(leftHand, 0, -25, 0);
-  rotateBoneDeg(rightHand, 0, 25, 0);
+  const arms = getArmChain(model, boneMapper);
+  // Elbows out and back, forearms angling down and in so the hands land on the
+  // waist. The model faces -Z, so -Z is forward and +X is its left.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.62, -0.72, 0.31));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.52, -0.72, -0.46));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.62, -0.72, 0.31));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.52, -0.72, -0.46));
 }
 
 function applySalutePose(model, boneMapper = null) {
@@ -431,10 +487,13 @@ function applyArmsCrossedPose(model, boneMapper = null) {
 }
 
 function applyTPose(model, boneMapper = null) {
-  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  rotateBoneDeg(leftUpperArm, 0, 0, 90);
-  rotateBoneDeg(rightUpperArm, 0, 0, -90);
+  const arms = getArmChain(model, boneMapper);
+  // Straight out to the sides, level with the shoulders — the definition of a
+  // T-pose, reached by aiming rather than by offsetting from the rest pose.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(1, 0, 0));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(1, 0, 0));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-1, 0, 0));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-1, 0, 0));
 }
 
 function applyThinkPose(model, boneMapper = null) {

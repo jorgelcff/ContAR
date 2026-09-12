@@ -1,10 +1,17 @@
 import * as THREE from 'three';
+import { retargetRotationTracks } from '../utils/retarget';
 
-// Minimum disagreement between a source bone's rest orientation and the
-// avatar's before retargeting rebases that bone's track (see _retargetClip).
-// Rigs built on the Mixamo convention sit a few degrees apart at most, so this
-// leaves them untouched; genuinely different conventions are off by 90°+.
-const REBASE_MIN_ANGLE = THREE.MathUtils.degToRad(30);
+// A rig only gets full world-space retargeting when its bones genuinely rest in
+// a different frame from the animation's own skeleton. Rigs on the Mixamo
+// convention sit a few degrees apart (the bundled default_model's worst
+// non-hips bone is 33°, both thumb knuckles), while FBX-converted libraries are
+// off by 90–180° across most of the body — so these thresholds cleanly separate
+// "already compatible, leave alone" from "needs rebuilding".
+const FULL_RETARGET_MIN_ANGLE = THREE.MathUtils.degToRad(45);
+const FULL_RETARGET_MIN_BONES = 3;
+
+const getBoneName = (trackName) => trackName.split('.')[0];
+const getProperty = (trackName) => trackName.split('.')[1];
 
 /**
  * Records the rest rotation of every node in an animation GLB's own skeleton
@@ -20,7 +27,13 @@ export function attachSourceRestPose(clip, sourceRoot) {
   if (!clip || !sourceRoot) return clip;
   const rest = new Map();
   sourceRoot.traverse((node) => {
-    if (node.name) rest.set(node.name, node.quaternion.clone());
+    if (!node.name) return;
+    // Skip the wrapper Object3Ds above the skeleton (Scene, Armature): their
+    // transforms apply to the whole rig, so they cancel out of every
+    // rest-relative delta, and including them only risks pairing them with
+    // unrelated nodes on the target side.
+    const parent = node.parent?.name && node.parent.parent ? node.parent.name : null;
+    rest.set(node.name, { quaternion: node.quaternion.clone(), parent });
   });
   clip.userData = clip.userData || {};
   clip.userData.sourceRestPose = rest;
@@ -112,7 +125,13 @@ export class AnimationController {
     // before addClips() below, which retargets immediately.
     this._restPose = new Map();
     model.traverse((node) => {
-      if (node.isBone) this._restPose.set(node.name, node.quaternion.clone());
+      if (!node.isBone) return;
+      let parent = node.parent;
+      while (parent && !parent.isBone) parent = parent.parent;
+      this._restPose.set(node.name, {
+        quaternion: node.quaternion.clone(),
+        parent: parent ? parent.name : null,
+      });
     });
 
     this.addClips(clips);
@@ -137,8 +156,6 @@ export class AnimationController {
     const retargetedClip = clip.clone();
     const _dbg = import.meta.env.DEV;
 
-    const getBoneName = (trackName) => trackName.split('.')[0];
-    const getProperty = (trackName) => trackName.split('.')[1];
 
     // Build bone name set eagerly — needed both for remapping and for the filter below.
     if (!this._boneNameSet) {
@@ -283,6 +300,21 @@ export class AnimationController {
       }
     }
 
+    // ── Full hierarchical retargeting (rigs off the Mixamo convention) ───────
+    // Everything above only *renames* tracks, which copies Mixamo's quaternions
+    // onto the avatar verbatim. That is correct only while the avatar rests the
+    // way Mixamo does — Avaturn and Ready Player Me do, FBX-converted libraries
+    // (VALID, many CC0 packs) do not: their bones rest 90–180° away, so the
+    // copied rotations land in the wrong frame and the character folds up.
+    //
+    // For those rigs, transfer each bone's world-space motion instead of its raw
+    // local value (see utils/retarget.js). Rigs that already match keep the
+    // legacy path below untouched, so their behaviour is unchanged by
+    // construction rather than by luck.
+    const usedFullRetarget = this._applyFullRetarget(
+      clip, retargetedClip, sourceBoneByTrack, _dbg,
+    );
+
     // ── Hips parent-rotation correction ──────────────────────────────────────
     // Gallery/Studio avatars (Blender-exported) often have a non-bone Armature
     // Object3D sitting above mixamorigHips with a non-identity local rotation.
@@ -293,10 +325,10 @@ export class AnimationController {
     // Fix: for every keyframe Q in the hips quaternion track, apply:
     //   Q_corrected = R_parent^-1 * Q
     // so that the resulting world rotation matches the animation's intent.
-    if (this._hipsParentCorrection === undefined) {
+    if (!usedFullRetarget && this._hipsParentCorrection === undefined) {
       this._hipsParentCorrection = this._computeHipsParentCorrection();
     }
-    if (this._hipsParentCorrection) {
+    if (!usedFullRetarget && this._hipsParentCorrection) {
       const hipsBone = this._boneMapper.get('hips');
       if (hipsBone) {
         const hipsTrackName = `${hipsBone.name}.quaternion`;
@@ -322,7 +354,9 @@ export class AnimationController {
     // Detection: if the majority of sampled keyframes have |euler.x| > 45°
     // AFTER any parent correction, the track is incompatible → drop it so the
     // character keeps its upright bind-pose hips orientation.
-    if (this._boneMapper && this._boneMapper.source !== 'vrm') {
+    // Skipped after a full retarget: that path resolves the hips in world space,
+    // so its hips track is already correct and carries the weight shift.
+    if (!usedFullRetarget && this._boneMapper && this._boneMapper.source !== 'vrm') {
       const hipsBone = this._boneMapper.get('hips');
       if (hipsBone) {
         const hipsTrackName = `${hipsBone.name}.quaternion`;
@@ -348,57 +382,6 @@ export class AnimationController {
       }
     }
 
-    // ── Rest-pose rebasing ───────────────────────────────────────────────────
-    // Mixamo authors every keyframe against its OWN bone axes, and the mapping
-    // above only renames tracks — it copies the quaternions verbatim. That works
-    // only while the avatar rests in the same orientation as Mixamo does (true
-    // for Avaturn / Ready Player Me rigs). FBX-converted libraries like VALID
-    // rest completely differently (their LeftUpLeg sits ~126° away from
-    // Mixamo's), so the copied rotation lands in the wrong frame and the
-    // character folds up — the "legs pointing up" collapse.
-    //
-    // Rebase each keyframe out of the source's rest frame and into the target's:
-    //   Q' = Q · Rs⁻¹ · Rt
-    // For a rig that already agrees with Mixamo, Rs⁻¹·Rt is identity and the
-    // track comes out byte-identical, so matching rigs keep their exact current
-    // behaviour. Only bones that genuinely disagree past REBASE_MIN_ANGLE are
-    // touched, which keeps small authoring differences from nudging rigs that
-    // already animate correctly.
-    const sourceRest = clip.userData?.sourceRestPose;
-    if (sourceRest && this._restPose?.size) {
-      const _qs = new THREE.Quaternion();
-      const _rebase = new THREE.Quaternion();
-      const _q = new THREE.Quaternion();
-      let rebasedCount = 0;
-
-      retargetedClip.tracks.forEach((track) => {
-        const targetName = getBoneName(track.name);
-        const sourceName = sourceBoneByTrack.get(track.name);
-        if (!sourceName) return;
-
-        const Rs = sourceRest.get(sourceName);
-        const Rt = this._restPose.get(targetName);
-        if (!Rs || !Rt) return;
-
-        // Angle between the two rest orientations (quaternion double-cover, so
-        // compare the absolute dot product).
-        const dot = Math.min(1, Math.abs(_qs.copy(Rs).dot(Rt)));
-        if (2 * Math.acos(dot) < REBASE_MIN_ANGLE) return;
-
-        _rebase.copy(Rs).invert().multiply(Rt); // Rs⁻¹ · Rt
-        const vals = track.values;
-        for (let i = 0; i < vals.length; i += 4) {
-          _q.set(vals[i], vals[i + 1], vals[i + 2], vals[i + 3]).multiply(_rebase);
-          vals[i] = _q.x; vals[i + 1] = _q.y; vals[i + 2] = _q.z; vals[i + 3] = _q.w;
-        }
-        rebasedCount++;
-      });
-
-      if (_dbg && rebasedCount) {
-        console.log(`[AnimCtrl] "${clip.name}": rebased ${rebasedCount} track(s) onto the avatar's rest pose`);
-      }
-    }
-
     if (_dbg) {
 
       console.groupCollapsed(`[AnimCtrl] retarget "${clip.name}" — mapper: ${this._boneMapper.source} (${this._boneMapper.resolvedCount} bones)`);
@@ -413,6 +396,67 @@ export class AnimationController {
     }
 
     return retargetedClip;
+  }
+
+  /**
+   * Rewrites `retargetedClip`'s tracks by transferring world-space motion from
+   * the clip's own skeleton onto this avatar — but only for rigs that actually
+   * need it. Returns true when it ran, so the caller can skip the legacy hips
+   * workarounds it supersedes.
+   */
+  _applyFullRetarget(clip, retargetedClip, sourceBoneByTrack, _dbg) {
+    const sourceRest = clip.userData?.sourceRestPose;
+    if (!sourceRest?.size || !this._restPose?.size) return false;
+    // VRM rigs have their own tuned path (hips dropped, native rest preserved);
+    // leave them on it.
+    if (this._boneMapper?.source === 'vrm') return false;
+
+    const sourceOf = new Map();
+    for (const track of retargetedClip.tracks) {
+      const source = sourceBoneByTrack.get(track.name);
+      if (source) sourceOf.set(getBoneName(track.name), source);
+    }
+    if (!sourceOf.size) return false;
+
+    // Decide from the bones themselves, not the file's provenance: how many
+    // rest orientations genuinely disagree? Hips is excluded because Mixamo
+    // bakes a ~90° X offset into it on every export, so it differs even for
+    // rigs that are otherwise a perfect match.
+    const hipsName = this._boneMapper?.get('hips')?.name;
+    let diverging = 0;
+    for (const [targetName, sourceName] of sourceOf) {
+      if (targetName === hipsName) continue;
+      const source = sourceRest.get(sourceName);
+      const target = this._restPose.get(targetName);
+      if (!source || !target) continue;
+      const dot = Math.min(1, Math.abs(source.quaternion.dot(target.quaternion)));
+      if (2 * Math.acos(dot) > FULL_RETARGET_MIN_ANGLE) diverging++;
+    }
+    if (diverging < FULL_RETARGET_MIN_BONES) return false;
+
+    const retargeted = retargetRotationTracks({
+      tracks: retargetedClip.tracks.map((t) => ({
+        name: getBoneName(t.name), times: t.times, values: t.values,
+      })),
+      sourceOf,
+      sourceRest,
+      targetRest: this._restPose,
+    });
+    if (!retargeted) return false;
+
+    const byName = new Map(retargeted.map((t) => [t.name, t]));
+    retargetedClip.tracks.forEach((track) => {
+      const next = byName.get(getBoneName(track.name));
+      if (!next) return;
+      track.times = next.times;
+      track.values = next.values;
+    });
+    retargetedClip.resetDuration();
+
+    if (_dbg) {
+      console.log(`[AnimCtrl] "${clip.name}": full retarget — ${diverging} bone(s) rest off the source convention`);
+    }
+    return true;
   }
 
   play(clipOrName, fadeDuration = 0.4, { retarget = true } = {}) {

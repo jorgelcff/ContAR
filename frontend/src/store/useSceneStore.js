@@ -122,16 +122,24 @@ const createStorySlice = (set, get) => ({
   // text and audio, transform, etc). Story-level fields (title, description,
   // scene list) are intentionally left alone — callers reset those too when
   // starting a brand-new story.
-  resetSceneForNew: () => set({
-    avatarUrl: '',
-    transform: { positionX: 0, positionY: 0, positionZ: 0, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1 },
-    posePreset: 'idle',
-    animSpeed: 1,
-    animLoopOnce: false,
-    vrmExpression: '',
+  // `keepCharacter` carries the avatar and how it is staged (pose, placement,
+  // animation settings) into the next scene, clearing only what is specific to
+  // the scene being left behind. Chaining scenes in one story almost always
+  // means the same narrator, so re-picking the avatar every time is busywork —
+  // whereas starting a standalone scene should begin from nothing.
+  resetSceneForNew: ({ keepCharacter = false } = {}) => set({
+    ...(keepCharacter ? {} : {
+      avatarUrl: '',
+      transform: { positionX: 0, positionY: 0, positionZ: 0, rotationX: 0, rotationY: 0, rotationZ: 0, scale: 1 },
+      posePreset: 'idle',
+      animSpeed: 1,
+      animLoopOnce: false,
+      vrmExpression: '',
+      textDisplayMode: 'bubble',
+    }),
+    // Always cleared — these describe the scene that was just finished.
     speechText: '',
     narrativeAudioUrl: '',
-    textDisplayMode: 'bubble',
     sceneTitle: '',
     currentSceneId: '',
     timelineBlocks: [],

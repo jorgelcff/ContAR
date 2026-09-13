@@ -373,7 +373,9 @@ export default function EditorPage() {
       //    once it has real, saved content), and this new blank scene will
       //    go through that same path the next time this button is clicked.
       const newSceneId = crypto.randomUUID();
-      store.resetSceneForNew();
+      // Chaining scenes within a story keeps the narrator — only the narration
+      // for the finished scene is cleared.
+      store.resetSceneForNew({ keepCharacter: true });
       store.setCurrentSceneId(newSceneId);
 
       // 3. Pre-mark as "loaded" so the scene-load effect doesn't try to GET

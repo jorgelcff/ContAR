@@ -8,13 +8,33 @@
  */
 import * as THREE from 'three';
 
+/**
+ * VALID (Google/UCF) and other Character-Creator-derived rigs ship a real
+ * phoneme set rather than ARKit's `viseme_*` names — `h_expressions.AE_AA_h`,
+ * `FV_h`, `MPB_Up_h` and so on, with a matching `t_`-prefixed copy on the teeth
+ * mesh. The ARKit patterns below stumble onto `MouthOpen_h` and nothing else,
+ * so lip sync on these avatars fell back to swinging the jaw by amplitude while
+ * ignoring a rig that can actually articulate.
+ *
+ * Anchored on the trailing `_h` and a name boundary so they can only ever match
+ * this convention, never another rig's blendshapes.
+ */
+const validPhonemes = (...names) =>
+  names.map((name) => new RegExp(`(^|\\.)(t_)?${name}_h$`, 'i'));
+
 const VISEME_PATTERNS = {
-  aa: [/viseme.*aa/i, /viseme.*ah/i, /mouthopen/i, /jawopen/i],
-  oh: [/viseme.*oh/i, /viseme.*o/i, /mouthfunnel/i, /mouthpucker/i],
-  ee: [/viseme.*ee/i, /viseme.*ih/i, /mouthsmile/i, /mouthstretch/i],
-  fv: [/viseme.*ff/i, /viseme.*fv/i, /mouthrolllower/i],
-  mbp: [/viseme.*pp/i, /viseme.*bb/i, /viseme.*mm/i, /mouthclose/i],
-  mouthOpen: [/jaw.*open/i, /mouth.*open/i, /^jawopen$/i, /^mouthopen$/i, /viseme.*(aa|ah|ao|oh|o)/i],
+  aa: [/viseme.*aa/i, /viseme.*ah/i, /mouthopen/i, /jawopen/i,
+    ...validPhonemes('AE_AA', 'MouthOpen')],
+  oh: [/viseme.*oh/i, /viseme.*o/i, /mouthfunnel/i, /mouthpucker/i,
+    ...validPhonemes('AO_a', 'UH_OO', 'UW_U')],
+  ee: [/viseme.*ee/i, /viseme.*ih/i, /mouthsmile/i, /mouthstretch/i,
+    ...validPhonemes('Ax_E', 'TD_I', 'S')],
+  fv: [/viseme.*ff/i, /viseme.*fv/i, /mouthrolllower/i,
+    ...validPhonemes('FV')],
+  mbp: [/viseme.*pp/i, /viseme.*bb/i, /viseme.*mm/i, /mouthclose/i,
+    ...validPhonemes('MPB_Up', 'MPB_Down')],
+  mouthOpen: [/jaw.*open/i, /mouth.*open/i, /^jawopen$/i, /^mouthopen$/i, /viseme.*(aa|ah|ao|oh|o)/i,
+    ...validPhonemes('AE_AA', 'MouthOpen')],
 };
 
 // Bone names that represent the jaw across rig conventions (VRM, Mixamo, CC3,

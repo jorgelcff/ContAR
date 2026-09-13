@@ -100,6 +100,25 @@ describe('resetSceneForNew', () => {
     expect(state.storyTitle).toBe('My Story');
     expect(state.storyScenes).toHaveLength(1);
   });
+
+  it('keeps the character but drops the narration with keepCharacter', () => {
+    // Chaining scenes inside a story: the narrator carries over, so the user
+    // isn't re-picking the same avatar for every scene.
+    const store = useSceneStore.getState();
+    store.setAvatarUrl('https://example.com/avatar.glb');
+    store.setPosePreset('wave');
+    store.setSpeechText('Hello there');
+    store.setSceneTitle('My Scene');
+
+    useSceneStore.getState().resetSceneForNew({ keepCharacter: true });
+    const state = useSceneStore.getState();
+
+    expect(state.avatarUrl).toBe('https://example.com/avatar.glb');
+    expect(state.posePreset).toBe('wave');
+    expect(state.speechText).toBe('');
+    expect(state.sceneTitle).toBe('');
+    expect(state.currentSceneId).toBe('');
+  });
 });
 
 describe('buildScenePayload', () => {

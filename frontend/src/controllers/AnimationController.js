@@ -354,8 +354,7 @@ export class AnimationController {
     // Detection: if the majority of sampled keyframes have |euler.x| > 45°
     // AFTER any parent correction, the track is incompatible → drop it so the
     // character keeps its upright bind-pose hips orientation.
-    // Skipped after a full retarget: that path resolves the hips in world space,
-    // so its hips track is already correct and carries the weight shift.
+    // Skipped after a full retarget — that path drops the hips track itself.
     if (!usedFullRetarget && this._boneMapper && this._boneMapper.source !== 'vrm') {
       const hipsBone = this._boneMapper.get('hips');
       if (hipsBone) {
@@ -443,6 +442,19 @@ export class AnimationController {
       targetRest: this._restPose,
     });
     if (!retargeted) return false;
+
+    // Anchor the hips at the avatar's own rest, exactly as the legacy path
+    // already does for every other rig. Retargeting the hips faithfully is
+    // technically more correct — it reproduces the clip's weight shift — but a
+    // Mixamo idle pitches the pelvis forward, which cascades into a stooped
+    // head and a stance with the feet drawn together. Verified by forcing the
+    // bundled default_model down this path: with the hips track kept it
+    // stooped just like the FBX rigs did, and dropping it restored the upright
+    // stance the legacy path produces.
+    const hipsTrack = hipsName ? `${hipsName}.quaternion` : null;
+    if (hipsTrack) {
+      retargetedClip.tracks = retargetedClip.tracks.filter((t) => t.name !== hipsTrack);
+    }
 
     const byName = new Map(retargeted.map((t) => [t.name, t]));
     retargetedClip.tracks.forEach((track) => {

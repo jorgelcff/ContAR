@@ -1,4 +1,5 @@
 const { test, expect, registerUser } = require('./fixtures');
+const { API_BASE } = require('./config');
 
 // "Concluir cena e adicionar à história" only updates the client store —
 // nothing reaches the database until the story itself is saved. The editor
@@ -10,7 +11,7 @@ test.describe('Story scenes pending save', () => {
     test.setTimeout(60_000);
     const user = await registerUser(request);
 
-    const storyRes = await request.post('http://localhost:3001/api/story', {
+    const storyRes = await request.post(`${API_BASE}/api/story`, {
       headers: { Authorization: `Bearer ${user.token}` },
       data: { metadata: { title: 'Pending Scenes Story', description: '' }, scenes: [] },
     });

@@ -1,4 +1,5 @@
 const { defineConfig, devices } = require('@playwright/test');
+const { API_PORT, APP_PORT, API_BASE, APP_BASE } = require('./e2e/config');
 
 module.exports = defineConfig({
   testDir: './e2e',
@@ -13,7 +14,7 @@ module.exports = defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: APP_BASE,
     trace: 'retain-on-failure',
   },
   projects: [
@@ -21,17 +22,20 @@ module.exports = defineConfig({
   ],
   // Both servers point at a throwaway in-memory MongoDB (see
   // backend/scripts/serve-e2e.js) — this suite never touches the real
-  // Atlas database, on purpose.
+  // Atlas database, on purpose. They also run on their own ports (see
+  // e2e/config.js) so that reuseExistingServer can never latch onto a Docker
+  // or dev stack sitting on 3001/5173 and quietly test that instead.
   webServer: [
     {
       command: 'npm run serve:e2e --prefix backend',
-      url: 'http://localhost:3001/health',
+      url: `${API_BASE}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
+      env: { PORT: String(API_PORT) },
     },
     {
-      command: 'npm run dev --prefix frontend -- --port 5173',
-      url: 'http://localhost:5173',
+      command: `npm run dev --prefix frontend -- --port ${APP_PORT}`,
+      url: APP_BASE,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
       // Force these regardless of frontend/.env — a developer's local .env
@@ -41,7 +45,7 @@ module.exports = defineConfig({
       // the disposable one above, which both breaks tests that mint a token
       // against the local backend and — far worse — creates real accounts and
       // data against production.
-      env: { VITE_API_BASE_URL: 'http://localhost:3001', VITE_BASE_PATH: '' },
+      env: { VITE_API_BASE_URL: API_BASE, VITE_BASE_PATH: '' },
     },
   ],
 });

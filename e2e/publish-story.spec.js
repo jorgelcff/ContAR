@@ -1,4 +1,5 @@
 const { test, expect, registerUser } = require('./fixtures');
+const { API_BASE } = require('./config');
 
 // The onboarding tour occasionally reappeared mid-test under heavy parallel
 // load (slow network responses left the app on an intermediate render for
@@ -23,7 +24,7 @@ test.describe('Story publish / draft state', () => {
     // handleSaveStory (which publishing calls first) refuses to save a story
     // with zero scenes — needs at least one, even a made-up id, since the
     // save endpoint only validates the UUID shape, not that it exists.
-    const storyRes = await request.post('http://localhost:3001/api/story', {
+    const storyRes = await request.post(`${API_BASE}/api/story`, {
       headers: { Authorization: `Bearer ${user.token}` },
       data: {
         metadata: { title: 'Publish Flow Story', description: '' },
@@ -33,7 +34,7 @@ test.describe('Story publish / draft state', () => {
     const { storyId } = await storyRes.json();
 
     // Draft: the public route must not serve it yet.
-    const draftPublic = await request.get(`http://localhost:3001/api/story/public/${storyId}`);
+    const draftPublic = await request.get(`${API_BASE}/api/story/public/${storyId}`);
     expect(draftPublic.status()).toBe(404);
 
     await page.addInitScript((token) => localStorage.setItem('auth:token', token), user.token);
@@ -55,7 +56,7 @@ test.describe('Story publish / draft state', () => {
     await expect(page.getByText(/história publicada/i).first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('link', { name: /visualizar história/i })).toBeVisible();
 
-    const publishedPublic = await request.get(`http://localhost:3001/api/story/public/${storyId}`);
+    const publishedPublic = await request.get(`${API_BASE}/api/story/public/${storyId}`);
     expect(publishedPublic.status()).toBe(200);
 
     // Unpublish: share link disappears again, public route 404s again.
@@ -65,13 +66,13 @@ test.describe('Story publish / draft state', () => {
     await expect(page.getByRole('link', { name: /visualizar história/i })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^publicar$/i })).toBeVisible();
 
-    const unpublishedPublic = await request.get(`http://localhost:3001/api/story/public/${storyId}`);
+    const unpublishedPublic = await request.get(`${API_BASE}/api/story/public/${storyId}`);
     expect(unpublishedPublic.status()).toBe(404);
   });
 
   test('Stories list shows a Draft/Published badge and hides the share link for drafts', async ({ page, request }) => {
     const user = await registerUser(request);
-    await request.post('http://localhost:3001/api/story', {
+    await request.post(`${API_BASE}/api/story`, {
       headers: { Authorization: `Bearer ${user.token}` },
       data: { metadata: { title: 'Badge Check Story', description: '' }, scenes: [] },
     });

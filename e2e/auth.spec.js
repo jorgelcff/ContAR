@@ -1,4 +1,5 @@
 const { test, expect } = require('./fixtures');
+const { API_BASE } = require('./config');
 
 test.describe('Auth', () => {
   test('a new user can register and lands on their stories', async ({ page }) => {
@@ -17,7 +18,7 @@ test.describe('Auth', () => {
 
   test('rejects an incorrect password with a visible error, without navigating away', async ({ page, request }) => {
     const email = `e2e-wrongpw-${Date.now()}@example.com`;
-    await request.post('http://localhost:3001/api/auth/register', {
+    await request.post(`${API_BASE}/api/auth/register`, {
       data: { email, password: 'password123' },
     });
 
@@ -32,7 +33,7 @@ test.describe('Auth', () => {
 
   test('an existing user can log in', async ({ page, request }) => {
     const email = `e2e-login-${Date.now()}@example.com`;
-    await request.post('http://localhost:3001/api/auth/register', {
+    await request.post(`${API_BASE}/api/auth/register`, {
       data: { email, password: 'password123' },
     });
 

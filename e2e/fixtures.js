@@ -1,4 +1,5 @@
 const base = require('@playwright/test');
+const { API_BASE } = require('./config');
 
 const VIEWPORTS = {
   mobile: { width: 375, height: 812 },
@@ -10,7 +11,7 @@ const AUTH_TOKEN_KEY = 'auth:token';
 
 async function registerUser(request) {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
-  const res = await request.post('http://localhost:3001/api/auth/register', {
+  const res = await request.post(`${API_BASE}/api/auth/register`, {
     data: { name: 'E2E User', email, password: 'password123' },
   });
   const body = await res.json();

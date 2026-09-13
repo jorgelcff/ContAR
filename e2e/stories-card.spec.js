@@ -1,4 +1,5 @@
 const { test, expect, VIEWPORTS, registerUser } = require('./fixtures');
+const { API_BASE } = require('./config');
 
 // Regression test: StoriesPage's card grid was missing a base grid-cols-1,
 // so below the sm: breakpoint the single implicit column sized to content
@@ -11,7 +12,7 @@ test.describe('Stories — card fits the viewport on mobile', () => {
   test('a story card never renders wider than the screen', async ({ page, request }) => {
     const user = await registerUser(request);
 
-    await request.post('http://localhost:3001/api/story', {
+    await request.post(`${API_BASE}/api/story`, {
       headers: { Authorization: `Bearer ${user.token}` },
       data: { metadata: { title: 'E2E Story', description: '' }, scenes: [] },
     });

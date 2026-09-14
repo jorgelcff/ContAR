@@ -67,7 +67,9 @@ const modelUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MODEL_SIZE_LIMIT },
   fileFilter: (_req, file, cb) => {
-    const ok = /\.(glb|vrm)$/i.test(file.originalname)
+    // .vrma is a VRM *animation* clip — same endpoint, since it is the same
+    // kind of binary asset and needs the same persistence as the models.
+    const ok = /\.(glb|vrm|vrma)$/i.test(file.originalname)
       || ['model/gltf-binary', 'model/vrm', 'application/octet-stream'].includes(file.mimetype);
     cb(null, ok);
   },

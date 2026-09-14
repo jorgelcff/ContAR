@@ -422,6 +422,10 @@ export default function StoryViewerPage() {
                       posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
                       speechText={sceneData?.content?.narrative?.text || ''}
                       textDisplayMode={sceneData?.content?.narrative?.displayMode || 'bubble'}
+                      vrmaUrl={sceneData?.content?.avatar?.vrmaUrl || ''}
+                      animSpeed={sceneData?.content?.avatar?.animSpeed ?? 1}
+                      animLoopOnce={Boolean(sceneData?.content?.avatar?.animLoopOnce)}
+                      vrmExpression={sceneData?.content?.avatar?.vrmExpression || ''}
                       analyserRef={audio.analyserRef}
                       lipSyncConfig={audio.lipSyncConfig}
                       visemeTimeline={audio.visemeTimeline}

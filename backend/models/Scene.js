@@ -11,6 +11,12 @@ const SceneSchema = new mongoose.Schema({
     avatar: {
       modelUrl:   { type: String, default: '' },
       posePreset: { type: String, default: 'idle' },
+      // How the pose plays back: speed multiplier, whether it runs once instead
+      // of looping, an optional VRM expression, and a custom .vrma animation.
+      animSpeed:     { type: Number,  default: 1 },
+      animLoopOnce:  { type: Boolean, default: false },
+      vrmExpression: { type: String,  default: '' },
+      vrmaUrl:       { type: String,  default: '' },
       transform: {
         position: { type: [Number], default: [0, 0, 0] },
         rotation: { type: [Number], default: [0, 0, 0] },

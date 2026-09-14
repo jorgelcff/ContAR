@@ -36,6 +36,7 @@ export default function EditorPage() {
     avatarUrl,
     transform,
     posePreset,
+    vrmaUrl, setVrmaUrl,
     speechText,
     textDisplayMode, setTextDisplayMode,
     sceneTitle,
@@ -76,7 +77,6 @@ export default function EditorPage() {
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
   const [showTour, setShowTour] = useState(() => !shouldShowOnboarding() && shouldShowTour());
   const [mobilePanelTab, setMobilePanelTab] = useState(null);
-  const [vrmaUrl, setVrmaUrl] = useState('');
   // Names of animation clips embedded in the currently loaded avatar GLB,
   // surfaced by SceneCanvas so the panel can offer them for direct selection.
   const [avatarClips, setAvatarClips] = useState([]);
@@ -152,7 +152,7 @@ export default function EditorPage() {
     }, 5000);
     return () => clearTimeout(autosaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl, textDisplayMode]);
+  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl, textDisplayMode, animSpeed, animLoopOnce, vrmExpression, vrmaUrl]);
 
   // Flush a still-pending autosave when leaving the editor (e.g. clicking
   // "Minhas cenas" right after a change), so edits made within the 3s
@@ -191,6 +191,12 @@ export default function EditorPage() {
       posePreset: 'idle',
       narrativeAudioUrl: '',
       textDisplayMode: 'bubble',
+      // Reset with the rest: these used to survive here, so opening a second
+      // scene inherited the previous one's playback settings.
+      animSpeed: 1,
+      animLoopOnce: false,
+      vrmExpression: '',
+      vrmaUrl: '',
     });
 
     setSceneLoading(true);
@@ -219,6 +225,10 @@ export default function EditorPage() {
           speechText: narrative.text || '',
           narrativeAudioUrl: narrative.audioUrl || '',
           textDisplayMode: narrative.displayMode || 'bubble',
+          animSpeed: Number(avatar.animSpeed) || 1,
+          animLoopOnce: Boolean(avatar.animLoopOnce),
+          vrmExpression: avatar.vrmExpression || '',
+          vrmaUrl: avatar.vrmaUrl || '',
         });
 
         // The freshly loaded scene matches what's persisted — mark it clean so
@@ -616,6 +626,7 @@ export default function EditorPage() {
                 animLoopOnce={animLoopOnce}
                 vrmExpression={vrmExpression}
                 textDisplayMode={textDisplayMode}
+                showRigTools
                 onAvatarClips={setAvatarClips}
                 onJawApi={setJawApi}
               />

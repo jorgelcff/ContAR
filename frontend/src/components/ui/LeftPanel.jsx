@@ -257,14 +257,35 @@ export default function LeftPanel({
     }
   };
 
-  const handleVrmaChange = (e) => {
+  const handleVrmaChange = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+
+    // Preview from a blob straight away, then swap in the uploaded URL. Without
+    // the upload the animation only existed for the life of the page, so a
+    // scene saved with a custom .vrma reopened without it.
     if (vrmaBlobUrlRef.current) URL.revokeObjectURL(vrmaBlobUrlRef.current);
     const blobUrl = URL.createObjectURL(file);
     vrmaBlobUrlRef.current = blobUrl;
     onLoadVrma?.(blobUrl);
+
+    try {
+      const serverUrl = await uploadModel(file);
+      URL.revokeObjectURL(blobUrl);
+      vrmaBlobUrlRef.current = '';
+      onLoadVrma?.(serverUrl);
+    } catch (err) {
+      // Keep the blob so the animation still plays this session, but say so —
+      // it will not survive a reload.
+      const status = err?.response?.status;
+      addToast(
+        status === 413 ? t('lpModelTooLarge', { size: (file.size / 1024 / 1024).toFixed(1), max: 10 })
+          : t('lpVrmaUploadFailed'),
+        'warning',
+        6000,
+      );
+    }
   };
 
   const handleClearVrma = () => {

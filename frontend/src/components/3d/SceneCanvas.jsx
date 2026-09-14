@@ -196,6 +196,10 @@ export default function SceneCanvas({
   animLoopOnce,
   vrmExpression,
   textDisplayMode = "bubble",
+  // Rigging aids (bone-mapping panel and its toggle) are authoring tools —
+  // off unless the editor asks for them, so they never surface in the public
+  // viewer or in AR.
+  showRigTools = false,
   onAvatarClips,
   onJawApi,
 }) {
@@ -1769,7 +1773,7 @@ export default function SceneCanvas({
       {/* Panel height is capped against the canvas, not the viewport: at 70vh it
           grew up past the top of the 3D view and its header ended up out of
           reach underneath the toolbar. */}
-      {!showDevTools && showBoneMapperPanel && boneCatalogSnapshot.length > 0 && (
+      {showRigTools && !showDevTools && showBoneMapperPanel && boneCatalogSnapshot.length > 0 && (
         <div className="absolute left-3 bottom-3 z-20 w-72 max-h-[calc(100%-1.5rem)] overflow-y-auto rounded-md border border-gray-700/70 bg-gray-950/95 px-3 py-2 text-xs text-gray-100 shadow-xl">
           <div className="flex items-center justify-between mb-2">
             <p className="font-semibold text-gray-300 uppercase tracking-wide text-[11px]">
@@ -1827,7 +1831,7 @@ export default function SceneCanvas({
       )}
 
       {/* Bone mapper toggle button — visible to all users when avatar has bones */}
-      {!showDevTools && !showBoneMapperPanel && boneCatalogSnapshot.length > 0 && (
+      {showRigTools && !showDevTools && !showBoneMapperPanel && boneCatalogSnapshot.length > 0 && (
         <button
           onClick={() => setShowBoneMapperPanel(true)}
           className="absolute bottom-3 left-3 z-20 rounded-md border border-gray-600/60 bg-gray-900/80 px-2 py-1 text-xs text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors backdrop-blur-sm"

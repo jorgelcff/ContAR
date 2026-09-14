@@ -114,6 +114,14 @@ export default function ViewerPage() {
             transform={transform}
             posePreset={scene?.content?.avatar?.posePreset || 'idle'}
             speechText={scene?.content?.narrative?.text}
+            // Without these the viewer replayed the scene with default playback
+            // settings — most visibly, narration always rendered as a bubble
+            // even when the scene was authored with subtitles.
+            textDisplayMode={scene?.content?.narrative?.displayMode || 'bubble'}
+            vrmaUrl={scene?.content?.avatar?.vrmaUrl || ''}
+            animSpeed={scene?.content?.avatar?.animSpeed ?? 1}
+            animLoopOnce={Boolean(scene?.content?.avatar?.animLoopOnce)}
+            vrmExpression={scene?.content?.avatar?.vrmExpression || ''}
             analyserRef={audio.analyserRef}
             lipSyncConfig={audio.lipSyncConfig}
             visemeTimeline={audio.visemeTimeline}

@@ -24,7 +24,11 @@ const createAvatarSlice = (set) => ({
   animSpeed: 1,
   animLoopOnce: false,
   vrmExpression: '',
+  // Custom .vrma animation for this scene. Lives here rather than in component
+  // state so it is saved with the scene like every other avatar setting.
+  vrmaUrl: '',
   setAvatarUrl: (url) => set({ avatarUrl: url }),
+  setVrmaUrl: (url) => set({ vrmaUrl: url }),
   setTransform: (key, value) =>
     set((state) => ({ transform: { ...state.transform, [key]: value } })),
   setFullTransform: (t) => set({
@@ -147,7 +151,7 @@ const createStorySlice = (set, get) => ({
   }),
 
   buildScenePayload: (existingId) => {
-    const { sceneTitle, avatarUrl, posePreset, transform, speechText, narrativeAudioUrl, textDisplayMode, timelineBlocks, timelineDuration } = get();
+    const { sceneTitle, avatarUrl, posePreset, transform, speechText, narrativeAudioUrl, textDisplayMode, timelineBlocks, timelineDuration, animSpeed, animLoopOnce, vrmExpression, vrmaUrl } = get();
     return {
       sceneId: existingId !== undefined ? existingId : (get().currentSceneId || undefined),
       metadata: { title: sceneTitle || 'Untitled Scene', theme: '' },
@@ -155,6 +159,15 @@ const createStorySlice = (set, get) => ({
         avatar: {
           modelUrl: avatarUrl,
           posePreset,
+          // How the pose actually plays. Without these a scene reopened (or
+          // opened by a viewer) silently fell back to the defaults, no matter
+          // what was set when it was authored.
+          animSpeed,
+          animLoopOnce,
+          vrmExpression,
+          // Blob URLs die with the page, so only a real uploaded URL is worth
+          // persisting — see handleLoadVrma in EditorPage.
+          vrmaUrl: sanitizeUrl(vrmaUrl),
           transform: {
             position: [transform.positionX, transform.positionY, transform.positionZ],
             rotation: [

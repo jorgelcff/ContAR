@@ -71,7 +71,10 @@ export default function SpeechBubble({ text, avatarRef, camera, renderer }) {
           make gray-900 text on a white bubble invisible in light mode. This
           bubble is meant to look the same in both themes, so it avoids the
           remapped token entirely. */}
-      <div data-testid="narration-bubble" className="bg-white text-black rounded-2xl px-3 py-2 text-sm shadow-xl leading-snug break-words">
+      {/* Capped and scrollable for the same reason as the subtitle caption: the
+          bubble had a width limit but no height one, so a long narration grew
+          past the top of the viewport. */}
+      <div data-testid="narration-bubble" className="bg-white text-black rounded-2xl px-3 py-2 text-sm shadow-xl leading-snug break-words max-h-[30vh] overflow-y-auto">
         {text}
       </div>
       {/* Tail */}

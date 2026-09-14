@@ -1611,7 +1611,10 @@ export default function SceneCanvas({
         // ar-dark: pins this caption to always-dark styling, matching the (also
         // theme-independent) 3D viewport behind it — see index.css's ar-dark rules.
         <div className="ar-dark absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none px-4 w-full max-w-2xl">
-          <div data-testid="narration-caption" className="bg-black/70 backdrop-blur-sm text-white text-base text-center font-medium leading-snug rounded-lg px-5 py-2.5 shadow-xl wrap-break-word">
+          {/* Height is capped and scrolls: the caption only had a width limit,
+              so a long narration grew until it covered the viewport and hid the
+              narrator it was captioning. */}
+          <div data-testid="narration-caption" className="bg-black/70 backdrop-blur-sm text-white text-base text-center font-medium leading-snug rounded-lg px-5 py-2.5 shadow-xl wrap-break-word max-h-[35vh] overflow-y-auto pointer-events-auto">
             {speechText}
           </div>
         </div>

@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const { getAuthSecret } = require('../config/auth');
+const { verificationEmail, passwordResetEmail } = require('../emails/templates');
 
 // bcrypt's cost factor is deliberately CPU-expensive (that's what makes it
 // brute-force resistant) — fine for real traffic, but the E2E suite creates
@@ -58,27 +59,14 @@ function emailFrom() {
   return process.env.EMAIL_FROM || `ContAR <${process.env.SMTP_USER}>`;
 }
 
-async function sendVerificationEmail(user) {
+async function sendVerificationEmail(user, language) {
   const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
   const link = `${frontendUrl}/verify-email?token=${user.emailVerificationToken}`;
+  const { subject, html } = verificationEmail(language, link);
 
-  console.log(`[Email] Enviando verificação para: ${user.email}`);
+  console.log(`[Email] Enviando verificação para: ${user.email} (${language || 'fallback'})`);
   const transporter = createTransporter();
-  await transporter.sendMail({
-    from: emailFrom(),
-    to: user.email,
-    subject: 'Confirme seu email — ContAR',
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#111827;color:#f9fafb;border-radius:16px;">
-        <h2 style="margin:0 0 8px;color:#22d3ee;">Bem-vindo ao ContAR!</h2>
-        <p style="color:#9ca3af;margin:0 0 24px;">Confirme seu email para ativar sua conta e ter acesso completo à plataforma.</p>
-        <a href="${link}" style="background:#0891b2;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;display:inline-block;font-weight:600;margin-bottom:24px;">
-          Confirmar meu email
-        </a>
-        <p style="color:#6b7280;font-size:13px;margin:0;">Se você não criou uma conta no ContAR, ignore este email.</p>
-      </div>
-    `,
-  });
+  await transporter.sendMail({ from: emailFrom(), to: user.email, subject, html });
   console.log(`[Email] Verificação enviada para ${user.email}`);
 }
 
@@ -124,7 +112,7 @@ async function register(req, res) {
 
     // Send verification email — non-blocking: registration succeeds even if email fails
     if (emailConfigured()) {
-      sendVerificationEmail(user).catch((err) =>
+      sendVerificationEmail(user, String(req.body?.language || '')).catch((err) =>
         console.error("Failed to send verification email:", err.message),
       );
     }
@@ -201,26 +189,11 @@ async function forgotPassword(req, res) {
       process.env.FRONTEND_URL || "http://localhost:5173"
     ).replace(/\/$/, "");
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
-    console.log(`[Email] Enviando redefinição de senha para: ${email}`);
+    const language = String(req.body?.language || '');
+    const { subject, html } = passwordResetEmail(language, resetUrl);
+    console.log(`[Email] Enviando redefinição de senha para: ${email} (${language || 'fallback'})`);
     const transporter = createTransporter();
-    await transporter.sendMail({
-      from: emailFrom(),
-      to: email,
-      subject: 'Redefinir senha — ContAR',
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#111827;color:#f9fafb;border-radius:16px;">
-          <h2 style="margin:0 0 8px;color:#22d3ee;">Redefinir senha</h2>
-          <p style="color:#9ca3af;margin:0 0 24px;">Você solicitou a redefinição de senha da sua conta ContAR.</p>
-          <a href="${resetUrl}" style="background:#0891b2;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;display:inline-block;font-weight:600;margin-bottom:24px;">
-            Redefinir minha senha
-          </a>
-          <p style="color:#6b7280;font-size:13px;margin:0;">
-            Este link expira em <strong>1 hora</strong>.<br>
-            Se você não solicitou a redefinição, ignore este email — sua senha não será alterada.
-          </p>
-        </div>
-      `,
-    });
+    await transporter.sendMail({ from: emailFrom(), to: email, subject, html });
     console.log(`[Email] Redefinição enviada para ${email}`);
 
     return res.json({ message: SUCCESS_MSG });
@@ -293,7 +266,7 @@ async function resendVerification(req, res) {
       await user.save();
     }
 
-    await sendVerificationEmail(user);
+    await sendVerificationEmail(user, String(req.body?.language || ''));
     return res.json({ message: 'Email de confirmação reenviado.' });
   } catch (err) {
     console.error('resendVerification error:', err);

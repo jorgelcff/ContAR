@@ -54,6 +54,7 @@ function EyeIcon({ open }) {
 
 // ── Input field ───────────────────────────────────────────────────────────────
 function Field({ type, value, onChange, placeholder, autoComplete, required, minLength, hasError, children }) {
+  const { t } = useTranslation();
   const [showPw, setShowPw] = useState(false);
   const isPw = type === 'password';
   const effectiveType = isPw ? (showPw ? 'text' : 'password') : type;
@@ -75,12 +76,15 @@ function Field({ type, value, onChange, placeholder, autoComplete, required, min
         }`}
       />
       {isPw && (
+        // The padding is the tap target: the icon itself is 16px square, which
+        // on a phone is a coin toss. Sitting flush right with p-3 keeps the
+        // icon exactly where right-3 put it, inside the input's pr-10 gutter.
         <button
           type="button"
           tabIndex={-1}
           onClick={() => setShowPw((v) => !v)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-          aria-label={showPw ? 'Ocultar senha' : 'Mostrar senha'}
+          className="absolute right-0 top-1/2 -translate-y-1/2 p-3 text-gray-500 hover:text-gray-300 transition-colors"
+          aria-label={showPw ? t('loginHidePassword') : t('loginShowPassword')}
         >
           <EyeIcon open={showPw} />
         </button>

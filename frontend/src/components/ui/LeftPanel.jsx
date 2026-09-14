@@ -29,6 +29,12 @@ const TAB_DEFS = [
   { id: 'historia', labelKey: 'tabHistoria', icon: 'story' },
 ];
 
+// Animations the user has uploaded before, so a story that reuses one does not
+// mean uploading the same file per scene. Kept on the device: the upload
+// endpoint has no listing, and this covers the case that actually hurts —
+// building several scenes in a row.
+const VRMA_RECENTS_KEY = 'contar:vrma-recents';
+
 export default function LeftPanel({
   onAddCurrentSceneToStory,
   onAddSceneIdToStory,
@@ -257,6 +263,23 @@ export default function LeftPanel({
     }
   };
 
+  const [vrmaRecents, setVrmaRecents] = useState(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(VRMA_RECENTS_KEY) || '[]');
+      return Array.isArray(raw) ? raw.filter((r) => r?.url && r?.name).slice(0, 5) : [];
+    } catch { return []; }
+  });
+
+  const rememberVrma = (name, url) => {
+    // Blob URLs die with the page, so only a real uploaded one is worth keeping.
+    if (!url || url.startsWith('blob:')) return;
+    setVrmaRecents((prev) => {
+      const next = [{ name, url }, ...prev.filter((r) => r.url !== url)].slice(0, 5);
+      try { localStorage.setItem(VRMA_RECENTS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
   const handleVrmaChange = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -275,6 +298,7 @@ export default function LeftPanel({
       URL.revokeObjectURL(blobUrl);
       vrmaBlobUrlRef.current = '';
       onLoadVrma?.(serverUrl);
+      rememberVrma(file.name.replace(/\.vrma$/i, ''), serverUrl);
     } catch (err) {
       // Keep the blob so the animation still plays this session, but say so —
       // it will not survive a reload.
@@ -462,6 +486,28 @@ export default function LeftPanel({
                   onChange={handleVrmaChange}
                   className="hidden"
                 />
+                {vrmaRecents.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t('lpVrmaRecent')}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {vrmaRecents.map((item) => (
+                        <button
+                          key={item.url}
+                          onClick={() => onLoadVrma?.(item.url)}
+                          title={item.name}
+                          className={`max-w-full truncate rounded-lg px-2.5 py-1 text-[11px] transition-colors ${
+                            vrmaUrl === item.url
+                              ? 'bg-cyan-700 text-white'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          {item.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {vrmaUrl ? (
                   <p className="text-xs text-emerald-400 flex items-center gap-1">
                     <Icon name="check" className="w-3.5 h-3.5" /> {t('lpVrmAnimApplied')}

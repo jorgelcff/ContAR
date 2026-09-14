@@ -1,4 +1,5 @@
 import axios from 'axios';
+import i18n from '../i18n';
 
 // VITE_API_BASE_URL is the backend's origin (e.g. https://host.example.com),
 // not its full API root — every backend route lives under /api (see
@@ -33,7 +34,9 @@ export function logoutUser() {
 }
 
 export async function registerUser(name, email, password) {
-  const { data } = await api.post('/auth/register', { name, email, password });
+  // The language goes with it so the confirmation mail arrives in whatever the
+  // visitor is reading the app in, rather than always in Portuguese.
+  const { data } = await api.post('/auth/register', { name, email, password, language: i18n.language });
   if (data?.token) {
     localStorage.setItem(AUTH_TOKEN_KEY, data.token);
   }
@@ -163,7 +166,7 @@ export async function verifyEmail(token) {
 }
 
 export async function resendVerification() {
-  const { data } = await api.post('/auth/resend-verification');
+  const { data } = await api.post('/auth/resend-verification', { language: i18n.language });
   return data;
 }
 
@@ -188,7 +191,7 @@ export async function changePassword(currentPassword, newPassword) {
 }
 
 export async function forgotPassword(email) {
-  const { data } = await api.post('/auth/forgot-password', { email });
+  const { data } = await api.post('/auth/forgot-password', { email, language: i18n.language });
   return data;
 }
 

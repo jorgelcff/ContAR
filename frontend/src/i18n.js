@@ -56,6 +56,8 @@ const en = {
   loginPassword: 'Password',
   loginSubmit: 'Login',
   loginSubmitting: 'Please wait…',
+  loginShowPassword: 'Show password',
+  loginHidePassword: 'Hide password',
   registerSubmit: 'Create account',
   forgotSubmit: 'Send reset link',
   forgotSubmitting: 'Sending…',
@@ -584,6 +586,7 @@ const en = {
   lpExprRelaxed: 'Relaxed',
   lpGeneratingVoice: 'Generating voice...',
   lpLoadVrma: 'Load .vrma',
+  lpVrmaRecent: 'Recently uploaded',
   lpVrmAnimApplied: 'VRM animation applied',
   lpGalleryBtn: 'Gallery',
   apWriteTextFirst: 'Write the text in the "Narrator speech" field first.',
@@ -697,6 +700,8 @@ const pt = {
   loginPassword: "Senha",
   loginSubmit: "Entrar",
   loginSubmitting: "Aguarde…",
+  loginShowPassword: "Mostrar senha",
+  loginHidePassword: "Ocultar senha",
   registerSubmit: "Criar conta",
   forgotSubmit: "Enviar link de redefinição",
   forgotSubmitting: "Enviando…",
@@ -1230,6 +1235,7 @@ const pt = {
   lpExprRelaxed: 'Relaxado',
   lpGeneratingVoice: 'Gerando voz...',
   lpLoadVrma: 'Carregar .vrma',
+  lpVrmaRecent: 'Enviadas recentemente',
   lpVrmAnimApplied: 'Animação VRM aplicada',
   lpGalleryBtn: 'Galeria',
   apWriteTextFirst: 'Escreva o texto no campo "Fala do narrador" primeiro.',
@@ -1343,6 +1349,8 @@ const es = {
   loginPassword: 'Contraseña',
   loginSubmit: 'Iniciar sesión',
   loginSubmitting: 'Espera…',
+  loginShowPassword: 'Mostrar contraseña',
+  loginHidePassword: 'Ocultar contraseña',
   registerSubmit: 'Crear cuenta',
   forgotSubmit: 'Enviar enlace de restablecimiento',
   forgotSubmitting: 'Enviando…',
@@ -1833,6 +1841,7 @@ const es = {
   lpExprRelaxed: 'Relajado',
   lpGeneratingVoice: 'Generando voz...',
   lpLoadVrma: 'Cargar .vrma',
+  lpVrmaRecent: 'Subidas recientemente',
   lpVrmAnimApplied: 'Animación VRM aplicada',
   lpGalleryBtn: 'Galería',
   apWriteTextFirst: 'Escribe el texto en el campo "Voz del narrador" primero.',
@@ -1944,6 +1953,8 @@ const fr = {
   loginPassword: 'Mot de passe',
   loginSubmit: 'Se connecter',
   loginSubmitting: 'Veuillez patienter…',
+  loginShowPassword: 'Afficher le mot de passe',
+  loginHidePassword: 'Masquer le mot de passe',
   registerSubmit: 'Créer un compte',
   forgotSubmit: 'Envoyer le lien de réinitialisation',
   forgotSubmitting: 'Envoi en cours…',
@@ -2434,6 +2445,7 @@ const fr = {
   lpExprRelaxed: 'Détendu',
   lpGeneratingVoice: 'Génération de la voix...',
   lpLoadVrma: 'Charger .vrma',
+  lpVrmaRecent: 'Envoyées récemment',
   lpVrmAnimApplied: 'Animation VRM appliquée',
   lpGalleryBtn: 'Galerie',
   apWriteTextFirst: 'Écrivez d\'abord le texte dans le champ « Voix du narrateur ».',
@@ -2525,7 +2537,12 @@ function getInitialLanguage() {
           .toLowerCase()
       : "";
 
-  return SUPPORTED_LANGUAGES.includes(browserLanguage) ? browserLanguage : "pt";
+  if (SUPPORTED_LANGUAGES.includes(browserLanguage)) return browserLanguage;
+  // A browser asking for a language we don't carry — German, Italian, Japanese —
+  // belongs to someone far more likely to read English than Portuguese. With no
+  // language information at all there is nothing to infer, so the app's home
+  // language stands.
+  return browserLanguage ? "en" : "pt";
 }
 
 i18n.use(initReactI18next).init({

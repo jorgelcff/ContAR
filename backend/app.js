@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const ttsRoutes = require('./routes/ttsRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
 const boneMapRoutes = require('./routes/boneMapRoutes');
+const statsRoutes = require('./routes/statsRoutes');
 
 const app = express();
 const TRUST_PROXY = process.env.TRUST_PROXY || '1';
@@ -46,6 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tts', ttsRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/bones', boneMapRoutes);
+app.use('/api/stats', statsRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

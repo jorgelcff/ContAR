@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import { useAuth } from '../auth/AuthContext';
-import { updateAccount, changePassword } from '../api/sceneApi';
+import { updateAccount, changePassword, getStats } from '../api/sceneApi';
 import { useTranslation } from 'react-i18next';
 
 export default function AccountPage() {
   const { t } = useTranslation();
   const { user, refreshUser } = useAuth();
+
+  // Reach numbers, for the account that deployed this. The endpoint answers 403
+  // for everyone else, so a null here simply means "not for you" and the panel
+  // never renders.
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    let active = true;
+    getStats()
+      .then((data) => { if (active) setStats(data); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const [name, setName]           = useState(user?.name || '');
   const [nameMsg, setNameMsg]     = useState('');
@@ -65,6 +77,28 @@ export default function AccountPage() {
           <h1 className="text-xl font-bold">{t('accountTitle')}</h1>
           <p className="text-sm text-gray-400 mt-0.5">{user?.email}</p>
         </div>
+
+        {stats && (
+          <section className="rounded-2xl border border-cyan-800/50 bg-cyan-950/20 p-5 flex flex-col gap-4">
+            <h2 className="text-sm font-semibold text-cyan-200 uppercase tracking-wide">{t('statsTitle')}</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-3xl font-bold text-white">{stats.users}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('statsUsers')}</p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-white">{stats.usersWhoCreated}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('statsUsersWhoCreated')}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-400 border-t border-cyan-800/40 pt-3">
+              <span>{t('statsNewThisWeek', { count: stats.newUsersLast7Days })}</span>
+              <span>{t('statsScenes', { count: stats.scenes })}</span>
+              <span>{t('statsStories', { count: stats.stories })}</span>
+              <span>{t('statsPublished', { count: stats.publishedStories })}</span>
+            </div>
+          </section>
+        )}
 
         {/* Nome */}
         <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 flex flex-col gap-4">

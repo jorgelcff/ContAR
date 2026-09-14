@@ -210,3 +210,10 @@ export async function mapBones(boneNames) {
   const { data } = await api.post('/bones/map', { bones: boneNames });
   return data.mapping || {};
 }
+
+/** Reach numbers for the deployment. 403 for anyone not in ADMIN_EMAILS, which
+ *  is how the Account page decides whether to show the panel at all. */
+export async function getStats() {
+  const { data } = await api.get('/stats');
+  return data;
+}

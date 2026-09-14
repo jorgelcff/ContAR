@@ -68,6 +68,13 @@ function direction(bones, from, to) {
   return b.sub(a).normalize();
 }
 
+/** World position of a bone after the pose is applied. */
+function position(bones, name) {
+  const v = new THREE.Vector3();
+  bones[name].getWorldPosition(v);
+  return v;
+}
+
 function pose(rig, preset) {
   applyPosePreset(rig.root, null, null, [], preset, null, {});
   rig.root.updateMatrixWorld(true);
@@ -176,5 +183,46 @@ describe('static poses on degenerate rigs', () => {
     rig.bones.Neck.removeFromParent();
     expect(() => pose(rig, 'pray')).not.toThrow();
     expect(() => pose(rig, 'bow')).not.toThrow();
+  });
+});
+
+// These rigs face +Z — measured from their ankle-to-toe direction. Nothing
+// asserted that until poses shipped with the depth axis inverted: praying with
+// the hands behind the body, pointing backwards, the thinking hand behind the
+// head. The tests above only ever checked left/right and up/down, so they were
+// all perfectly green while every pose that reaches faced the wrong way.
+describe('poses reach toward the front of the character', () => {
+  const reaching = [
+    ['point', 'RightHand'],
+    ['pray', 'LeftHand'],
+    ['think', 'RightHand'],
+    ['arms_crossed', 'LeftHand'],
+    ['salute', 'RightHand'],
+  ];
+
+  for (const [preset, hand] of reaching) {
+    it(`${preset} puts the hand in front of the chest`, () => {
+      const rig = buildRig();
+      pose(rig, preset);
+      const chestZ = position(rig.bones, 'Spine1').z;
+      expect(position(rig.bones, hand).z, `${preset}: ${hand} is behind the body`)
+        .toBeGreaterThan(chestZ);
+    });
+  }
+
+  it('hands_on_hips is the exception — elbows go behind the shoulders', () => {
+    // Worth pinning separately: a blanket "everything points forward" rule
+    // would be wrong here, and flipping this one too would look just as bad.
+    const rig = buildRig();
+    pose(rig, 'hands_on_hips');
+    expect(position(rig.bones, 'LeftForeArm').z).toBeLessThan(position(rig.bones, 'LeftArm').z);
+    // The hands still come forward, onto the waist.
+    expect(position(rig.bones, 'LeftHand').z).toBeGreaterThan(position(rig.bones, 'LeftForeArm').z);
+  });
+
+  it('holds on a rig that binds its bones differently', () => {
+    const odd = buildRig(twisted());
+    pose(odd, 'point');
+    expect(position(odd.bones, 'RightHand').z).toBeGreaterThan(position(odd.bones, 'Spine1').z);
   });
 });

@@ -381,7 +381,7 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
 
   if (!story.hasStarted) {
     return (
-      <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/65 backdrop-blur-sm">
+      <div className="pointer-events-auto absolute inset-0 z-30 flex items-center justify-center bg-gray-900/65 backdrop-blur-sm">
         <div className="mx-6 w-full max-w-sm rounded-2xl border border-white/10 bg-gray-900/90 p-6 text-center">
           <p className="text-xs uppercase tracking-[0.2em] text-cyan-300 mb-2">{t('arStoryInAr')}</p>
           <h2 className="text-xl font-bold text-white mb-1">{story.story?.metadata?.title}</h2>
@@ -398,7 +398,7 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
   }
 
   return (
-    <div className={`${compact ? 'absolute top-16 left-3 right-3 z-25' : ''} rounded-xl border border-white/10 bg-gray-900/80 px-3 py-2.5 backdrop-blur-sm`}>
+    <div className={`pointer-events-auto ${compact ? 'absolute top-16 left-3 right-3 z-25' : ''} rounded-xl border border-white/10 bg-gray-900/80 px-3 py-2.5 backdrop-blur-sm`}>
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-xs text-cyan-300 font-medium truncate max-w-[75%]">
           {story.currentScene?.content?.narrative?.text

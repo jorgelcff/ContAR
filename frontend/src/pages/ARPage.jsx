@@ -34,6 +34,9 @@ const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
+  // Root handed to WebXR as the dom-overlay: transparent and click-through, so
+  // the camera feed shows and taps still reach the canvas to place the avatar.
+  const overlayRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
@@ -141,6 +144,11 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
     const renderer = rendererRef.current;
     const container = containerRef.current;
     if (!renderer || !container || starting || arActive) return;
+    // The overlay root has to be the element that holds the interface. It used
+    // to be `container`, which holds only the canvas — so during a session the
+    // UA showed the canvas and nothing else, and every control (including the
+    // one that starts the story) was invisible.
+    const overlayRoot = overlayRef.current || container;
     setStarting(true);
     setError('');
     setHitTestUnsupported(false);
@@ -149,7 +157,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       navigator.xr.requestSession('immersive-ar', {
         ...(requireHitTest ? { requiredFeatures: ['hit-test'] } : {}),
         optionalFeatures: ['hit-test', 'dom-overlay'],
-        domOverlay: { root: container },
+        domOverlay: { root: overlayRoot },
       });
 
     try {
@@ -542,107 +550,117 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
 
       <div ref={containerRef} className="absolute inset-0" />
 
-      <div className="absolute inset-x-0 top-0 z-20">
-        <Header />
-      </div>
-
-      {/* Story splash / controls */}
-      <StoryOverlay
-        story={story}
-        storyId={storyId}
-        compact
-        onStart={() => {
-          // Single tap: unlock narration audio AND start the WebXR session.
-          // Both must happen synchronously in this click handler — AR session
-          // start requires transient user activation.
-          story.start(initWebAudio);
-          startArSession();
-        }}
-      />
-
-      {/* Narration text overlay (subtitle / bubble / none) */}
-      {arActive && <ARNarration mode={effectiveDisplayMode} text={narrationText} />}
-
-      {/* Status panel (only shown when no story or story not started) */}
-      {(!storyId || !story.hasStarted) && (
-        <div className="absolute left-4 right-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
-          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{t('arTitle')}</p>
-          <p className="mt-2 text-sm text-gray-200">{status || t('tapToPlace')}</p>
-          {loadingModel && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent shrink-0" />
-              <p className="text-xs text-cyan-300">{t('arLoadingChar')}</p>
-            </div>
-          )}
-          {!loadingModel && error && <p className="mt-1 text-xs text-red-400">{error}</p>}
-        </div>
-      )}
-
-      <div className="absolute bottom-4 left-4 right-4 z-30 rounded-2xl border border-white/10 bg-black/80 p-3 backdrop-blur-sm md:left-1/2 md:right-auto md:w-130 md:-translate-x-1/2">
-        {/* Header: minimize toggle so the panel doesn't cover the narration */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium uppercase tracking-wider text-cyan-300">{t('arControls')}</span>
-          <button
-            onClick={() => setControlsMin((m) => !m)}
-            title={controlsMin ? t('arExpand') : t('arMinimize')}
-            className="rounded-lg border border-white/10 bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700">
-            {controlsMin ? '▴' : '▾'}
-          </button>
+      <div ref={overlayRef} className="absolute inset-0 z-10 pointer-events-none">
+        <div className="absolute inset-x-0 top-0 z-20 pointer-events-auto">
+          <Header />
         </div>
 
-        {!controlsMin && (
-          <>
-            <div className="mt-2 grid grid-cols-2 gap-2 md:flex md:flex-row md:items-center">
-              <button onClick={onBack}
-                className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
-                ← {t('back')}
-              </button>
-              <button
-                onClick={() => {
-                  placedRef.current = false;
-                  setStatus(t('arMoveToDetect'));
-                  if (modelRootRef.current) modelRootRef.current.visible = false;
-                }}
-                className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
-                {t('reset')}
-              </button>
-              <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
-                <input type="checkbox" checked={lockPlacement} onChange={(e) => setLockPlacement(e.target.checked)} className="w-5 h-5 accent-cyan-400 cursor-pointer" />
-                <span>{lockPlacement ? t('arPositionLocked') : t('arMoveAvatar')}</span>
-              </label>
-              {!storyId && narrativeAudioUrl && (
-                <button
-                  onClick={toggleSpeech}
-                  className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                  {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
-                </button>
-              )}
-            </div>
+        {/* Story splash / controls */}
+        <StoryOverlay
+          story={story}
+          storyId={storyId}
+          compact
+          onStart={() => {
+            // Single tap: unlock narration audio AND start the WebXR session.
+            // Both must happen synchronously in this click handler — AR session
+            // start requires transient user activation.
+            story.start(initWebAudio);
+            startArSession();
+          }}
+        />
 
-            <label className="mt-3 flex items-center gap-3 text-sm text-gray-200">
-              <span className="shrink-0 w-14 text-right text-xs text-gray-400">{scaleLabel}</span>
-              <input type="range" min="0.2" max="2.0" step="0.01" value={scale}
-                onChange={(e) => setScale(Number(e.target.value))}
-                className="flex-1 accent-cyan-400 cursor-pointer" />
-              <span className="shrink-0 text-xs text-gray-400">{t('scale')}</span>
-            </label>
+        {/* Narration text overlay (subtitle / bubble / none) */}
+        {arActive && <ARNarration mode={effectiveDisplayMode} text={narrationText} />}
 
-            {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
-            {hitTestUnsupported && (
-              <Link to={pseudoHref}
-                className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                {t('openPseudoAr')} →
-              </Link>
+        {/* Status panel (only shown when no story or story not started) */}
+        {(!storyId || !story.hasStarted) && (
+          <div className="pointer-events-auto absolute left-4 right-4 top-16 z-20 max-w-xs rounded-xl border border-white/10 bg-black/70 p-4 backdrop-blur-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{t('arTitle')}</p>
+            <p className="mt-2 text-sm text-gray-200">{status || t('tapToPlace')}</p>
+            {loadingModel && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent shrink-0" />
+                <p className="text-xs text-cyan-300">{t('arLoadingChar')}</p>
+              </div>
             )}
-          </>
+            {!loadingModel && error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+          </div>
         )}
 
-        <button
-          onClick={arActive ? stopArSession : startArSession}
-          disabled={starting}
-          className="mt-3 w-full min-h-12 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 px-4 py-3 text-sm font-semibold text-white transition-colors disabled:opacity-60">
-          {starting ? t('arStarting') : arActive ? t('arEndSession') : t('arStartSession')}
-        </button>
+        <div className="pointer-events-auto absolute bottom-4 left-4 right-4 z-30 rounded-2xl border border-white/10 bg-black/80 p-3 backdrop-blur-sm md:left-1/2 md:right-auto md:w-130 md:-translate-x-1/2">
+          {/* Header: minimize toggle so the panel doesn't cover the narration */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-cyan-300">{t('arControls')}</span>
+            <button
+              onClick={() => setControlsMin((m) => !m)}
+              title={controlsMin ? t('arExpand') : t('arMinimize')}
+              className="rounded-lg border border-white/10 bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700">
+              {controlsMin ? '▴' : '▾'}
+            </button>
+          </div>
+
+          {!controlsMin && (
+            <>
+              <div className="mt-2 grid grid-cols-2 gap-2 md:flex md:flex-row md:items-center">
+                <button onClick={onBack}
+                  className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
+                  ← {t('back')}
+                </button>
+                <button
+                  onClick={() => {
+                    placedRef.current = false;
+                    setStatus(t('arMoveToDetect'));
+                    if (modelRootRef.current) modelRootRef.current.visible = false;
+                  }}
+                  className="min-h-12 rounded-xl border border-white/10 bg-gray-800 px-4 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-600">
+                  {t('reset')}
+                </button>
+                <label className="col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-gray-200 cursor-pointer">
+                  <input type="checkbox" checked={lockPlacement} onChange={(e) => setLockPlacement(e.target.checked)} className="w-5 h-5 accent-cyan-400 cursor-pointer" />
+                  <span>{lockPlacement ? t('arPositionLocked') : t('arMoveAvatar')}</span>
+                </label>
+                {!storyId && narrativeAudioUrl && (
+                  <button
+                    onClick={toggleSpeech}
+                    className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                    {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
+                  </button>
+                )}
+              </div>
+
+              <label className="mt-3 flex items-center gap-3 text-sm text-gray-200">
+                <span className="shrink-0 w-14 text-right text-xs text-gray-400">{scaleLabel}</span>
+                <input type="range" min="0.2" max="2.0" step="0.01" value={scale}
+                  onChange={(e) => setScale(Number(e.target.value))}
+                  className="flex-1 accent-cyan-400 cursor-pointer" />
+                <span className="shrink-0 text-xs text-gray-400">{t('scale')}</span>
+              </label>
+
+              {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+              {hitTestUnsupported && (
+                <Link to={pseudoHref}
+                  className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-emerald-700 hover:bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                  {t('openPseudoAr')} →
+                </Link>
+              )}
+            </>
+          )}
+
+          <button
+            onClick={() => {
+              if (arActive) return stopArSession();
+              // Starting the session from here used to leave the story sitting at
+              // its splash: the avatar could be placed and moved, and narration
+              // never began. Both have to happen in this one gesture — audio
+              // unlock and requestSession each need the user activation.
+              if (storyId && !story.hasStarted) story.start(initWebAudio);
+              return startArSession();
+            }}
+            disabled={starting}
+            className="mt-3 w-full min-h-12 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 px-4 py-3 text-sm font-semibold text-white transition-colors disabled:opacity-60">
+            {starting ? t('arStarting') : arActive ? t('arEndSession') : t('arStartSession')}
+          </button>
+        </div>
       </div>
     </div>
   );

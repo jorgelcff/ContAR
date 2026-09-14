@@ -10,7 +10,10 @@ const { test, expect } = require('./fixtures');
 // each time this was observed timing out; it was just still catching up.
 test('full journey: register, build a scene, save a story, view it in AR', async ({ page }) => {
   test.setTimeout(60_000);
-  const email = `journey-${Date.now()}@example.com`;
+  // Timestamp alone collides: two workers starting in the same millisecond
+  // registered the same address, the second got a duplicate-key error, and the
+  // run sat on /login — which read as this test being flaky under parallelism.
+  const email = `journey-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
 
   // 1. Register
   await page.goto('/login');

@@ -27,6 +27,54 @@ describe('POST /api/auth/register', () => {
     expect(res.body.user.passwordHash).toBeUndefined();
   });
 
+  it('sends the verification email when SMTP is configured', async () => {
+    // The send used to be gated on RESEND_API_KEY, which nothing reads — the
+    // transport is nodemailer over SMTP. On a server with working SMTP (proven
+    // by password resets going out) no verification mail was ever sent.
+    const nodemailer = require('nodemailer');
+    const sent = [];
+    const spy = vi.spyOn(nodemailer, 'createTransport').mockReturnValue({
+      sendMail: async (msg) => { sent.push(msg); return { messageId: 'x' }; },
+    });
+    const prev = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
+    process.env.SMTP_USER = 'sender@example.com';
+    process.env.SMTP_PASS = 'secret';
+
+    try {
+      const email = `verify-${Date.now()}@example.com`;
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ name: 'V', email, password: 'password123' });
+      expect(res.status).toBe(201);
+
+      // Sending is fire-and-forget so the response does not wait on it.
+      await new Promise((r) => setTimeout(r, 50));
+      expect(sent).toHaveLength(1);
+      expect(sent[0].to).toBe(email);
+      expect(sent[0].html).toContain('/verify-email?token=');
+    } finally {
+      spy.mockRestore();
+      process.env.SMTP_USER = prev.user;
+      process.env.SMTP_PASS = prev.pass;
+    }
+  });
+
+  it('still registers when the server cannot send mail', async () => {
+    const prev = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
+    process.env.SMTP_USER = '';
+    process.env.SMTP_PASS = '';
+    try {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ name: 'N', email: `nomail-${Date.now()}@example.com`, password: 'password123' });
+      expect(res.status).toBe(201);
+      expect(res.body.token).toBeTruthy();
+    } finally {
+      process.env.SMTP_USER = prev.user;
+      process.env.SMTP_PASS = prev.pass;
+    }
+  });
+
   it('rejects a duplicate email', async () => {
     await request(app)
       .post('/api/auth/register')

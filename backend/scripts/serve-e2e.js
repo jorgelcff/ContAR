@@ -18,6 +18,12 @@ process.env.AUTH_RATE_LIMIT_MAX = process.env.AUTH_RATE_LIMIT_MAX || '2000';
 // with ECONNRESET). A low cost here only weakens throwaway E2E accounts in
 // an in-memory DB that's destroyed when the process exits.
 process.env.BCRYPT_COST = process.env.BCRYPT_COST || '4';
+// This process loads the real backend/.env, so it inherits real SMTP
+// credentials. A suite run registers dozens of throwaway users, and sending is
+// gated on these being present — leaving them set would fire that many real
+// messages from the developer's own mailbox at fake addresses on every run.
+process.env.SMTP_USER = '';
+process.env.SMTP_PASS = '';
 
 const app = require('../app');
 

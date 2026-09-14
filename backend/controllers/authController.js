@@ -45,6 +45,15 @@ function createTransporter() {
   });
 }
 
+// Whether this server can send at all. The check used to be for
+// RESEND_API_KEY, which nothing in the codebase reads — mail goes out through
+// nodemailer over SMTP — so on a server with working SMTP credentials the
+// verification email was silently never sent, while password resets (which
+// never had that gate) went out fine.
+function emailConfigured() {
+  return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
 function emailFrom() {
   return process.env.EMAIL_FROM || `ContAR <${process.env.SMTP_USER}>`;
 }
@@ -111,7 +120,7 @@ async function register(req, res) {
     });
 
     // Send verification email — non-blocking: registration succeeds even if email fails
-    if (process.env.RESEND_API_KEY) {
+    if (emailConfigured()) {
       sendVerificationEmail(user).catch((err) =>
         console.error("Failed to send verification email:", err.message),
       );

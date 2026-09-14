@@ -445,8 +445,8 @@ function applyWavePose(model, boneMapper = null) {
   const arms = getArmChain(model, boneMapper);
   relaxArm(model, arms, 'left');
   // Upper arm out and up, forearm raised so the hand sits beside the head.
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.72, 0.66, -0.22));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.30, 0.94, -0.16));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.72, 0.66, 0.22));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.30, 0.94, 0.16));
 
   // Spread fingers for wave
   applyFingerPose(model, 'right', 'spread');
@@ -463,20 +463,23 @@ function applySpeakerPose(model, boneMapper = null) {
   // Open, ready-to-gesture stance: arms down but held a little away from the
   // body, forearms angled forward. The animation controller layers its speaker
   // gestures on top of this.
-  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.30, -0.94, -0.16));
-  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.34, -0.50, -0.80));
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.30, -0.94, -0.16));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.34, -0.50, -0.80));
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.30, -0.94, 0.16));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.34, -0.50, 0.80));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.30, -0.94, 0.16));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.34, -0.50, 0.80));
 }
 
 function applyHandsOnHipsPose(model, boneMapper = null) {
   const arms = getArmChain(model, boneMapper);
   // Elbows out and back, forearms angling down and in so the hands land on the
-  // waist. The model faces -Z, so -Z is forward and +X is its left.
-  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.62, -0.72, 0.31));
-  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.52, -0.72, -0.46));
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.62, -0.72, 0.31));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.52, -0.72, -0.46));
+  // waist. These rigs face +Z — measured from the ankle-to-toe direction, 0.88
+  // and 0.94 on Z for the two reference avatars — so +Z is forward and +X is
+  // the character's left. Reading it the other way put every hand behind the
+  // body: praying, pointing and thinking all aimed backwards.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.62, -0.72, -0.31));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.52, -0.72, 0.46));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.62, -0.72, -0.31));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.52, -0.72, 0.46));
 }
 
 function applySalutePose(model, boneMapper = null) {
@@ -484,8 +487,8 @@ function applySalutePose(model, boneMapper = null) {
   const arms = getArmChain(model, boneMapper);
   relaxArm(model, arms, 'left');
   // Elbow out at shoulder height, forearm angled up and inward to the brow.
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.82, 0.16, -0.55));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.52, 0.74, -0.42));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.82, 0.16, 0.55));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.52, 0.74, 0.42));
 
   // Flat hand for salute — fingers extended and together
   applyFingerPose(model, 'right', 'flat');
@@ -495,10 +498,10 @@ function applyArmsCrossedPose(model, boneMapper = null) {
   const arms = getArmChain(model, boneMapper);
   // Upper arms hang close to the body and slightly forward; forearms run almost
   // horizontally across the chest, each toward the opposite shoulder.
-  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.26, -0.93, -0.26));
-  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.90, 0.16, -0.40));
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.26, -0.93, -0.26));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.90, 0.16, -0.40));
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.26, -0.93, 0.26));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.90, 0.16, 0.40));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.26, -0.93, 0.26));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.90, 0.16, 0.40));
 }
 
 function applyTPose(model, boneMapper = null) {
@@ -517,10 +520,10 @@ function applyThinkPose(model, boneMapper = null) {
   rotateBoneDeg(neck, 0, 8, 6);
   const arms = getArmChain(model, boneMapper);
   // Right hand to the chin; left arm tucked across the waist under the elbow.
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.34, -0.90, -0.28));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.26, 0.84, -0.48));
-  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.24, -0.95, -0.20));
-  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.88, 0.22, -0.42));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.34, -0.90, 0.28));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.26, 0.84, 0.48));
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.24, -0.95, 0.20));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.88, 0.22, 0.42));
 }
 
 function applyPointPose(model, boneMapper = null) {
@@ -530,8 +533,8 @@ function applyPointPose(model, boneMapper = null) {
   const arms = getArmChain(model, boneMapper);
   relaxArm(model, arms, 'left');
   // Whole arm extended forward and slightly across the body.
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.26, -0.22, -0.94));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.12, -0.06, -0.99));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.26, -0.22, 0.94));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.12, -0.06, 0.99));
 
   // Index extended, other fingers curled
   applyFingerPose(model, 'right', 'point');
@@ -562,10 +565,10 @@ function applyPrayPose(model, boneMapper = null) {
   const arms = getArmChain(model, boneMapper);
   // Upper arms tucked in at the sides, forearms angled up and inward so both
   // hands meet in front of the chest.
-  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.22, -0.94, -0.26));
-  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.34, 0.74, -0.58));
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.22, -0.94, -0.26));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.34, 0.74, -0.58));
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.22, -0.94, 0.26));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.34, 0.74, 0.58));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.22, -0.94, 0.26));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.34, 0.74, 0.58));
 
   // Fingers pressed together and extended upward for prayer
   applyFingerPose(model, 'left', 'pray');
@@ -580,8 +583,8 @@ function applyShrugPose(model, boneMapper = null) {
   const arms = getArmChain(model, boneMapper);
   // Upper arms hang but angle out from the body; forearms turn forward and out
   // with the palms rolling up — the "who knows?" silhouette.
-  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.46, -0.87, 0.16));
-  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.62, 0.16, -0.77));
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.46, -0.87, 0.16));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.62, 0.16, -0.77));
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.46, -0.87, -0.16));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.62, 0.16, 0.77));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.46, -0.87, -0.16));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.62, 0.16, 0.77));
 }

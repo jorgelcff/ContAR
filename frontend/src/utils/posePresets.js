@@ -75,7 +75,11 @@ export function applyPosePreset(
     }
   }
 
-  if (normalized === "speaker") {
+  if (normalized === "neutral") {
+    // Previously unhandled, which left the avatar in its bind pose — arms
+    // straight out, i.e. a T-pose under the name "Neutra".
+    relaxArms(model, getArmChain(model, boneMapper));
+  } else if (normalized === "speaker") {
     applySpeakerPose(model, boneMapper);
   } else if (normalized === "wave") {
     applyWavePose(model, boneMapper);
@@ -236,6 +240,26 @@ function findBone(model, patterns) {
 
 function getBone(model, boneMapper, standardName, patterns) {
   return boneMapper?.get(standardName) ?? findBone(model, patterns);
+}
+
+/**
+ * Lets an arm hang naturally at the side.
+ *
+ * Every rig here binds in a T-pose, so an arm a pose does not explicitly place
+ * stays sticking straight out — which is why "neutral" looked like a T-pose and
+ * why the idle arm in "wave" or "point" stuck out sideways.
+ */
+function relaxArm(model, arms, side) {
+  const out = side === 'left' ? 1 : -1;
+  aimBone(model, arms[`${side}UpperArm`], arms[`${side}ForeArm`],
+    new THREE.Vector3(0.18 * out, -0.98, 0));
+  aimBone(model, arms[`${side}ForeArm`], arms[`${side}Hand`],
+    new THREE.Vector3(0.13 * out, -0.96, 0.14));
+}
+
+function relaxArms(model, arms) {
+  relaxArm(model, arms, 'left');
+  relaxArm(model, arms, 'right');
 }
 
 /** Both arm chains, resolved once — shoulder → elbow → hand on each side. */
@@ -415,13 +439,12 @@ function applyFingerPose(model, side, shape) {
 }
 
 function applyWavePose(model, boneMapper = null) {
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
 
-  rotateBoneDeg(rightUpperArm, -45, 0, -65);
-  rotateBoneDeg(rightForeArm, -20, 0, -35);
-  rotateBoneDeg(rightHand, 10, 0, -20);
+  const arms = getArmChain(model, boneMapper);
+  relaxArm(model, arms, 'left');
+  // Upper arm out and up, forearm raised so the hand sits beside the head.
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.72, 0.66, -0.22));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.30, 0.94, -0.16));
 
   // Spread fingers for wave
   applyFingerPose(model, 'right', 'spread');
@@ -430,18 +453,18 @@ function applyWavePose(model, boneMapper = null) {
 function applySpeakerPose(model, boneMapper = null) {
   const spine         = getBone(model, boneMapper, 'spine',         [/spine(?:0?1)?/, /chest/, /mixamorigspine/]);
   const neck          = getBone(model, boneMapper, 'neck',          [/neck/, /mixamorigneck/]);
-  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
 
   rotateBoneDeg(spine, -4, 0, 0);
   rotateBoneDeg(neck, 2, 0, 0);
-  rotateBoneDeg(leftUpperArm, -18, 0, 15);
-  rotateBoneDeg(rightUpperArm, -18, 0, -15);
-  // Reduced forearm flex to prevent hand from clipping into the upper arm
-  rotateBoneDeg(leftForeArm, -25, 0, -8);
-  rotateBoneDeg(rightForeArm, -25, 0, 8);
+
+  const arms = getArmChain(model, boneMapper);
+  // Open, ready-to-gesture stance: arms down but held a little away from the
+  // body, forearms angled forward. The animation controller layers its speaker
+  // gestures on top of this.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.30, -0.94, -0.16));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.34, -0.50, -0.80));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.30, -0.94, -0.16));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.34, -0.50, -0.80));
 }
 
 function applyHandsOnHipsPose(model, boneMapper = null) {
@@ -455,35 +478,25 @@ function applyHandsOnHipsPose(model, boneMapper = null) {
 }
 
 function applySalutePose(model, boneMapper = null) {
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
 
-  rotateBoneDeg(rightUpperArm, -55, 0, -50);
-  rotateBoneDeg(rightForeArm, -95, 0, 10);
-  rotateBoneDeg(rightHand, -5, 0, 15);
+  const arms = getArmChain(model, boneMapper);
+  relaxArm(model, arms, 'left');
+  // Elbow out at shoulder height, forearm angled up and inward to the brow.
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.82, 0.16, -0.55));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.52, 0.74, -0.42));
 
   // Flat hand for salute — fingers extended and together
   applyFingerPose(model, 'right', 'flat');
 }
 
 function applyArmsCrossedPose(model, boneMapper = null) {
-  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-  const leftHand      = getBone(model, boneMapper, 'leftHand',      [/lefthand/, /hand_l/, /mixamoriglefthand/]);
-  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
-
-  // Swing upper arms slightly forward so forearms can cross in front of the chest
-  rotateBoneDeg(leftUpperArm, -8, 0, 20);
-  rotateBoneDeg(rightUpperArm, -8, 0, -20);
-  // Reduced flex from -70° to -52° to prevent the hand from clipping into the arm
-  rotateBoneDeg(leftForeArm, -52, 0, -30);
-  rotateBoneDeg(rightForeArm, -52, 0, 30);
-  // Correct wrist rotation so hands align with the crossed-arms silhouette
-  rotateBoneDeg(leftHand, 0, 18, 0);
-  rotateBoneDeg(rightHand, 0, -18, 0);
+  const arms = getArmChain(model, boneMapper);
+  // Upper arms hang close to the body and slightly forward; forearms run almost
+  // horizontally across the chest, each toward the opposite shoulder.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.26, -0.93, -0.26));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.90, 0.16, -0.40));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.26, -0.93, -0.26));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.90, 0.16, -0.40));
 }
 
 function applyTPose(model, boneMapper = null) {
@@ -498,34 +511,25 @@ function applyTPose(model, boneMapper = null) {
 
 function applyThinkPose(model, boneMapper = null) {
   const neck          = getBone(model, boneMapper, 'neck',          [/neck/, /mixamorigneck/]);
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
-  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
 
   rotateBoneDeg(neck, 0, 8, 6);
-  rotateBoneDeg(rightUpperArm, -30, 0, -28);
-  rotateBoneDeg(rightForeArm, -65, 0, 12);
-  rotateBoneDeg(rightHand, 5, 0, 8);
-  rotateBoneDeg(leftUpperArm, -12, 0, 22);
-  rotateBoneDeg(leftForeArm, -55, 0, -8);
+  const arms = getArmChain(model, boneMapper);
+  // Right hand to the chin; left arm tucked across the waist under the elbow.
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.34, -0.90, -0.28));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.26, 0.84, -0.48));
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.24, -0.95, -0.20));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.88, 0.22, -0.42));
 }
 
 function applyPointPose(model, boneMapper = null) {
   const spine         = getBone(model, boneMapper, 'spine',         [/spine(?:0?1)?/, /chest/, /mixamorigspine/]);
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
-  const rightHand     = getBone(model, boneMapper, 'rightHand',     [/righthand/, /hand_r/, /mixamorigrighthand/]);
-  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
 
   rotateBoneDeg(spine, -5, 12, 0);
-  rotateBoneDeg(rightUpperArm, -35, 0, -45);
-  rotateBoneDeg(rightForeArm, -55, 0, 18);
-  rotateBoneDeg(rightHand, -10, 0, 0);
-  rotateBoneDeg(leftUpperArm, -8, 0, 22);
-  rotateBoneDeg(leftForeArm, -25, 0, -8);
+  const arms = getArmChain(model, boneMapper);
+  relaxArm(model, arms, 'left');
+  // Whole arm extended forward and slightly across the body.
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.26, -0.22, -0.94));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.12, -0.06, -0.99));
 
   // Index extended, other fingers curled
   applyFingerPose(model, 'right', 'point');
@@ -541,22 +545,25 @@ function applyBowPose(model, boneMapper = null) {
   rotateBoneDeg(spine, 20, 0, 0);
   rotateBoneDeg(chest, 15, 0, 0);
   rotateBoneDeg(neck, -15, 0, 0);
+
+  // Without this the arms stay out sideways through the whole bow.
+  relaxArms(model, getArmChain(model, boneMapper));
 }
 
 function applyPrayPose(model, boneMapper = null) {
   const spine         = getBone(model, boneMapper, 'spine',         [/spine(?:0?1)?/, /chest/, /mixamorigspine/]);
   const neck          = getBone(model, boneMapper, 'neck',          [/neck/, /mixamorigneck/]);
-  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
 
   rotateBoneDeg(spine, -8, 0, 0);
   rotateBoneDeg(neck, 10, 0, 0);
-  rotateBoneDeg(leftUpperArm, -55, 0, -12);
-  rotateBoneDeg(rightUpperArm, -55, 0, 12);
-  rotateBoneDeg(leftForeArm, -60, 0, 18);
-  rotateBoneDeg(rightForeArm, -60, 0, -18);
+
+  const arms = getArmChain(model, boneMapper);
+  // Upper arms tucked in at the sides, forearms angled up and inward so both
+  // hands meet in front of the chest.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.22, -0.94, -0.26));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.34, 0.74, -0.58));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.22, -0.94, -0.26));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.34, 0.74, -0.58));
 
   // Fingers pressed together and extended upward for prayer
   applyFingerPose(model, 'left', 'pray');
@@ -565,14 +572,14 @@ function applyPrayPose(model, boneMapper = null) {
 
 function applyShrugPose(model, boneMapper = null) {
   const neck          = getBone(model, boneMapper, 'neck',          [/neck/, /mixamorigneck/]);
-  const leftUpperArm  = getBone(model, boneMapper, 'leftUpperArm',  [/leftarm/, /l_upperarm/, /upperarm_l/, /mixamorigleftarm/]);
-  const rightUpperArm = getBone(model, boneMapper, 'rightUpperArm', [/rightarm/, /r_upperarm/, /upperarm_r/, /mixamorigrightarm/]);
-  const leftForeArm   = getBone(model, boneMapper, 'leftLowerArm',  [/leftforearm/, /l_forearm/, /lowerarm_l/, /mixamorigleftforearm/]);
-  const rightForeArm  = getBone(model, boneMapper, 'rightLowerArm', [/rightforearm/, /r_forearm/, /lowerarm_r/, /mixamorigrightforearm/]);
 
   rotateBoneDeg(neck, 5, 0, 0);
-  rotateBoneDeg(leftUpperArm, -20, 0, 62);
-  rotateBoneDeg(rightUpperArm, -20, 0, -62);
-  rotateBoneDeg(leftForeArm, -40, 0, -22);
-  rotateBoneDeg(rightForeArm, -40, 0, 22);
+
+  const arms = getArmChain(model, boneMapper);
+  // Upper arms hang but angle out from the body; forearms turn forward and out
+  // with the palms rolling up — the "who knows?" silhouette.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.46, -0.87, 0.16));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.62, 0.16, -0.77));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.46, -0.87, 0.16));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.62, 0.16, -0.77));
 }

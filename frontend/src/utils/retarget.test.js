@@ -110,6 +110,62 @@ describe('retargetRotationTracks', () => {
     expect(got.angleTo(targetRest.get('tip').quaternion)).toBeLessThan(TOLERANCE);
   });
 
+  it('skips a track whose bone is missing from the target rig', () => {
+    // Rigs in the wild are not complete: a mapped bone can simply not exist on
+    // the avatar. That track must be left as authored rather than throwing or
+    // writing garbage into the others.
+    const sourceRest = chain(euler(0, 0, 0), euler(0, 0, 0), euler(0, 0, 0));
+    const targetRest = new Map([
+      ['root', { quaternion: euler(-90, 0, 0), parent: null }],
+      ['mid', { quaternion: euler(0, 0, 125), parent: 'root' }],
+      // 'tip' deliberately absent
+    ]);
+    const animated = euler(0, 40, 0);
+
+    const result = retargetRotationTracks({
+      tracks: [track('mid', [0], [animated]), track('tip', [0], [animated])],
+      sourceOf: identityMap,
+      sourceRest,
+      targetRest,
+    });
+
+    expect(result).toHaveLength(2);
+    const mid = new THREE.Quaternion().fromArray(result.find((t) => t.name === 'mid').values, 0);
+    expect(Number.isFinite(mid.x + mid.y + mid.z + mid.w)).toBe(true);
+  });
+
+  it('ignores a track the source skeleton knows nothing about', () => {
+    const rest = () => chain(euler(0, 0, 0), euler(0, 0, 0), euler(0, 0, 0));
+    const result = retargetRotationTracks({
+      tracks: [track('mid', [0], [euler(0, 40, 0)]), track('ghost', [0], [euler(0, 10, 0)])],
+      sourceOf: new Map([...identityMap, ['ghost', 'ghost']]),
+      sourceRest: rest(),
+      targetRest: rest(),
+    });
+    expect(result).toHaveLength(2);
+    // The unknown bone stays finite rather than poisoning the output.
+    const ghost = new THREE.Quaternion().fromArray(result.find((t) => t.name === 'ghost').values, 0);
+    expect(Number.isFinite(ghost.x + ghost.y + ghost.z + ghost.w)).toBe(true);
+  });
+
+  it('does not hang on a hierarchy that references a missing parent', () => {
+    // A broken export can leave a bone pointing at a parent that was stripped.
+    const broken = new Map([
+      ['root', { quaternion: euler(0, 0, 0), parent: 'GONE' }],
+      ['mid', { quaternion: euler(0, 0, 0), parent: 'root' }],
+      ['tip', { quaternion: euler(0, 0, 0), parent: 'mid' }],
+    ]);
+    const result = retargetRotationTracks({
+      tracks: [track('mid', [0], [euler(0, 40, 0)])],
+      sourceOf: identityMap,
+      sourceRest: broken,
+      targetRest: chain(euler(0, 0, 0), euler(0, 0, 0), euler(0, 0, 0)),
+    });
+    expect(result).toHaveLength(1);
+    const q = new THREE.Quaternion().fromArray(result[0].values, 0);
+    expect(Number.isFinite(q.x + q.y + q.z + q.w)).toBe(true);
+  });
+
   it('returns null when there is nothing usable to retarget', () => {
     expect(retargetRotationTracks({
       tracks: [], sourceOf: identityMap, sourceRest: chain(euler(0, 0, 0), euler(0, 0, 0), euler(0, 0, 0)), targetRest: chain(euler(0, 0, 0), euler(0, 0, 0), euler(0, 0, 0)),

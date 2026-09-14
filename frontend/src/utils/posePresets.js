@@ -203,6 +203,8 @@ function aimBone(model, bone, childBone, dir) {
   _aimFrom
     .setFromMatrixPosition(childBone.matrixWorld)
     .sub(_aimPivot.setFromMatrixPosition(bone.matrixWorld));
+  // Nothing to aim when the bone sits on top of its child; three's normalize
+  // hands back a zero vector there and the resulting rotation is meaningless.
   if (_aimFrom.lengthSq() < 1e-12) return;
   _aimFrom.normalize();
 

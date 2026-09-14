@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../app');
 const { createAuthedUser } = require('./helpers');
+const User = require('../models/User');
 
 const VALID_SCENE_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -100,6 +101,63 @@ describe('PUT /api/story/:id/publish', () => {
   it('rejects unauthenticated requests', async () => {
     const res = await request(app).put('/api/story/11111111-1111-4111-8111-111111111111/publish').send({ isPublic: true });
     expect(res.status).toBe(401);
+  });
+
+  it('refuses to publish from an account that has not confirmed its email', async () => {
+    // Publishing is what puts content on the open internet under a shareable
+    // link, so it is what confirming the address buys. Everything else stays
+    // open — someone trying the app at a stand must not be walled off behind a
+    // message sitting in a spam folder.
+    const user = await createAuthedUser();
+    await User.updateOne({ _id: user.userId }, { emailVerified: false });
+
+    const created = await request(app)
+      .post('/api/story').set('Authorization', user.authHeader)
+      .send({ metadata: { title: 'Unverified' }, scenes: [] });
+
+    const res = await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: true });
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('EMAIL_NOT_VERIFIED');
+
+    // And it really is not reachable.
+    const pub = await request(app).get(`/api/story/public/${created.body.storyId}`);
+    expect(pub.status).toBe(404);
+  });
+
+  it('lets a confirmed account publish', async () => {
+    const user = await createAuthedUser();
+    await User.updateOne({ _id: user.userId }, { emailVerified: true });
+    const created = await request(app)
+      .post('/api/story').set('Authorization', user.authHeader)
+      .send({ metadata: { title: 'Verified' }, scenes: [] });
+
+    const res = await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: true });
+    expect(res.status).toBe(200);
+  });
+
+  it('always allows unpublishing, verified or not', async () => {
+    // Taking your own content down must never depend on a working mailbox.
+    const user = await createAuthedUser();
+    await User.updateOne({ _id: user.userId }, { emailVerified: true });
+    const created = await request(app)
+      .post('/api/story').set('Authorization', user.authHeader)
+      .send({ metadata: { title: 'Taking it down' }, scenes: [] });
+    await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader).send({ isPublic: true });
+
+    await User.updateOne({ _id: user.userId }, { emailVerified: false });
+    const res = await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader).send({ isPublic: false });
+    expect(res.status).toBe(200);
   });
 
   it("rejects publishing another user's story", async () => {

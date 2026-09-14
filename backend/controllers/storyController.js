@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const Story = require('../models/Story');
+const User = require('../models/User');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -164,6 +165,22 @@ async function setStoryPublished(req, res) {
     }
 
     const isPublic = Boolean(req.body?.isPublic);
+
+    // Publishing is the one action that puts something of this account's on the
+    // open internet under a shareable link, so it is what confirming the
+    // address buys. Everything else stays open — someone trying the app should
+    // not be blocked behind a message sitting in a spam folder. Unpublishing is
+    // always allowed: taking your own content down must never require a working
+    // mailbox.
+    if (isPublic) {
+      const user = await User.findById(ownerId).select('emailVerified').lean();
+      if (!user?.emailVerified) {
+        return res.status(403).json({
+          error: 'Confirm your email address before publishing',
+          code: 'EMAIL_NOT_VERIFIED',
+        });
+      }
+    }
 
     const story = await Story.findOneAndUpdate(
       { storyId, ownerId },

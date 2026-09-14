@@ -24,6 +24,9 @@ process.env.BCRYPT_COST = process.env.BCRYPT_COST || '4';
 // messages from the developer's own mailbox at fake addresses on every run.
 process.env.SMTP_USER = '';
 process.env.SMTP_PASS = '';
+// Which leaves no mailbox to click a confirmation link in, and publishing now
+// requires a confirmed account. Opt-in, and only ever set here.
+process.env.AUTO_VERIFY_EMAIL = '1';
 
 const app = require('../app');
 

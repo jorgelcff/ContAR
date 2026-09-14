@@ -117,6 +117,9 @@ async function register(req, res) {
       email,
       passwordHash,
       emailVerificationToken,
+      // Only ever set by the disposable E2E backend, which has no mailbox to
+      // click a confirmation link in (see scripts/serve-e2e.js).
+      emailVerified: process.env.AUTO_VERIFY_EMAIL === '1',
     });
 
     // Send verification email — non-blocking: registration succeeds even if email fails

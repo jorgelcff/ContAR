@@ -511,6 +511,12 @@ export default function EditorPage() {
       setIsStoryPublic(true);
       addToast(t('epStoryPublished'), 'success');
     } catch (err) {
+      // The server refuses to publish from an unconfirmed address; say what to
+      // do about it rather than surfacing a bare 403.
+      if (err?.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        addToast(t('publishNeedsVerify'), 'warning', 9000);
+        return;
+      }
       addToast(`${t('errorSaving')}: ${err.message}`, 'error');
     }
   };

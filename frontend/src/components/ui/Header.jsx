@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import useTheme from '../../context/useTheme';
 import HelpModal from './HelpModal';
+import VerifyEmailBanner from './VerifyEmailBanner';
 import Icon from './Icon';
 
 /** Top navigation bar with title and language/theme toggles. */
@@ -119,6 +120,7 @@ export default function Header() {
           )}
         </div>
       </header>
+      <VerifyEmailBanner />
     </>
   );
 }

@@ -1,20 +1,33 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import EditorPage from './pages/EditorPage';
-import ViewerPage from './pages/ViewerPage';
-import LoginPage from './pages/LoginPage';
-import StoriesPage from './pages/StoriesPage';
-import ScenesPage from './pages/ScenesPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import VerifyEmailPage from './pages/VerifyEmailPage';
-import AccountPage from './pages/AccountPage';
-import StoryViewerPage from './pages/StoryViewerPage';
-import ARPage from './pages/ARPage';
-import WelcomePage from './pages/WelcomePage';
+// Landing and login stay eager: they are the first thing an anonymous visitor
+// paints, and they are light. Every other route is split out — between them
+// they pull in three.js and its loaders, which anyone opening the landing page
+// was downloading before seeing a single 3D scene.
 import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
 import { useAuth } from './auth/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import './i18n';
+
+const EditorPage        = lazy(() => import('./pages/EditorPage'));
+const ViewerPage        = lazy(() => import('./pages/ViewerPage'));
+const StoriesPage       = lazy(() => import('./pages/StoriesPage'));
+const ScenesPage        = lazy(() => import('./pages/ScenesPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const VerifyEmailPage   = lazy(() => import('./pages/VerifyEmailPage'));
+const AccountPage       = lazy(() => import('./pages/AccountPage'));
+const StoryViewerPage   = lazy(() => import('./pages/StoryViewerPage'));
+const ARPage            = lazy(() => import('./pages/ARPage'));
+const WelcomePage       = lazy(() => import('./pages/WelcomePage'));
+
+function RouteFallback() {
+  return (
+    <div className="min-h-dvh bg-gray-950 flex items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+    </div>
+  );
+}
 
 // Derives React Router's basename from Vite's own BASE_URL (set by the
 // VITE_BASE_PATH env var / vite.config.js — see there), so the two never
@@ -44,6 +57,7 @@ export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter basename={routerBasename}>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -96,6 +110,7 @@ export default function App() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </ToastProvider>
   );

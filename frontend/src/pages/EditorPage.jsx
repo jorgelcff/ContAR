@@ -103,6 +103,13 @@ export default function EditorPage() {
   // updates a scene load triggers, so opening a scene never flashes "Unsaved".
   const lastSavedSigRef = useRef(null);
   const autosaveEducatedRef = useRef(false);
+  // updatedAt this editor is working from, sent with every save so the server
+  // can tell us if another tab saved in the meantime instead of us quietly
+  // overwriting it. Cleared on load; refreshed after each successful save.
+  const baseUpdatedAtRef = useRef(null);
+  // Set once a conflict is reported — autosave stops rather than fighting the
+  // other tab and burying the user in toasts.
+  const [saveConflict, setSaveConflict] = useState(false);
 
   useEffect(() => {
     // Only autosave when there is meaningful content to preserve
@@ -119,13 +126,17 @@ export default function EditorPage() {
       setIsDirty(false);
       return;
     }
+    if (saveConflict) {
+      pendingPayloadRef.current = null;
+      return;
+    }
     pendingPayloadRef.current = payload;
     setIsDirty(true);
     clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(async () => {
       setAutosaveStatus('saving');
       try {
-        const result = await saveScene(payload);
+        const result = await saveScene({ ...payload, baseUpdatedAt: baseUpdatedAtRef.current });
         pendingPayloadRef.current = null;
         if (result?.sceneId && !currentSceneId) {
           useSceneStore.getState().setCurrentSceneId(result.sceneId);
@@ -134,6 +145,7 @@ export default function EditorPage() {
         lastSavedSigRef.current = JSON.stringify(
           useSceneStore.getState().buildScenePayload(savedId),
         );
+        if (result?.updatedAt) baseUpdatedAtRef.current = result.updatedAt;
         setIsDirty(false);
         setAutosaveStatus(new Date());
         if (!autosaveEducatedRef.current) {
@@ -143,7 +155,13 @@ export default function EditorPage() {
       } catch (err) {
         setAutosaveStatus(null);
         const status = err?.response?.status;
-        if (status === 401 || status === 403) {
+        if (status === 409) {
+          // Another tab (or device) saved this scene after we loaded it.
+          // Keep what is on screen, stop writing, and let the user decide.
+          setSaveConflict(true);
+          setIsDirty(true);
+          addToast(t('epSaveConflict'), 'warning', 12000);
+        } else if (status === 401 || status === 403) {
           addToast(t('epAutosaveFailedAuth'), 'error', 7000);
         } else {
           addToast(t('epAutosaveFailed'), 'warning', 5000);
@@ -152,14 +170,19 @@ export default function EditorPage() {
     }, 5000);
     return () => clearTimeout(autosaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl, textDisplayMode, animSpeed, animLoopOnce, vrmExpression, vrmaUrl]);
+  }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl, textDisplayMode, animSpeed, animLoopOnce, vrmExpression, vrmaUrl, saveConflict]);
 
   // Flush a still-pending autosave when leaving the editor (e.g. clicking
   // "Minhas cenas" right after a change), so edits made within the 3s
   // debounce window aren't silently dropped.
   useEffect(() => () => {
     if (pendingPayloadRef.current) {
-      saveScene(pendingPayloadRef.current).catch(() => {});
+      // Sent with the base version like every other save. There is no component
+      // left to report a conflict to, so it fails silently — but silently
+      // declining to overwrite a newer save beats silently destroying it, and
+      // in the ordinary single-tab case the versions match and this lands.
+      saveScene({ ...pendingPayloadRef.current, baseUpdatedAt: baseUpdatedAtRef.current })
+        .catch(() => {});
     }
   }, []);
 
@@ -175,6 +198,11 @@ export default function EditorPage() {
     if (!sceneId) return;
     if (loadedSceneIdRef.current === sceneId) return; // already loaded this scene
     loadedSceneIdRef.current = sceneId;
+
+    // A different scene — nothing is in conflict yet, and there is no version
+    // to base a save on until the fetch below returns one.
+    setSaveConflict(false);
+    baseUpdatedAtRef.current = null;
 
     // Stop and clear any audio/viseme timeline left over from the previous
     // scene — otherwise its generated narration keeps playing/lip-syncing
@@ -230,6 +258,8 @@ export default function EditorPage() {
           vrmExpression: avatar.vrmExpression || '',
           vrmaUrl: avatar.vrmaUrl || '',
         });
+
+        baseUpdatedAtRef.current = data.updatedAt || null;
 
         // The freshly loaded scene matches what's persisted — mark it clean so
         // the autosave effect doesn't flag it as unsaved right after opening.
@@ -362,7 +392,13 @@ export default function EditorPage() {
       //    Only bother if there is actual content worth preserving.
       if (existingId || store.avatarUrl || store.speechText || store.sceneTitle) {
         try {
-          const result = await saveScene(buildScenePayload(existingId || undefined));
+          const result = await saveScene({
+            ...buildScenePayload(existingId || undefined),
+            baseUpdatedAt: baseUpdatedAtRef.current,
+          });
+          // Keep the autosave's base in step, or its next write would
+          // conflict with this one — from the very same tab.
+          if (result?.updatedAt) baseUpdatedAtRef.current = result.updatedAt;
           const savedId = result?.sceneId;
           // If this scene wasn't in the story yet, add it (first-time add).
           if (savedId && !store.storyScenes.some((s) => s.sceneId === savedId)) {

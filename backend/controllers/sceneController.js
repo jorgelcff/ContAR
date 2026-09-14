@@ -22,13 +22,43 @@ async function saveScene(req, res) {
       body.content && typeof body.content === 'object' && !Array.isArray(body.content)
         ? body.content : {};
 
+    // Refuse to write over someone else's scene. The upsert used to match on
+    // sceneId alone *and* set ownerId to the caller, so anyone posting a
+    // sceneId they had seen took the scene over outright: it vanished from the
+    // owner's list and appeared in theirs. Scene ids are not secret — they sit
+    // in the public /scene/:id link — so sharing a scene handed it away.
+    //
+    // An empty ownerId means the scene predates accounts and is unowned, so it
+    // stays claimable.
+    const existing = await Scene.findOne({ sceneId: id }).select('ownerId updatedAt').lean();
+    if (existing && existing.ownerId && existing.ownerId !== ownerId) {
+      return res.status(403).json({ error: 'This scene belongs to another account' });
+    }
+
+    // Optimistic concurrency. Saving is a 5-second autosave, so two tabs open on
+    // the same scene otherwise take turns overwriting each other with whatever
+    // each last had in memory, and the loser never finds out. Clients that send
+    // the updatedAt they started from get told instead; ones that don't keep the
+    // old last-write-wins behaviour.
+    const baseUpdatedAt = body.baseUpdatedAt ? new Date(body.baseUpdatedAt) : null;
+    if (
+      existing && baseUpdatedAt && !Number.isNaN(baseUpdatedAt.getTime())
+      && existing.updatedAt && existing.updatedAt.getTime() > baseUpdatedAt.getTime()
+    ) {
+      return res.status(409).json({
+        error: 'This scene was changed somewhere else',
+        updatedAt: existing.updatedAt,
+      });
+    }
+
     const scene = await Scene.findOneAndUpdate(
       { sceneId: id },
       { sceneId: id, ownerId, metadata, content, updatedAt: new Date() },
       { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
-    res.json({ sceneId: scene.sceneId });
+    // The client needs this to base its next save on.
+    res.json({ sceneId: scene.sceneId, updatedAt: scene.updatedAt });
   } catch (err) {
     console.error('saveScene error:', err);
     res.status(500).json({ error: 'Failed to save scene' });

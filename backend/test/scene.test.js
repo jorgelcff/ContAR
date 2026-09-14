@@ -46,6 +46,37 @@ describe('POST /api/scene', () => {
     expect(list.body.scenes[0].metadata.title).toBe('Renamed');
   });
 
+  it("refuses to write over another account's scene", async () => {
+    // The upsert used to match on sceneId alone and set ownerId to the caller,
+    // so posting a sceneId you had merely seen took the scene over: it left the
+    // owner's list and joined yours. Scene ids are public — they are the
+    // /scene/:id share link — so sharing a scene gave it away.
+    const owner = await createAuthedUser();
+    const attacker = await createAuthedUser();
+
+    const created = await request(app)
+      .post('/api/scene')
+      .set('Authorization', owner.authHeader)
+      .send(sampleScene);
+    const { sceneId } = created.body;
+
+    const hijack = await request(app)
+      .post('/api/scene')
+      .set('Authorization', attacker.authHeader)
+      .send({ ...sampleScene, sceneId, metadata: { title: 'Taken over' } });
+    expect(hijack.status).toBe(403);
+
+    // The scene is untouched and still the owner's.
+    const after = await request(app).get(`/api/scene/${sceneId}`);
+    expect(after.body.metadata.title).toBe('Test Scene');
+
+    const ownerList = await request(app).get('/api/scene').set('Authorization', owner.authHeader);
+    expect(ownerList.body.scenes.map((s) => s.sceneId)).toContain(sceneId);
+
+    const attackerList = await request(app).get('/api/scene').set('Authorization', attacker.authHeader);
+    expect(attackerList.body.scenes.map((s) => s.sceneId)).not.toContain(sceneId);
+  });
+
   it('ignores a client-supplied sceneId that is not a valid UUID (mints a real one instead)', async () => {
     const user = await createAuthedUser();
     const res = await request(app)
@@ -59,6 +90,45 @@ describe('POST /api/scene', () => {
 });
 
 describe('GET /api/scene/:id', () => {
+  it('reports a conflict instead of overwriting a newer save from another tab', async () => {
+    // Autosave fires every few seconds, so two tabs on one scene otherwise take
+    // turns overwriting each other with whatever each had in memory, and
+    // whoever loses never finds out.
+    const user = await createAuthedUser();
+    const first = await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send(sampleScene);
+    const { sceneId, updatedAt } = first.body;
+    expect(updatedAt).toBeTruthy();
+
+    // Tab A saves, moving the scene forward.
+    await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send({ ...sampleScene, sceneId, baseUpdatedAt: updatedAt, metadata: { title: 'From tab A' } });
+
+    // Tab B is still working from the original version.
+    const stale = await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send({ ...sampleScene, sceneId, baseUpdatedAt: updatedAt, metadata: { title: 'From tab B' } });
+
+    expect(stale.status).toBe(409);
+    const after = await request(app).get(`/api/scene/${sceneId}`);
+    expect(after.body.metadata.title).toBe('From tab A');
+  });
+
+  it('still saves when the client sends no base version (older clients)', async () => {
+    const user = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/scene').set('Authorization', user.authHeader).send(sampleScene);
+    const res = await request(app)
+      .post('/api/scene').set('Authorization', user.authHeader)
+      .send({ ...sampleScene, sceneId: created.body.sceneId, metadata: { title: 'No version' } });
+    expect(res.status).toBe(200);
+  });
+
   it('is public — no auth required to view a scene', async () => {
     const user = await createAuthedUser();
     const created = await request(app)

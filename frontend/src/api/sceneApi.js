@@ -53,7 +53,9 @@ export async function getCurrentUser() {
   return data;
 }
 
-/** Save or update a scene. Returns { sceneId }. */
+/** Save or update a scene. Returns { sceneId, updatedAt }.
+ *  Pass `baseUpdatedAt` (the updatedAt the editor started from) to get a 409
+ *  instead of silently overwriting a copy someone else has since saved. */
 export async function saveScene(payload) {
   const { data } = await api.post('/scene', payload);
   return data;

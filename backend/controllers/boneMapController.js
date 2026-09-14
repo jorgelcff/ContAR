@@ -17,6 +17,16 @@ exports.mapBones = async (req, res) => {
   if (bones.length > 300) {
     return res.status(400).json({ error: 'Too many bones (max 300)' });
   }
+  // This route stays open on purpose — the public viewer and AR need it for
+  // avatars whose rig the regex mapper cannot place, and there is no session
+  // there to require. That makes it a spend endpoint anyone can reach, so the
+  // prompt it can be made to build is bounded as well as the array length:
+  // a real bone name is short, and 300 unbounded strings would otherwise be a
+  // blank cheque against the OpenAI key.
+  const names = bones.filter((b) => typeof b === 'string' && b.length <= 100);
+  if (names.length !== bones.length) {
+    return res.status(400).json({ error: 'Bone names must be strings of at most 100 characters' });
+  }
   if (!process.env.OPENAI_API_KEY) {
     return res.status(503).json({ error: 'OpenAI API key not configured' });
   }
@@ -28,7 +38,7 @@ exports.mapBones = async (req, res) => {
 Standard names (use exact spelling):
 ${STANDARD_BONES.join(', ')}
 
-Avatar bone names: ${bones.join(', ')}
+Avatar bone names: ${names.join(', ')}
 
 Rules:
 - Map each standard name to the EXACT matching bone name from the avatar list above

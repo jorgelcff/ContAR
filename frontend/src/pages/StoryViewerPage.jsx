@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import * as THREE from 'three';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
@@ -193,19 +194,40 @@ export default function StoryViewerPage() {
   }, [hasStarted, storyScenes.length]);
 
   // ── Preload next scene's GLB ───────────────────────────────────
+  // Only worth doing when the next scene brings a *different* avatar. A story
+  // normally keeps one narrator throughout, and preloading the model already on
+  // screen actively hurt: this fetch fired before the canvas had finished
+  // loading the very same file, so neither could reuse the other's cache entry
+  // and a multi-megabyte GLB came down twice on the critical path.
+  const currentModelUrl = sceneData?.content?.avatar?.modelUrl || '';
   const nextSceneId = storyScenes[index + 1]?.sceneId;
+  const preloadedRef = useRef(new Set());
   useEffect(() => {
-    if (!nextSceneId) return;
+    // Wait for the current scene, otherwise there is nothing to compare against
+    // and the preload races it exactly as before.
+    if (!nextSceneId || !currentModelUrl) return;
     let active = true;
     getScene(nextSceneId)
       .then((data) => {
         if (!active) return;
         const url = data?.content?.avatar?.modelUrl;
-        if (url) fetch(url, { method: 'GET', mode: 'cors' }).catch(() => {});
+        if (!url || url === currentModelUrl) return;
+        if (preloadedRef.current.has(url)) return;
+        preloadedRef.current.add(url);
+        // Load through three's own FileLoader rather than a bare fetch: that
+        // fills THREE.Cache under the same URL key GLTFLoader looks up, so the
+        // canvas reuses these bytes. A plain fetch only warmed the HTTP cache,
+        // which the loader missed — the file came down a second time anyway.
+        THREE.Cache.enabled = true;
+        new THREE.FileLoader()
+          .setResponseType('arraybuffer')
+          .load(url, () => {}, undefined, () => {
+            preloadedRef.current.delete(url); // failed — let it retry later
+          });
       })
       .catch(() => {});
     return () => { active = false; };
-  }, [nextSceneId]);
+  }, [nextSceneId, currentModelUrl]);
 
   // ── Derived values ────────────────────────────────────────────
   const transform = useMemo(() => {

@@ -26,7 +26,7 @@ function sanitizeStoryScenes(rawScenes) {
         order,
         transitionText: safeString(item?.transitionText) || '',
         durationSeconds,
-        advanceOn: safeString(item?.advanceOn) === 'narration' ? 'narration' : 'time',
+        advanceOn: safeString(item?.advanceOn) === 'time' ? 'time' : 'narration',
         markerUrl: safeString(item?.markerUrl) || '',
       };
     })

@@ -293,11 +293,12 @@ describe('DELETE /api/story/:id', () => {
   });
 });
 
-// A scene can hold until its narration finishes instead of counting seconds.
-// Stories saved before the field existed must keep playing exactly as they did,
-// so anything unrecognised has to read as the timed mode rather than the new one.
+// A scene holds until its narration finishes unless it asks for the clock.
+// Waiting is the default because that is what the AR player has always done;
+// counting seconds is the behaviour a scene has to opt into by name, so an
+// unreadable value must land on waiting rather than silently picking the other.
 describe('scene advance mode', () => {
-  it('stores the narration mode and defaults everything else to time', async () => {
+  it('stores the timed mode when asked, and waits for the narration otherwise', async () => {
     const user = await createAuthedUser();
     const res = await request(app)
       .post('/api/story')
@@ -317,7 +318,7 @@ describe('scene advance mode', () => {
       .get(`/api/story/${res.body.storyId}`)
       .set('Authorization', user.authHeader);
     expect(stored.body.scenes.map((s) => s.advanceOn)).toEqual([
-      'narration', 'time', 'time', 'time',
+      'narration', 'time', 'narration', 'narration',
     ]);
   });
 });

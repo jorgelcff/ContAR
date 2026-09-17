@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from 'react';
+import { sceneAdvanceMs, normalizeAdvanceOn, ADVANCE_ON_TIME } from '../../utils/sceneAdvance';
 import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -320,9 +321,16 @@ export function useARStory(storyId) {
   }, [sceneId]);
 
   // Load + play audio when scene changes (after start)
+  //
+  // AR always advanced when the audio ended, and only counted seconds when a
+  // scene had none — the opposite of what the browser player did. Both now read
+  // the scene's own setting, through the same rule, so a story paces the same
+  // way whichever way it is watched.
+  const advanceOn = normalizeAdvanceOn(scenes[index]?.advanceOn);
+
   useEffect(() => {
     const el = audioRef.current;
-    if (!el || !hasStarted) return;
+    if (!el || !hasStarted) return undefined;
     const audioUrl = currentScene?.content?.narrative?.audioUrl;
     if (audioUrl) {
       el.src = audioUrl;
@@ -331,17 +339,30 @@ export function useARStory(storyId) {
     } else {
       el.pause();
       el.src = '';
-      // No audio — auto-advance after scene duration
-      const dur = Math.max(2, Number(scenes[index]?.durationSeconds) || 5) * 1000;
-      const tid = setTimeout(() => setIndex((i) => Math.min(i + 1, scenes.length - 1)), dur);
-      return () => clearTimeout(tid);
     }
-  }, [currentScene, hasStarted]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-advance when audio ends
+    // A scene counting seconds needs a timer even when it has narration; one
+    // waiting for the narration only needs it when there is nothing to wait
+    // for. sceneAdvanceMs answers both, and returns null while an audio
+    // length is still unknown — nothing to schedule until it arrives.
+    const durationMs = sceneAdvanceMs({
+      advanceOn,
+      durationSeconds: scenes[index]?.durationSeconds,
+      hasNarrationAudio: Boolean(audioUrl),
+      audioDuration: 0,
+    });
+    if (durationMs === null) return undefined;
+
+    const tid = setTimeout(() => setIndex((i) => Math.min(i + 1, scenes.length - 1)), durationMs);
+    return () => clearTimeout(tid);
+  }, [currentScene, hasStarted, advanceOn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-advance when audio ends — only for a scene that is waiting on it. A
+  // scene holding for a fixed number of seconds must not be cut short because
+  // its narration happened to be shorter.
   useEffect(() => {
     const el = audioRef.current;
-    if (!el) return;
+    if (!el || advanceOn === ADVANCE_ON_TIME) return undefined;
     const onEnded = () => setIndex((i) => {
       const next = i + 1;
       if (next < scenes.length) return next;
@@ -350,7 +371,7 @@ export function useARStory(storyId) {
     });
     el.addEventListener('ended', onEnded);
     return () => el.removeEventListener('ended', onEnded);
-  }, [scenes.length]);
+  }, [scenes.length, advanceOn]);
 
   // start() must be called directly in a click handler to satisfy autoplay policy
   const start = (onUnlock) => {

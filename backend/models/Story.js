@@ -7,9 +7,16 @@ const StorySceneSchema = new mongoose.Schema(
     transitionText: { type: String, default: '' },
     durationSeconds: { type: Number, default: 0, min: 0 },
     // 'time' counts durationSeconds off a clock; 'narration' holds the scene
-    // until the narration audio finishes. Defaults to 'time' so stories saved
-    // before this existed keep playing exactly as they did.
-    advanceOn: { type: String, enum: ['time', 'narration'], default: 'time' },
+    // until the narration audio finishes.
+    //
+    // Waiting is the default, and that does change how stories saved before
+    // this existed play in the browser: a line longer than the configured
+    // seconds is no longer cut off mid-sentence, and a shorter one no longer
+    // leaves the character standing in silence. It is not a change in AR,
+    // which has always advanced when the audio ended — the two players
+    // disagreed, and this is the side that was right. A scene with no
+    // narration still falls back to its seconds either way.
+    advanceOn: { type: String, enum: ['time', 'narration'], default: 'narration' },
     markerUrl: { type: String, default: '' },
   },
   { _id: false }

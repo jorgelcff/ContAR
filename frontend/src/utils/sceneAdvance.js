@@ -12,6 +12,16 @@
 export const ADVANCE_ON_TIME = 'time';
 export const ADVANCE_ON_NARRATION = 'narration';
 
+/**
+ * Waiting for the narration is the default, for two reasons. It is what the
+ * AR player has always done — it advances when the audio ends — so making it
+ * the default is what finally makes the two players agree rather than one
+ * cutting lines the other lets finish. And it is the answer that needs no
+ * tuning: a scene with no narration still falls back to its seconds, so the
+ * default is only ever doing something where there is speech to wait for.
+ */
+export const DEFAULT_ADVANCE_ON = ADVANCE_ON_NARRATION;
+
 /** A breath after the last word, so the cut does not land on the final syllable. */
 export const NARRATION_TAIL_SECONDS = 1.2;
 
@@ -19,9 +29,10 @@ export const NARRATION_TAIL_SECONDS = 1.2;
 export const DEFAULT_SCENE_SECONDS = 8;
 
 export function normalizeAdvanceOn(value) {
-  return String(value || '').toLowerCase() === ADVANCE_ON_NARRATION
-    ? ADVANCE_ON_NARRATION
-    : ADVANCE_ON_TIME;
+  const mode = String(value || '').toLowerCase();
+  if (mode === ADVANCE_ON_TIME) return ADVANCE_ON_TIME;
+  if (mode === ADVANCE_ON_NARRATION) return ADVANCE_ON_NARRATION;
+  return DEFAULT_ADVANCE_ON;
 }
 
 function timedMs(durationSeconds) {
@@ -43,7 +54,7 @@ export function sceneAdvanceMs({
   audioUnavailable = false,
   tailSeconds = NARRATION_TAIL_SECONDS,
 } = {}) {
-  if (normalizeAdvanceOn(advanceOn) !== ADVANCE_ON_NARRATION) return timedMs(durationSeconds);
+  if (normalizeAdvanceOn(advanceOn) === ADVANCE_ON_TIME) return timedMs(durationSeconds);
 
   // Nothing to wait for, or waiting already failed — the configured seconds are
   // the only answer left, and a story that stalls forever is worse than one

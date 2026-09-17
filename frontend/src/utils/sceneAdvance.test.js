@@ -5,12 +5,21 @@ import {
   ADVANCE_ON_TIME,
   ADVANCE_ON_NARRATION,
   NARRATION_TAIL_SECONDS,
+  DEFAULT_ADVANCE_ON,
 } from './sceneAdvance';
 
 describe('how long a scene stays on screen', () => {
-  it('counts the configured seconds by default', () => {
+  it('counts the configured seconds when there is no narration to wait for', () => {
     expect(sceneAdvanceMs({ durationSeconds: 5 })).toBe(5000);
     expect(sceneAdvanceMs({ advanceOn: 'time', durationSeconds: 12 })).toBe(12000);
+  });
+
+  it('waits for the narration unless a scene says otherwise', () => {
+    // The default the AR player has always used. A scene that wants the clock
+    // has to ask for it.
+    const waiting = { durationSeconds: 2, hasNarrationAudio: true, audioDuration: 9 };
+    expect(sceneAdvanceMs(waiting)).toBe((9 + NARRATION_TAIL_SECONDS) * 1000);
+    expect(sceneAdvanceMs({ ...waiting, advanceOn: 'time' })).toBe(2000);
   });
 
   it('falls back to a sane default rather than advancing instantly', () => {
@@ -68,11 +77,14 @@ describe('how long a scene stays on screen', () => {
     })).toBe(6000);
   });
 
-  it('reads anything it does not recognise as the timed mode', () => {
+  it('only counts the clock when a scene actually asks for it', () => {
+    expect(normalizeAdvanceOn('time')).toBe(ADVANCE_ON_TIME);
+    expect(normalizeAdvanceOn('TIME')).toBe(ADVANCE_ON_TIME);
     expect(normalizeAdvanceOn('narration')).toBe(ADVANCE_ON_NARRATION);
-    expect(normalizeAdvanceOn('NARRATION')).toBe(ADVANCE_ON_NARRATION);
-    for (const v of ['time', '', null, undefined, 'whatever', 42]) {
-      expect(normalizeAdvanceOn(v)).toBe(ADVANCE_ON_TIME);
+    // Anything unreadable lands on the default rather than silently picking
+    // the other behaviour.
+    for (const v of ['', null, undefined, 'whatever', 42]) {
+      expect(normalizeAdvanceOn(v)).toBe(DEFAULT_ADVANCE_ON);
     }
   });
 });

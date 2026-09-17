@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { normalizeAdvanceOn, ADVANCE_ON_NARRATION } from '../../utils/sceneAdvance';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Icon from './Icon';
@@ -131,15 +132,17 @@ export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
                         value={item.durationSeconds}
                         onChange={(e) => updateStoryScene(index, 'durationSeconds', e.target.value)}
                         placeholder={t('durationSeconds')}
-                        disabled={item.advanceOn === 'narration'}
-                        title={item.advanceOn === 'narration' ? t('advanceOnNarrationHint') : t('durationSeconds')}
+                        disabled={normalizeAdvanceOn(item.advanceOn) === ADVANCE_ON_NARRATION}
+                        title={normalizeAdvanceOn(item.advanceOn) === ADVANCE_ON_NARRATION
+                          ? t('advanceOnNarrationHint')
+                          : t('durationSeconds')}
                         className="w-20 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500 disabled:opacity-40"
                       />
                       {/* What ends the scene. Counting seconds was the only
                           option, so a line longer than the number was cut off
                           mid-sentence and a shorter one left silence. */}
                       <select
-                        value={item.advanceOn === 'narration' ? 'narration' : 'time'}
+                        value={normalizeAdvanceOn(item.advanceOn)}
                         onChange={(e) => updateStoryScene(index, 'advanceOn', e.target.value)}
                         className="rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 focus:outline-none focus:border-cyan-500"
                       >

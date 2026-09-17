@@ -28,6 +28,8 @@ function silentWav(seconds) {
 }
 
 async function buildStory(request, token, { advanceOn, durationSeconds }) {
+  // advanceOn undefined means the field is simply not sent — the case every
+  // story saved before this existed is in.
   const scene = await request.post(`${API_BASE}/api/scene`, {
     headers: { Authorization: `Bearer ${token}` },
     data: {
@@ -48,7 +50,7 @@ async function buildStory(request, token, { advanceOn, durationSeconds }) {
     data: {
       metadata: { title: 'Ritmo' },
       scenes: [
-        { sceneId, order: 0, durationSeconds, advanceOn },
+        { sceneId, order: 0, durationSeconds, ...(advanceOn ? { advanceOn } : {}) },
         { sceneId: secondId, order: 1, durationSeconds: 30 },
       ],
     },
@@ -72,6 +74,22 @@ test.describe('When a scene gives way to the next', () => {
     await page.waitForTimeout(2000);
     // The narration text is drawn into the canvas, so the scene counter is
     // the readable signal for where playback is.
+    await expect(page.getByText(/^1\/2$/)).toBeVisible();
+  });
+
+  test('a story saved before this existed now waits for its narration too', async ({ page, request }) => {
+    // The default is waiting, which is what the AR player has always done.
+    // This is the behaviour change: in the browser such a scene used to cut
+    // its line off after the configured second.
+    const user = await registerUser(request);
+    const storyId = await buildStory(request, user.token, { durationSeconds: 1 });
+
+    await page.route('**/narration.wav', (r) => r.fulfill({ body: silentWav(3), contentType: 'audio/wav' }));
+    await page.addInitScript((token) => localStorage.setItem('auth:token', token), user.token);
+    await page.goto(`/story/${storyId}`);
+    await page.getByRole('button', { name: /começar|iniciar|start/i }).first().click();
+
+    await page.waitForTimeout(2000);
     await expect(page.getByText(/^1\/2$/)).toBeVisible();
   });
 

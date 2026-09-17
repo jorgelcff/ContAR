@@ -56,7 +56,9 @@ test('full journey: register, build a scene, save a story, view it in AR', async
   await page.getByPlaceholder('Minha História').fill('História de Jornada E2E');
   await page.getByRole('button', { name: /salvar história/i }).click();
   await expect(page.getByText(/história salva/i)).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole('link', { name: /visualizar história/i })).toHaveCount(0);
+  // Saving gives the author a preview but no share link — that is publishing.
+  await expect(page.getByRole('button', { name: /copiar link/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /visualizar história/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /^publicar$/i })).toBeVisible();
 
   // Publishing is what actually makes the share link live

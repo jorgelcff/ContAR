@@ -274,7 +274,20 @@ export default function StoryViewerPage() {
           {!fullscreen && (
           <div className="shrink-0 border-b border-gray-700 bg-gray-800 px-4 py-3 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold">{stripEmojis(story?.metadata?.title) || t('appTitle')}</h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-semibold">{stripEmojis(story?.metadata?.title) || t('appTitle')}</h2>
+                {/* The author can now open an unpublished story, so say so —
+                    otherwise this URL looks shareable and 404s for whoever
+                    receives it. */}
+                {story && story.isPublic === false && (
+                  <span
+                    title={t('viewerPrivatePreviewHint')}
+                    className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300"
+                  >
+                    {t('viewerPrivatePreview')}
+                  </span>
+                )}
+              </div>
               {story?.metadata?.description && (
                 <p className="text-xs text-gray-400">{linkifyText(story.metadata.description)}</p>
               )}

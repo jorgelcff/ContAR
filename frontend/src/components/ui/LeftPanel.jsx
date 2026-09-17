@@ -949,15 +949,28 @@ export default function LeftPanel({
               </button>
             )}
 
-            {isStoryPublic && storyShareUrl && (
-              <a
-                href={storyShareUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Icon name="eye" className="w-4 h-4" /> {t('lpPreviewStory')}
-              </a>
+            {/* Not gated on publishing. Publishing decides who *else* can open
+                the link; it has no business standing between the author and a
+                look at what they just built — least of all when the only other
+                way to watch a story is to point a phone camera at something. */}
+            {storyShareUrl && (
+              <>
+                <a
+                  href={storyShareUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`w-full py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                    isStoryPublic
+                      ? 'bg-cyan-700 hover:bg-cyan-600 text-white'
+                      : 'border border-gray-600 hover:bg-gray-700 text-gray-200'
+                  }`}
+                >
+                  <Icon name="eye" className="w-4 h-4" /> {t('lpPreviewStory')}
+                </a>
+                {!isStoryPublic && (
+                  <p className="text-[11px] text-gray-500 leading-snug">{t('lpPreviewStoryPrivate')}</p>
+                )}
+              </>
             )}
 
             {isStoryPublic && storyShareUrl && (

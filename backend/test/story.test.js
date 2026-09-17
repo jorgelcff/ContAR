@@ -95,6 +95,61 @@ describe('GET /api/story/public/:id', () => {
     const res = await request(app).get('/api/story/public/22222222-2222-4222-8222-222222222222');
     expect(res.status).toBe(404);
   });
+
+  // Publishing is about who *else* can see the story. It was also gating the
+  // author's own preview: the "View" button in the story list, and the browser
+  // preview link in the editor, both 404'd on anything not yet published — so
+  // the only way to look at a story you were building was to publish it first.
+  it('lets the author preview their own story before it is published', async () => {
+    const user = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send(sampleStory);
+
+    const res = await request(app)
+      .get(`/api/story/public/${created.body.storyId}`)
+      .set('Authorization', user.authHeader);
+
+    expect(res.status).toBe(200);
+    expect(res.body.metadata.title).toBe('Test Story');
+    expect(res.body.isPublic).toBe(false);
+  });
+
+  it('still hides an unpublished story from a different signed-in user', async () => {
+    const author = await createAuthedUser();
+    const stranger = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', author.authHeader)
+      .send(sampleStory);
+
+    const res = await request(app)
+      .get(`/api/story/public/${created.body.storyId}`)
+      .set('Authorization', stranger.authHeader);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('ignores a junk token rather than rejecting the request', async () => {
+    // A stale token in someone's browser must not break a link that works for
+    // a signed-out visitor.
+    const user = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send(sampleStory);
+    await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: true });
+
+    const res = await request(app)
+      .get(`/api/story/public/${created.body.storyId}`)
+      .set('Authorization', 'Bearer not-a-real-token');
+
+    expect(res.status).toBe(200);
+  });
 });
 
 describe('PUT /api/story/:id/publish', () => {

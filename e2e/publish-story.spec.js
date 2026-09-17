@@ -47,7 +47,10 @@ test.describe('Story publish / draft state', () => {
     await dismissTourIfShown(page);
 
     // Draft state in the UI: no share link, "Publicar" is the only action.
-    await expect(page.getByRole('link', { name: /visualizar história/i })).toHaveCount(0);
+    // The browser preview is deliberately not part of that gate — the author
+    // can watch a draft, they just have nothing to hand anyone else yet.
+    await expect(page.getByRole('button', { name: /copiar link/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /visualizar história/i })).toBeVisible();
     const publishBtn = page.getByRole('button', { name: /^publicar$/i });
     await expect(publishBtn).toBeVisible();
 
@@ -63,7 +66,9 @@ test.describe('Story publish / draft state', () => {
     await dismissTourIfShown(page);
     await page.getByRole('button', { name: /despublicar/i }).click();
     await expect(page.getByText(/história despublicada/i).first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('link', { name: /visualizar história/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /copiar link/i })).toHaveCount(0);
+    // Still previewable by its author, as any draft is.
+    await expect(page.getByRole('link', { name: /visualizar história/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /^publicar$/i })).toBeVisible();
 
     const unpublishedPublic = await request.get(`${API_BASE}/api/story/public/${storyId}`);

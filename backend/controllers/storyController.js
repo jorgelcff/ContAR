@@ -134,15 +134,22 @@ async function getPublicStory(req, res) {
 
     const story = await Story.findOne(
       { storyId },
-      { _id: 0, storyId: 1, metadata: 1, scenes: 1, isPublic: 1, createdAt: 1, updatedAt: 1 }
+      { _id: 0, storyId: 1, metadata: 1, scenes: 1, isPublic: 1, ownerId: 1, createdAt: 1, updatedAt: 1 }
     );
     // Same "not found" response whether the story doesn't exist or is just
     // not published yet — this must not leak which of the two is true.
-    if (!story || !story.isPublic) {
+    //
+    // The author is the exception. Publishing decides who *else* can open the
+    // link; it should not stand between authors and a look at what they are
+    // building. Without this the "View" button on their own story list, and the
+    // browser preview in the editor, both dead-ended on 404.
+    const isAuthor = Boolean(req.user?.userId) && req.user.userId === story?.ownerId;
+    if (!story || (!story.isPublic && !isAuthor)) {
       return res.status(404).json({ error: 'Story not found' });
     }
 
-    return res.json(story);
+    const { ownerId: _ownerId, ...publicStory } = story.toObject();
+    return res.json(publicStory);
   } catch (err) {
     console.error('getPublicStory error:', err);
     return res.status(500).json({ error: 'Failed to load story' });

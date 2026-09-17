@@ -2,7 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { saveStory, getStory, listStories, getPublicStory, setStoryPublished, deleteStory } = require('../controllers/storyController');
-const { requireAuth } = require('../middleware/authMiddleware');
+const { requireAuth, optionalAuth } = require('../middleware/authMiddleware');
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -13,7 +13,7 @@ const limiter = rateLimit({
 
 router.post('/',           limiter, requireAuth, saveStory);
 router.get('/',            limiter, requireAuth, listStories);
-router.get('/public/:id',  limiter, getPublicStory);
+router.get('/public/:id',  limiter, optionalAuth, getPublicStory);
 router.get('/:id',         limiter, requireAuth, getStory);
 router.put('/:id/publish', limiter, requireAuth, setStoryPublished);
 router.delete('/:id',      limiter, requireAuth, deleteStory);

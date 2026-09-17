@@ -338,3 +338,89 @@ describe('rate limiting on the sensitive endpoints', () => {
     });
   });
 });
+
+// The endpoint that 502'd in production. register hands the send to a dangling
+// promise and answers straight away; resend and the password reset wait on it
+// so they can report what happened — which means an SMTP port that hangs
+// rather than refusing holds the HTTP request until the platform's proxy gives
+// up, and the caller sees a gateway error with nothing in the app logs.
+describe('the endpoints that wait on the mail server', () => {
+  const clearSmtp = () => {
+    const prev = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
+    process.env.SMTP_USER = '';
+    process.env.SMTP_PASS = '';
+    return () => { process.env.SMTP_USER = prev.user; process.env.SMTP_PASS = prev.pass; };
+  };
+
+  it('says so when the server cannot send at all, instead of trying anyway', async () => {
+    const user = await createAuthedUser({ emailVerified: false });
+    const restore = clearSmtp();
+    try {
+      const res = await request(app)
+        .post('/api/auth/resend-verification')
+        .set('Authorization', user.authHeader)
+        .send({});
+      expect(res.status).toBe(503);
+    } finally { restore(); }
+  });
+
+  it('reports a failed send as an error rather than hanging', async () => {
+    const nodemailer = require('nodemailer');
+    const spy = vi.spyOn(nodemailer, 'createTransport').mockReturnValue({
+      sendMail: async () => { throw new Error('ETIMEDOUT'); },
+    });
+    const prev = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
+    process.env.SMTP_USER = 'sender@example.com';
+    process.env.SMTP_PASS = 'secret';
+    const user = await createAuthedUser({ emailVerified: false });
+    try {
+      const res = await request(app)
+        .post('/api/auth/resend-verification')
+        .set('Authorization', user.authHeader)
+        .send({});
+      expect(res.status).toBe(502);
+      expect(res.body.error).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+      process.env.SMTP_USER = prev.user;
+      process.env.SMTP_PASS = prev.pass;
+    }
+  });
+
+  it('carries bounded timeouts, so a stuck port cannot outlive the request', async () => {
+    // The defaults are greeting 30s, connect 2min, socket 10min — all longer
+    // than a managed host will hold an HTTP request open.
+    const nodemailer = require('nodemailer');
+    let opts = null;
+    const spy = vi.spyOn(nodemailer, 'createTransport').mockImplementation((o) => {
+      opts = o;
+      return { sendMail: async () => ({ messageId: 'x' }) };
+    });
+    const prev = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
+    process.env.SMTP_USER = 'sender@example.com';
+    process.env.SMTP_PASS = 'secret';
+    const user = await createAuthedUser({ emailVerified: false });
+    try {
+      await request(app)
+        .post('/api/auth/resend-verification')
+        .set('Authorization', user.authHeader)
+        .send({});
+      expect(opts.connectionTimeout).toBeLessThanOrEqual(15000);
+      expect(opts.greetingTimeout).toBeLessThanOrEqual(15000);
+      expect(opts.socketTimeout).toBeLessThanOrEqual(20000);
+    } finally {
+      spy.mockRestore();
+      process.env.SMTP_USER = prev.user;
+      process.env.SMTP_PASS = prev.pass;
+    }
+  });
+
+  it('the password reset also refuses rather than stalling with no mail server', async () => {
+    const user = await createAuthedUser();
+    const restore = clearSmtp();
+    try {
+      const res = await request(app).post('/api/auth/forgot-password').send({ email: user.email });
+      expect(res.status).toBe(503);
+    } finally { restore(); }
+  });
+});

@@ -34,6 +34,18 @@ function sanitizeUser(user) {
   };
 }
 
+// Nodemailer's own timeouts are measured in minutes — greeting 30s, connect
+// 2min, socket 10min. A managed host gives an HTTP request far less than that
+// (Render cuts at about 100s and answers 502 Bad Gateway), so an SMTP port that
+// hangs rather than refusing turns into a gateway error with nothing in the
+// logs. Bounded well under the platform's ceiling, a stuck send surfaces as a
+// real error from this process instead.
+const SMTP_TIMEOUTS = {
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 15_000,
+};
+
 function createTransporter() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -43,6 +55,7 @@ function createTransporter() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    ...SMTP_TIMEOUTS,
   });
 }
 
@@ -188,6 +201,10 @@ async function forgotPassword(req, res) {
     const frontendUrl = (
       process.env.FRONTEND_URL || "http://localhost:5173"
     ).replace(/\/$/, "");
+    if (!emailConfigured()) {
+      return res.status(503).json({ error: 'Envio de email não configurado neste servidor.' });
+    }
+
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
     const language = String(req.body?.language || '');
     const { subject, html } = passwordResetEmail(language, resetUrl);
@@ -266,11 +283,19 @@ async function resendVerification(req, res) {
       await user.save();
     }
 
+    // Unlike register, this one waits on the send so it can report what
+    // happened — which is why it needs the guard and the bounded timeouts
+    // above. Without the guard, a deployment whose SMTP is unset or blocked
+    // hangs here until the platform gives up on the request.
+    if (!emailConfigured()) {
+      return res.status(503).json({ error: 'Envio de email não configurado neste servidor.' });
+    }
+
     await sendVerificationEmail(user, String(req.body?.language || ''));
     return res.json({ message: 'Email de confirmação reenviado.' });
   } catch (err) {
     console.error('resendVerification error:', err);
-    return res.status(500).json({ error: 'Não foi possível reenviar o email.' });
+    return res.status(502).json({ error: 'Não foi possível reenviar o email. Tente novamente em instantes.' });
   }
 }
 

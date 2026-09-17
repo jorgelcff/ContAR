@@ -663,6 +663,7 @@ export default function EditorPage() {
                 lipSyncConfig={audio.lipSyncConfig}
                 visemeTimeline={audio.visemeTimeline}
                 audioCurrentTime={audio.audioCurrentTime}
+                isSpeaking={audio.isSpeaking || audio.isPlaying}
                 vrmaUrl={vrmaUrl}
                 animSpeed={animSpeed}
                 animLoopOnce={animLoopOnce}

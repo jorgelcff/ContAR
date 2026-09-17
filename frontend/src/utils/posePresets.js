@@ -2,6 +2,7 @@
  * 3D view and the AR scenes apply identical poses/animations to avatars.
  * These are pure functions over a THREE model + BoneMapper — no React. */
 import * as THREE from 'three';
+import { isSpeakerPreset } from './speakerStyles';
 
 export function applyPosePreset(
   model,
@@ -49,8 +50,10 @@ export function applyPosePreset(
   const normalized = raw.toLowerCase();
 
   if (animationController) {
+    // The presenter variants all drive the same procedural gestures; the
+    // controller reads the style off the preset name.
     animationController.setProceduralMode(
-      normalized === "speaker" ? "speaker" : "default",
+      isSpeakerPreset(normalized) ? normalized : "default",
     );
     animationController.stopAll();
   }
@@ -58,10 +61,15 @@ export function applyPosePreset(
   ensureRestPoseSnapshot(model);
   resetToRestPose(model);
 
-  const animatedPresets = ["idle", "walk", "walk_circle", "slow_run", "run", "dance", "speaker"];
-  if (animatedPresets.includes(normalized)) {
+  const animatedPresets = ["idle", "walk", "walk_circle", "slow_run", "run", "dance"];
+  if (animatedPresets.includes(normalized) || isSpeakerPreset(normalized)) {
     if (animationController) {
-      const clip = pickAnimationClip(normalized, idleClip, avatarClips, externalClips);
+      // Every presenter variant looks for the same clip as plain "speaker";
+      // the variation is in the gesture layer on top of it.
+      const clip = pickAnimationClip(
+        isSpeakerPreset(normalized) ? "speaker" : normalized,
+        idleClip, avatarClips, externalClips,
+      );
       if (clip) {
         animationController.play(clip, 0.35);
         model.updateMatrixWorld(true);
@@ -69,7 +77,7 @@ export function applyPosePreset(
       }
     }
 
-    if (normalized !== "speaker") {
+    if (!isSpeakerPreset(normalized)) {
       model.updateMatrixWorld(true);
       return;
     }
@@ -79,7 +87,7 @@ export function applyPosePreset(
     // Previously unhandled, which left the avatar in its bind pose — arms
     // straight out, i.e. a T-pose under the name "Neutra".
     relaxArms(model, getArmChain(model, boneMapper));
-  } else if (normalized === "speaker") {
+  } else if (isSpeakerPreset(normalized)) {
     applySpeakerPose(model, boneMapper);
   } else if (normalized === "wave") {
     applyWavePose(model, boneMapper);

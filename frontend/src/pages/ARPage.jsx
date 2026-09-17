@@ -1276,6 +1276,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
             textDisplayMode={currentScene?.content?.narrative?.displayMode || 'bubble'}
             visemeTimeline={audio.visemeTimeline}
             audioCurrentTime={audio.audioCurrentTime}
+            isSpeaking={audio.isSpeaking || audio.isPlaying}
             lipSyncConfig={audio.lipSyncConfig}
           />
         </Suspense>

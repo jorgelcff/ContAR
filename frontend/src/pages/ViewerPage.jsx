@@ -126,6 +126,7 @@ export default function ViewerPage() {
             lipSyncConfig={audio.lipSyncConfig}
             visemeTimeline={audio.visemeTimeline}
             audioCurrentTime={audio.audioCurrentTime}
+            isSpeaking={audio.isSpeaking || audio.isPlaying}
           />
         </Suspense>
       </div>

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isSpeakerPreset, resolveSpeakerStyle, SPEAKER_STYLES } from '../utils/speakerStyles';
 import { retargetRotationTracks } from '../utils/retarget';
 
 // A rig only gets full world-space retargeting when its bones genuinely rest in
@@ -117,6 +118,7 @@ export class AnimationController {
     this._proceduralMode = 'default';
     this._speakerTime = 0;
     this._speakerBones = undefined;
+    this._speakerStyle = SPEAKER_STYLES.speaker;
 
     // Bind-pose local rotation of every bone, snapshotted before a single clip
     // has run. Retargeting needs it: Mixamo quaternions are authored against
@@ -572,15 +574,25 @@ export class AnimationController {
     }
   }
 
+  /**
+   * @param {string} mode 'default', or any presenter preset (see
+   *   utils/speakerStyles) — 'speaker', 'speaker_wide', 'speaker_left',
+   *   'speaker_right'. The variants share one gesture routine and differ only
+   *   in how broadly and which way it plays.
+   */
   setProceduralMode(mode = 'default') {
-    const normalized = mode === 'speaker' ? 'speaker' : 'default';
+    const speaker = isSpeakerPreset(mode);
+    const normalized = speaker ? String(mode).toLowerCase() : 'default';
     if (this._proceduralMode === normalized) return;
-    if (this._proceduralMode === 'speaker') {
+    // Switching between two presenter styles still has to put the bones back
+    // where the base pose left them, or the offsets compound.
+    if (isSpeakerPreset(this._proceduralMode)) {
       this._resetSpeakerBones();
       this._speakerTime = 0;
     }
     this._proceduralMode = normalized;
-    if (normalized === 'speaker') this._speakerBones = undefined;
+    this._speakerStyle = resolveSpeakerStyle(normalized);
+    if (speaker) this._speakerBones = undefined;
   }
 
   update(delta) {
@@ -835,12 +847,21 @@ export class AnimationController {
   // ── Speaker gestures ──────────────────────────────────────────────────────
 
   _updateSpeakerGestures(delta) {
-    if (this._proceduralMode !== 'speaker') return;
+    if (!isSpeakerPreset(this._proceduralMode)) return;
     const bones = this._getSpeakerBones();
     if (!bones) return;
 
-    this._speakerTime += delta;
+    const { gain: g, lateral, tempo } = this._speakerStyle;
+    this._speakerTime += delta * tempo;
     const t = this._speakerTime;
+
+    // Addressing one side: the head and torso turn that way, the near arm
+    // opens out and the far one tucks across the body. An arm moving on its
+    // own does not read as gesturing in a direction — the turn is what sells
+    // it, so both happen together or neither does.
+    const turn = 0.20 * lateral;
+    const nearArm = 1 + 0.55 * lateral;   // character's left
+    const farArm = 1 - 0.55 * lateral;    // character's right
 
     // Helper: layered organic sine using golden ratio (φ) and silver ratio (δ)
     // φ = 1.618…  δ = 2.414…   These are incommensurable with each other and with 1.
@@ -873,59 +894,59 @@ export class AnimationController {
 
     // Head: nod + turn, asymmetric
     applyOffset(bones.head,
-      organic(1.1, 0.020, 0.012, 0.008, 0.0),   // nod
-      organic(0.7, 0.030, 0.020, 0.010, 0.5),   // turn
-      organic(0.5, 0.010, 0.005, 0.005, 1.2)    // tilt
+      organic(1.1, 0.020 * g, 0.012 * g, 0.008 * g, 0.0),        // nod
+      turn + organic(0.7, 0.030 * g, 0.020 * g, 0.010 * g, 0.5), // turn
+      organic(0.5, 0.010 * g, 0.005 * g, 0.005 * g, 1.2)         // tilt
     );
 
     // Neck: follows head slightly, offset phase
     applyOffset(bones.neck,
-      organic(0.9, 0.010, 0.006, 0.004, 0.3),
-      organic(0.6, 0.018, 0.010, 0.006, 0.8),
+      organic(0.9, 0.010 * g, 0.006 * g, 0.004 * g, 0.3),
+      turn * 0.35 + organic(0.6, 0.018 * g, 0.010 * g, 0.006 * g, 0.8),
       0
     );
 
     // Spine / torso sway — gives sense of weight and breath
     applyOffset(bones.spine,
-      organic(0.4, 0.012, 0.007, 0.004, 1.5),
-      organic(0.3, 0.008, 0.005, 0.002, 2.0),
-      organic(0.35, 0.006, 0.003, 0.002, 0.4)
+      organic(0.4, 0.012 * g, 0.007 * g, 0.004 * g, 1.5),
+      turn * 0.55 + organic(0.3, 0.008 * g, 0.005 * g, 0.002 * g, 2.0),
+      organic(0.35, 0.006 * g, 0.003 * g, 0.002 * g, 0.4)
     );
 
     // Left arm — gestures slightly ahead of right
     applyOffset(bones.leftUpperArm,
-      -0.14 + organic(1.1, 0.040, 0.025, 0.015, 0.0),
+      -0.14 * nearArm + organic(1.1, 0.040 * g, 0.025 * g, 0.015 * g, 0.0),
       0,
-      0.24 + organic(0.85, 0.060, 0.035, 0.015, 0.3)
+      0.24 * nearArm + organic(0.85, 0.060 * g, 0.035 * g, 0.015 * g, 0.3)
     );
     applyOffset(bones.leftForeArm,
-      -0.30 + organic(1.4, 0.050, 0.030, 0.010, 0.6),
-      organic(0.7, 0.015, 0.010, 0.005, 0.2),
+      -0.30 * nearArm + organic(1.4, 0.050 * g, 0.030 * g, 0.010 * g, 0.6),
+      organic(0.7, 0.015 * g, 0.010 * g, 0.005 * g, 0.2),
       -0.06
     );
 
     // Right arm — slightly different rhythm (offset phase)
     applyOffset(bones.rightUpperArm,
-      -0.12 + organic(1.1, 0.040, 0.025, 0.015, 1.4),
+      -0.12 * farArm + organic(1.1, 0.040 * g, 0.025 * g, 0.015 * g, 1.4),
       0,
-      -0.24 + organic(0.85, 0.060, 0.035, 0.015, 1.7)
+      -0.24 * farArm + organic(0.85, 0.060 * g, 0.035 * g, 0.015 * g, 1.7)
     );
     applyOffset(bones.rightForeArm,
-      -0.28 + organic(1.4, 0.050, 0.030, 0.010, 2.0),
-      organic(0.7, 0.015, 0.010, 0.005, 1.8),
+      -0.28 * farArm + organic(1.4, 0.050 * g, 0.030 * g, 0.010 * g, 2.0),
+      organic(0.7, 0.015 * g, 0.010 * g, 0.005 * g, 1.8),
       0.06
     );
 
     // Wrist micro-rotation (expressiveness detail)
     applyOffset(bones.leftHand,
       0,
-      organic(1.8, 0.020, 0.012, 0.006, 0.0),
-      organic(2.1, 0.015, 0.010, 0.005, 0.5)
+      organic(1.8, 0.020 * g, 0.012 * g, 0.006 * g, 0.0),
+      organic(2.1, 0.015 * g, 0.010 * g, 0.005 * g, 0.5)
     );
     applyOffset(bones.rightHand,
       0,
-      organic(1.8, 0.020, 0.012, 0.006, 2.3),
-      organic(2.1, 0.015, 0.010, 0.005, 1.9)
+      organic(1.8, 0.020 * g, 0.012 * g, 0.006 * g, 2.3),
+      organic(2.1, 0.015 * g, 0.010 * g, 0.005 * g, 1.9)
     );
   }
 

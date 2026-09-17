@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { pickMouthSource } from '../../utils/lipsyncSources';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -191,6 +192,9 @@ export default function SceneCanvas({
   lipSyncConfig,
   visemeTimeline,
   audioCurrentTime,
+  // Whether a voice is actually speaking right now. Without it the mouth had
+  // no way to learn that it should close — see utils/lipsyncSources.
+  isSpeaking = false,
   vrmaUrl,
   animSpeed,
   animLoopOnce,
@@ -275,6 +279,11 @@ export default function SceneCanvas({
   useEffect(() => {
     analyserRefLocal.current = analyserRef;
   }, [analyserRef]);
+
+  const isSpeakingRef = useRef(isSpeaking);
+  useEffect(() => {
+    isSpeakingRef.current = isSpeaking;
+  }, [isSpeaking]);
   useEffect(() => {
     visemeTimelineRef.current = Array.isArray(visemeTimeline)
       ? visemeTimeline
@@ -641,7 +650,16 @@ export default function SceneCanvas({
       // routes through Web Audio): drive the mouth straight from the viseme
       // timeline so lip sync still plays. audioCurrentTime is advanced by the
       // Web Speech timer in useAudio.
-      if (!analyser && effectiveConfig.visemeMode === "timeline" && hasMorphs && visemeTimelineRef.current.length) {
+      const mouthSource = pickMouthSource({
+        hasAnalyser: Boolean(analyser),
+        hasMorphs,
+        hasJaw: jawBones.length > 0,
+        visemeMode: effectiveConfig.visemeMode,
+        timelineLength: visemeTimelineRef.current.length,
+        isSpeaking: isSpeakingRef.current,
+      });
+
+      if (mouthSource === "timeline") {
         const timelineBlend = getTimelineBlendState(
           visemeTimelineRef.current,
           audioCurrentTimeRef.current,
@@ -665,7 +683,7 @@ export default function SceneCanvas({
             }
           });
         }
-      } else if (analyser && (hasMorphs || jawBones.length > 0)) {
+      } else if (mouthSource === "analyser") {
         const binCount = analyser.frequencyBinCount;
         if (
           !lipSyncDataRef.current ||

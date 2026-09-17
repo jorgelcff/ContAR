@@ -548,6 +548,9 @@ export default function LeftPanel({
                   <option value="run">{t('poseRun')}</option>
                   <option value="dance">{t('poseDance')}</option>
                   <option value="speaker">{t('poseSpeaker')}</option>
+                  <option value="speaker_wide">{t('poseSpeakerWide')}</option>
+                  <option value="speaker_left">{t('poseSpeakerLeft')}</option>
+                  <option value="speaker_right">{t('poseSpeakerRight')}</option>
                 </optgroup>
                 <optgroup label="Estáticas">
                   <option value="neutral">{t('poseNeutral')}</option>

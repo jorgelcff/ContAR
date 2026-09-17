@@ -6,6 +6,10 @@ const StorySceneSchema = new mongoose.Schema(
     order: { type: Number, required: true, min: 0 },
     transitionText: { type: String, default: '' },
     durationSeconds: { type: Number, default: 0, min: 0 },
+    // 'time' counts durationSeconds off a clock; 'narration' holds the scene
+    // until the narration audio finishes. Defaults to 'time' so stories saved
+    // before this existed keep playing exactly as they did.
+    advanceOn: { type: String, enum: ['time', 'narration'], default: 'time' },
     markerUrl: { type: String, default: '' },
   },
   { _id: false }

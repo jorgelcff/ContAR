@@ -292,3 +292,32 @@ describe('DELETE /api/story/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// A scene can hold until its narration finishes instead of counting seconds.
+// Stories saved before the field existed must keep playing exactly as they did,
+// so anything unrecognised has to read as the timed mode rather than the new one.
+describe('scene advance mode', () => {
+  it('stores the narration mode and defaults everything else to time', async () => {
+    const user = await createAuthedUser();
+    const res = await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send({
+        metadata: { title: 'Advance' },
+        scenes: [
+          { sceneId: VALID_SCENE_ID, order: 0, advanceOn: 'narration' },
+          { sceneId: VALID_SCENE_ID, order: 1, advanceOn: 'time' },
+          { sceneId: VALID_SCENE_ID, order: 2 },
+          { sceneId: VALID_SCENE_ID, order: 3, advanceOn: 'whatever' },
+        ],
+      });
+    expect(res.status).toBe(200);
+
+    const stored = await request(app)
+      .get(`/api/story/${res.body.storyId}`)
+      .set('Authorization', user.authHeader);
+    expect(stored.body.scenes.map((s) => s.advanceOn)).toEqual([
+      'narration', 'time', 'time', 'time',
+    ]);
+  });
+});

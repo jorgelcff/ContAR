@@ -1,4 +1,6 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { normalizeAdvanceOn } from '../utils/sceneAdvance';
+import { pickPreviewSource } from '../utils/scenePreview';
 import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -73,6 +75,32 @@ export default function EditorPage() {
   };
 
   const audio = useAudio({ onAudioBlob: persistGeneratedAudio });
+
+  // ── Run the scene, in place ───────────────────────────────────
+  // Everything needed to play a scene is already on screen; what was missing
+  // was something to start it from the top. Seeing it meant saving and opening
+  // the viewer in another tab.
+  const previewSource = pickPreviewSource({
+    narrationAudioUrl: narrativeAudioUrl,
+    speechText,
+    webSpeechAvailable: typeof window !== 'undefined' && Boolean(window.speechSynthesis),
+  });
+  const isPreviewing = audio.isPlaying || audio.isSpeaking;
+
+  const runScene = async () => {
+    if (isPreviewing) {
+      audio.stop();
+      audio.stopWebSpeech();
+      return;
+    }
+    if (previewSource === 'audio') {
+      if (audio.audioUrl !== narrativeAudioUrl) audio.loadUrl(narrativeAudioUrl);
+      audio.stop(); // rewind, so "run" always starts at the beginning
+      await audio.play().catch(() => {});
+      return;
+    }
+    if (previewSource === 'speech') audio.speakWithWebSpeech(speechText);
+  };
 
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
   const [showTour, setShowTour] = useState(() => !shouldShowOnboarding() && shouldShowTour());
@@ -318,6 +346,7 @@ export default function EditorPage() {
                 sceneId: item?.sceneId || '',
                 transitionText: item?.transitionText || '',
                 durationSeconds: Number(item?.durationSeconds) || 0,
+                advanceOn: normalizeAdvanceOn(item?.advanceOn),
                 markerUrl: item?.markerUrl || '',
               }))
           : [];
@@ -484,6 +513,7 @@ export default function EditorPage() {
           order: index,
           transitionText: item.transitionText || '',
           durationSeconds: Number(item.durationSeconds) || 0,
+          advanceOn: normalizeAdvanceOn(item.advanceOn),
           markerUrl: item.markerUrl || '',
         })),
       };
@@ -674,6 +704,20 @@ export default function EditorPage() {
                 onJawApi={setJawApi}
               />
             </Suspense>
+
+            {/* Sits over the canvas rather than in a side panel, so it is
+                reachable whichever tab is open, and on a phone too. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-20 md:bottom-4 flex justify-center px-4">
+              <button
+                onClick={runScene}
+                disabled={previewSource === 'none'}
+                title={previewSource === 'none' ? t('editorRunSceneEmpty') : undefined}
+                className="pointer-events-auto flex items-center gap-2 rounded-full bg-cyan-700 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-cyan-700"
+              >
+                <Icon name={isPreviewing ? 'stop' : 'play'} className="h-4 w-4" />
+                {isPreviewing ? t('editorRunSceneStop') : t('editorRunScene')}
+              </button>
+            </div>
           </div>
           <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} isAddingScene={isAddingScene} />
         </div>

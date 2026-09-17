@@ -5,6 +5,10 @@ import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
 import { getPublicStory, getScene } from '../api/sceneApi';
+import { sceneAdvanceMs } from '../utils/sceneAdvance';
+
+// How long a scene will wait for a narration file before giving up on it.
+const NARRATION_WAIT_LIMIT_MS = 12000;
 import useAudio from '../hooks/useAudio';
 import { stripEmojis, linkifyText } from '../utils/text';
 
@@ -18,6 +22,13 @@ export default function StoryViewerPage() {
   const [story, setStory]               = useState(null);
   const [storyScenes, setStoryScenes]   = useState([]);
   const [index, setIndex]               = useState(0);
+  // Set when a scene set to wait for its narration has waited too long for the
+  // audio to load — see the loader below.
+  const [narrationUnavailable, setNarrationUnavailable] = useState(false);
+  // Which scene the loaded sceneData belongs to. Without it the advance rule
+  // ran before the scene arrived, read "no narration" off a null, and fell
+  // straight back to counting seconds — the very thing it replaces.
+  const [loadedSceneId, setLoadedSceneId] = useState('');
   const [sceneData, setSceneData]       = useState(null);
   const [hasStarted, setHasStarted]     = useState(false); // user must click ▶ first
   const [isPlaying, setIsPlaying]       = useState(false);
@@ -74,10 +85,20 @@ export default function StoryViewerPage() {
 
   // ── Scene progress / auto-advance ─────────────────────────────
   useEffect(() => {
-    if (loading || error || !storyScenes.length || !isPlaying) return;
+    if (loading || error || !storyScenes.length || !isPlaying) return undefined;
+    // Nothing is known about this scene yet; deciding now would decide wrong.
+    if (loadedSceneId !== storyScenes[index]?.sceneId) return undefined;
 
-    const durationSeconds = Math.max(1, Number(storyScenes[index]?.durationSeconds) || 8);
-    const durationMs = durationSeconds * 1000;
+    const durationMs = sceneAdvanceMs({
+      advanceOn: storyScenes[index]?.advanceOn,
+      durationSeconds: storyScenes[index]?.durationSeconds,
+      hasNarrationAudio: Boolean(sceneData?.content?.narrative?.audioUrl),
+      audioDuration: audio.audioDuration,
+      audioUnavailable: narrationUnavailable,
+    });
+    // null means the narration's length has not arrived yet. Hold the scene —
+    // this effect re-runs when it does.
+    if (durationMs === null) return undefined;
 
     if (index >= storyScenes.length - 1) {
       setIsPlaying(false);
@@ -114,7 +135,7 @@ export default function StoryViewerPage() {
       }
       window.cancelAnimationFrame(progressFrameRef.current);
     };
-  }, [error, index, isPlaying, loading, storyScenes]);
+  }, [error, index, isPlaying, loading, storyScenes, sceneData, loadedSceneId, audio.audioDuration, narrationUnavailable]);
 
   useEffect(() => {
     if (!storyScenes.length) return;
@@ -129,10 +150,15 @@ export default function StoryViewerPage() {
 
   useEffect(() => {
     let active = true;
-    if (!currentSceneId) { setSceneData(null); return; }
-    getScene(currentSceneId)
-      .then((data) => { if (active) setSceneData(data); })
-      .catch(() => { if (active) setSceneData(null); });
+    if (!currentSceneId) { setSceneData(null); setLoadedSceneId(''); return undefined; }
+    // Settled either way — a scene that failed to load is as decided as one
+    // that arrived, and both release the hold below.
+    const settle = (data) => {
+      if (!active) return;
+      setSceneData(data);
+      setLoadedSceneId(currentSceneId);
+    };
+    getScene(currentSceneId).then(settle).catch(() => settle(null));
     return () => { active = false; };
   }, [currentSceneId]);
 
@@ -140,14 +166,21 @@ export default function StoryViewerPage() {
   useEffect(() => {
     const narrativeAudioUrl = sceneData?.content?.narrative?.audioUrl;
     const text = sceneData?.content?.narrative?.text || '';
+    setNarrationUnavailable(false);
 
     if (narrativeAudioUrl) {
       audio.loadUrl(narrativeAudioUrl);
       if (text) audio.generateVisemeTimelineFromText(text);
-    } else {
-      audio.stop();
-      audio.clearVisemeTimeline();
+      // A scene waiting on a narration that never loads would wait forever.
+      // After this, it falls back to its configured seconds and the story
+      // keeps moving — a story that runs short beats one that stalls.
+      const giveUp = setTimeout(() => setNarrationUnavailable(true), NARRATION_WAIT_LIMIT_MS);
+      return () => clearTimeout(giveUp);
     }
+
+    audio.stop();
+    audio.clearVisemeTimeline();
+    return undefined;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneData]);
 

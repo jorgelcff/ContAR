@@ -131,8 +131,21 @@ export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
                         value={item.durationSeconds}
                         onChange={(e) => updateStoryScene(index, 'durationSeconds', e.target.value)}
                         placeholder={t('durationSeconds')}
-                        className="w-20 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
+                        disabled={item.advanceOn === 'narration'}
+                        title={item.advanceOn === 'narration' ? t('advanceOnNarrationHint') : t('durationSeconds')}
+                        className="w-20 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500 disabled:opacity-40"
                       />
+                      {/* What ends the scene. Counting seconds was the only
+                          option, so a line longer than the number was cut off
+                          mid-sentence and a shorter one left silence. */}
+                      <select
+                        value={item.advanceOn === 'narration' ? 'narration' : 'time'}
+                        onChange={(e) => updateStoryScene(index, 'advanceOn', e.target.value)}
+                        className="rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 focus:outline-none focus:border-cyan-500"
+                      >
+                        <option value="time">{t('advanceOnTime')}</option>
+                        <option value="narration">{t('advanceOnNarration')}</option>
+                      </select>
                       <button
                         onClick={() => handleEditScene(item.sceneId)}
                         className="ml-auto px-2 py-1 rounded bg-cyan-700 hover:bg-cyan-600 text-xs text-white"

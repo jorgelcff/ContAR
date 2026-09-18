@@ -130,10 +130,18 @@ export default function ReachPanel({ stats }) {
         <span className="text-[11px] text-gray-500">{t('statsNewThisWeek', { count: stats.newUsersLast7Days || 0 })}</span>
       </div>
 
-      {/* The headline: one number, no plot. */}
-      <div>
-        <p className="text-4xl font-bold leading-none text-white tabular-nums">{stats.users}</p>
-        <p className="mt-1 text-xs text-gray-400">{t('statsUsers')}</p>
+      {/* Two headlines, because sign-ups were only ever half the reach: the
+          audience a shared link is for watches and leaves without ever making
+          an account, and until now none of them were counted at all. */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-4xl font-bold leading-none text-white tabular-nums">{stats.storyViews ?? 0}</p>
+          <p className="mt-1 text-xs text-gray-400">{t('statsStoryViews')}</p>
+        </div>
+        <div>
+          <p className="text-4xl font-bold leading-none text-white tabular-nums">{stats.users}</p>
+          <p className="mt-1 text-xs text-gray-400">{t('statsUsers')}</p>
+        </div>
       </div>
 
       {days.length > 0 && <SignupTrend days={days} language={i18n.language} />}

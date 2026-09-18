@@ -322,3 +322,90 @@ describe('scene advance mode', () => {
     ]);
   });
 });
+
+// Sign-ups were the only thing counted, which misses the audience a QR code at
+// a poster is for entirely: they watch and leave without ever making an
+// account. Counting who opened the public link is the number that was missing.
+describe('counting who watched', () => {
+  async function publish(user, title = 'Contada') {
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send({ ...sampleStory, metadata: { title } });
+    await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: true });
+    return created.body.storyId;
+  }
+
+  const viewsOf = async (user, storyId) => {
+    const list = await request(app).get('/api/story').set('Authorization', user.authHeader);
+    return list.body.stories.find((s) => s.storyId === storyId)?.views;
+  };
+
+  it('counts a visitor opening the public link', async () => {
+    const author = await createAuthedUser();
+    const storyId = await publish(author);
+
+    expect(await viewsOf(author, storyId)).toBe(0);
+    await request(app).get(`/api/story/public/${storyId}`);
+    await request(app).get(`/api/story/public/${storyId}`);
+    expect(await viewsOf(author, storyId)).toBe(2);
+  });
+
+  it('does not count the author checking their own story', async () => {
+    // Previewing your own work is not an audience, and a number inflated by
+    // the person reading it is worse than no number.
+    const author = await createAuthedUser();
+    const storyId = await publish(author);
+
+    await request(app)
+      .get(`/api/story/public/${storyId}`)
+      .set('Authorization', author.authHeader);
+
+    expect(await viewsOf(author, storyId)).toBe(0);
+  });
+
+  it('counts another signed-in person, who is an audience', async () => {
+    const author = await createAuthedUser();
+    const visitor = await createAuthedUser();
+    const storyId = await publish(author);
+
+    await request(app)
+      .get(`/api/story/public/${storyId}`)
+      .set('Authorization', visitor.authHeader);
+
+    expect(await viewsOf(author, storyId)).toBe(1);
+  });
+
+  it('counts nothing for a story nobody can open', async () => {
+    const author = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', author.authHeader)
+      .send(sampleStory);
+
+    // A draft 404s for everyone else, so there is no public reach to measure.
+    await request(app).get(`/api/story/public/${created.body.storyId}`);
+    expect(await viewsOf(author, created.body.storyId)).toBe(0);
+  });
+
+  it('never lets the counter break the page', async () => {
+    // The increment is fire-and-forget on purpose: a visitor who scanned a code
+    // must get the story even if the write fails.
+    const author = await createAuthedUser();
+    const storyId = await publish(author);
+    const spy = vi.spyOn(require('../models/Story'), 'updateOne')
+      .mockRejectedValue(new Error('write failed'));
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const res = await request(app).get(`/api/story/public/${storyId}`);
+      expect(res.status).toBe(200);
+      expect(res.body.metadata.title).toBe('Contada');
+    } finally {
+      spy.mockRestore();
+      quiet.mockRestore();
+    }
+  });
+});

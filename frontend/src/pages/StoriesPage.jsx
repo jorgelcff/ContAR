@@ -86,6 +86,14 @@ function StoryCard({ story, onDelete, deleting }) {
       {/* Date */}
       <p className="text-[11px] text-gray-500">
         {t('storiesCardEdited', { time: timeAgo(story.updatedAt) })}
+        {/* Only once published — a draft nobody can open has no reach to
+            report, and a zero there reads like failure rather than "not yet". */}
+        {story.isPublic && (
+          <>
+            {' · '}
+            {t('storiesCardViews', { count: story.views ?? 0 })}
+          </>
+        )}
       </p>
 
       {/* Share link — only meaningful once the story is actually published */}

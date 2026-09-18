@@ -34,6 +34,12 @@ const StorySchema = new mongoose.Schema({
   // A story is only reachable via its public share link once this is true —
   // saving/editing a story never implies publishing it.
   isPublic: { type: Boolean, default: false },
+  // How many times someone other than the author opened the public link. The
+  // reach panel counted sign-ups, which misses the entire audience a QR code
+  // at a poster is for: they watch and leave without ever making an account,
+  // so the number that matters most was the one number nobody had.
+  views: { type: Number, default: 0 },
+  lastViewedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

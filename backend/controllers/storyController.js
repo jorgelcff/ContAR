@@ -105,7 +105,7 @@ async function listStories(_req, res) {
 
     const stories = await Story.find(
       { ownerId },
-      { _id: 0, storyId: 1, metadata: 1, scenes: 1, isPublic: 1, createdAt: 1, updatedAt: 1 }
+      { _id: 0, storyId: 1, metadata: 1, scenes: 1, isPublic: 1, views: 1, createdAt: 1, updatedAt: 1 }
     )
       .sort({ updatedAt: -1 })
       .limit(100);
@@ -116,6 +116,7 @@ async function listStories(_req, res) {
         metadata:   s.metadata,
         sceneCount: Array.isArray(s.scenes) ? s.scenes.length : 0,
         isPublic:   Boolean(s.isPublic),
+        views:      Number(s.views) || 0,
         createdAt:  s.createdAt,
         updatedAt:  s.updatedAt,
       })),
@@ -147,6 +148,15 @@ async function getPublicStory(req, res) {
     const isAuthor = Boolean(req.user?.userId) && req.user.userId === story?.ownerId;
     if (!story || (!story.isPublic && !isAuthor)) {
       return res.status(404).json({ error: 'Story not found' });
+    }
+
+    // Count the visit, but only a real one: the author checking their own
+    // draft is not an audience, and a story nobody can open has no public
+    // reach to measure. Fire-and-forget — a counter must never be the reason
+    // a page fails to load.
+    if (story.isPublic && !isAuthor) {
+      Story.updateOne({ storyId }, { $inc: { views: 1 }, $set: { lastViewedAt: new Date() } })
+        .catch((err) => console.error('view count failed:', err.message));
     }
 
     const { ownerId: _ownerId, ...publicStory } = story.toObject();

@@ -54,7 +54,7 @@ async function getStats(req, res) {
     trendStart.setUTCHours(0, 0, 0, 0);
 
     const [
-      users, newUsers, verifiedUsers, scenes, stories, published,
+      users, newUsers, verifiedUsers, scenes, stories, published, viewRows,
       creatorIds, publisherIds, signupRows, newest,
     ] = await Promise.all([
       User.countDocuments({}),
@@ -63,6 +63,9 @@ async function getStats(req, res) {
       Scene.countDocuments({}),
       Story.countDocuments({}),
       Story.countDocuments({ isPublic: true }),
+      // Sign-ups miss the audience a shared link is for entirely — people who
+      // watch and leave without ever making an account.
+      Story.aggregate([{ $group: { _id: null, total: { $sum: '$views' } } }]),
       Scene.distinct('ownerId', { ownerId: { $nin: ['', null] } }),
       Story.distinct('ownerId', { isPublic: true, ownerId: { $nin: ['', null] } }),
       User.aggregate([
@@ -88,6 +91,7 @@ async function getStats(req, res) {
       scenes,
       stories,
       publishedStories: published,
+      storyViews: viewRows?.[0]?.total || 0,
       lastSignupAt: newest?.createdAt || null,
       signupsByDay: zeroFilledDays(counts, TREND_DAYS, now),
     });

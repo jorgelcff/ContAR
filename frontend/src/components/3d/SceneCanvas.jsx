@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { pickMouthSource } from '../../utils/lipsyncSources';
+import { useTranslation } from 'react-i18next';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -207,6 +208,7 @@ export default function SceneCanvas({
   onAvatarClips,
   onJawApi,
 }) {
+  const { t } = useTranslation();
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -314,6 +316,11 @@ export default function SceneCanvas({
   // Expose renderer/camera to SpeechBubble via state once scene is ready
   const [renderCtx, setRenderCtx] = useState(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
+  // How far the model has downloaded, 0–100, or null when the server sends no
+  // length to measure against. On the wifi at an event a multi-megabyte avatar
+  // is many seconds of a spinner that looks identical to a spinner that has
+  // hung — a number is the difference between waiting and giving up.
+  const [avatarProgress, setAvatarProgress] = useState(null);
   const [avatarLoadError, setAvatarLoadError] = useState("");
   const [debugSnapshot, setDebugSnapshot] = useState({
     mouthOpen: 0,
@@ -1076,6 +1083,7 @@ export default function SceneCanvas({
     }
 
     setAvatarLoading(true);
+    setAvatarProgress(null);
     const avatarLoader = loaderRef.current;
     if (!avatarLoader) {
       setAvatarLoadError("Avatar loader is not ready yet.");
@@ -1293,7 +1301,15 @@ export default function SceneCanvas({
             .catch(() => {});
         }
       },
-      undefined,
+      (event) => {
+        if (cancelled || loadId !== activeAvatarLoadIdRef.current) return;
+        // Content-Length is not guaranteed — without it there is a count of
+        // bytes but nothing to divide by, so say nothing rather than invent a
+        // percentage.
+        const total = Number(event?.total) || 0;
+        const loaded = Number(event?.loaded) || 0;
+        setAvatarProgress(total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : null);
+      },
       (err) => {
         if (cancelled || loadId !== activeAvatarLoadIdRef.current) {
           return;
@@ -1589,10 +1605,10 @@ export default function SceneCanvas({
               </span>
             </div>
             <p className="text-sm text-cyan-200 font-medium">
-              Carregando seu personagem...
+              {t('viewerLoadingAvatar')}
             </p>
-            <p className="text-xs text-gray-400">
-              Isso pode levar alguns segundos
+            <p className="text-xs tabular-nums text-gray-400">
+              {avatarProgress === null ? t('loadingTakesSeconds') : `${avatarProgress}%`}
             </p>
           </div>
         </div>
@@ -1612,7 +1628,7 @@ export default function SceneCanvas({
             <path d="M12 9v5m0 3h.01" />
           </svg>
           <div>
-            <p className="font-medium">Não foi possível carregar o avatar</p>
+            <p className="font-medium">{t('canvasAvatarFailed')}</p>
             <p className="text-xs text-red-300/80 mt-0.5">{avatarLoadError}</p>
           </div>
         </div>

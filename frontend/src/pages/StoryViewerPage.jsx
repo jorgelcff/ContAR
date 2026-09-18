@@ -32,6 +32,11 @@ export default function StoryViewerPage() {
   // ran before the scene arrived, read "no narration" off a null, and fell
   // straight back to counting seconds — the very thing it replaces.
   const [loadedSceneId, setLoadedSceneId] = useState('');
+  // Reaching the end used to do nothing at all: the progress bar filled, the
+  // controls greyed out, and the visitor was left looking at a still frame
+  // with no indication anything had finished — at the exact moment they were
+  // most interested.
+  const [hasFinished, setHasFinished] = useState(false);
   // Which language the visitor is hearing. Starts from their own browser — a
   // QR code at a poster has nobody standing next to it to ask — and can be
   // changed from the control in the top bar.
@@ -81,6 +86,15 @@ export default function StoryViewerPage() {
   }, [id]);
 
   // ── User starts the story (gesture → unlocks audio) ──────────
+  const restart = () => {
+    setHasFinished(false);
+    setIndex(0);
+    setSceneProgress(0);
+    playbackBaseMsRef.current = 0;
+    playbackStartMsRef.current = 0;
+    setIsPlaying(true);
+  };
+
   const handleStart = () => {
     setHasStarted(true);
     setIsPlaying(true);
@@ -116,7 +130,8 @@ export default function StoryViewerPage() {
     if (index >= storyScenes.length - 1) {
       setIsPlaying(false);
       setSceneProgress(100);
-      return;
+      setHasFinished(true);
+      return undefined;
     }
 
     playbackStartMsRef.current = window.performance.now();
@@ -152,6 +167,8 @@ export default function StoryViewerPage() {
 
   useEffect(() => {
     if (!storyScenes.length) return;
+    // Stepping back with the controls means the visitor is watching again.
+    if (index < storyScenes.length - 1) setHasFinished(false);
     setSceneProgress(0);
     playbackBaseMsRef.current = 0;
     playbackStartMsRef.current = 0;
@@ -401,6 +418,54 @@ export default function StoryViewerPage() {
           >
 
             {/* ── Splash screen (shown until user clicks ▶) ── */}
+            {hasStarted && hasFinished && (
+              // The canvas behind this advances the story when tapped, and the
+              // click went straight through: "watch again" reset to the first
+              // scene and the tap handler underneath immediately moved it back
+              // to the last one.
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-gray-950/95 px-6 backdrop-blur-sm"
+              >
+                <div className="flex w-full max-w-sm flex-col items-center gap-5 text-center">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{t('viewerTheEnd')}</p>
+                    <h2 className="mt-2 text-xl font-bold leading-snug text-white">
+                      {stripEmojis(story?.metadata?.title) || t('appTitle')}
+                    </h2>
+                  </div>
+
+                  <div className="flex w-full flex-col gap-2">
+                    <button
+                      onClick={restart}
+                      className="w-full rounded-xl bg-cyan-700 py-3 text-sm font-semibold text-white transition-colors hover:bg-cyan-600"
+                    >
+                      {t('viewerWatchAgain')}
+                    </button>
+                    <Link
+                      to={arHref}
+                      className="w-full rounded-xl border border-gray-600 py-3 text-sm text-gray-200 transition-colors hover:bg-gray-800"
+                    >
+                      {t('viewerOpenAr')}
+                    </Link>
+                  </div>
+
+                  {/* The moment someone has just watched a whole story is the
+                      one moment they might want to make one. Before this there
+                      was nothing here at all. */}
+                  <div className="w-full border-t border-gray-800 pt-4">
+                    <p className="text-xs text-gray-400">{t('viewerMakeYourOwnHint')}</p>
+                    <Link
+                      to="/login"
+                      className="mt-2 inline-block text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline"
+                    >
+                      {t('viewerMakeYourOwn')}
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {!hasStarted && (
               <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-gray-950/95 backdrop-blur-sm px-6">
                 <div className="flex flex-col items-center gap-6 text-center max-w-sm w-full">

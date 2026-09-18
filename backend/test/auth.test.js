@@ -369,6 +369,8 @@ describe('the endpoints that wait on the mail server', () => {
     const spy = vi.spyOn(nodemailer, 'createTransport').mockReturnValue({
       sendMail: async () => { throw new Error('ETIMEDOUT'); },
     });
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    void quiet;
     const prev = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
     process.env.SMTP_USER = 'sender@example.com';
     process.env.SMTP_PASS = 'secret';
@@ -426,5 +428,66 @@ describe('the endpoints that wait on the mail server', () => {
       const res = await request(app).post('/api/auth/forgot-password').send({ email: user.email });
       expect(res.status).toBe(503);
     } finally { restore(); }
+  });
+});
+
+// One 502 and a sentence telling the user to try again looked identical
+// whether the port was blocked, the handshake was slow, or the password was
+// wrong — so diagnosing it meant guessing. Nodemailer knows which; this is
+// about writing it down where it can be read.
+describe('a failed send says which failure it was', () => {
+  const withBrokenMail = async (error, run) => {
+    const nodemailer = require('nodemailer');
+    const spy = vi.spyOn(nodemailer, 'createTransport').mockReturnValue({
+      sendMail: async () => { throw error; },
+    });
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const prev = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
+    process.env.SMTP_USER = 'sender@example.com';
+    process.env.SMTP_PASS = 'secret';
+    try {
+      await run();
+    } finally {
+      spy.mockRestore();
+      quiet.mockRestore();
+      process.env.SMTP_USER = prev.user;
+      process.env.SMTP_PASS = prev.pass;
+    }
+  };
+
+  const cases = [
+    ['ECONNREFUSED', 'a blocked outbound port'],
+    ['ETIMEDOUT', 'a handshake slower than the timeout'],
+    ['EAUTH', 'credentials the server refused'],
+  ];
+
+  for (const [code, what] of cases) {
+    it(`surfaces ${code} — ${what}`, async () => {
+      const user = await createAuthedUser({ emailVerified: false });
+      const err = new Error('mail failed');
+      err.code = code;
+
+      await withBrokenMail(err, async () => {
+        const res = await request(app)
+          .post('/api/auth/resend-verification')
+          .set('Authorization', user.authHeader)
+          .send({});
+        expect(res.status).toBe(502);
+        // Readable from a browser's network tab, which is the difference
+        // between knowing and redeploying to find out.
+        expect(res.body.code).toBe(code);
+      });
+    });
+  }
+
+  it('says UNKNOWN rather than nothing when the error carries no code', async () => {
+    const user = await createAuthedUser({ emailVerified: false });
+    await withBrokenMail(new Error('something odd'), async () => {
+      const res = await request(app)
+        .post('/api/auth/resend-verification')
+        .set('Authorization', user.authHeader)
+        .send({});
+      expect(res.body.code).toBe('UNKNOWN');
+    });
   });
 });

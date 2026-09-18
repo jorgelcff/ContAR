@@ -80,6 +80,27 @@ function emailFrom() {
   return process.env.EMAIL_FROM || `ContAR <${process.env.SMTP_USER}>`;
 }
 
+/**
+ * Why a send failed, in the two words that decide what to do about it.
+ *
+ * Every failure here looked the same from outside — one 502 and a sentence
+ * telling the user to try again — so diagnosing it meant guessing between a
+ * blocked port, a slow handshake and bad credentials. Nodemailer already knows
+ * which; it just was not being written down.
+ */
+function describeMailError(err) {
+  const code = err?.code || err?.responseCode || 'UNKNOWN';
+  const hints = {
+    ETIMEDOUT: 'nao houve resposta a tempo — porta SMTP bloqueada pela hospedagem, ou handshake mais lento que o timeout',
+    ESOCKET: 'a conexao caiu — normalmente TLS ou porta bloqueada',
+    ECONNECTION: 'nao foi possivel abrir a conexao — host/porta errados ou saida bloqueada',
+    ECONNREFUSED: 'a conexao foi recusada — saida SMTP bloqueada pela hospedagem',
+    EAUTH: 'as credenciais foram recusadas — usuario ou senha de app invalidos',
+    EENVELOPE: 'o endereco de destino foi recusado pelo servidor',
+  };
+  return { code, hint: hints[code] || err?.message || 'sem detalhe' };
+}
+
 async function sendVerificationEmail(user, language) {
   const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
   const link = `${frontendUrl}/verify-email?token=${user.emailVerificationToken}`;
@@ -87,8 +108,18 @@ async function sendVerificationEmail(user, language) {
 
   console.log(`[Email] Enviando verificação para: ${user.email} (${language || 'fallback'})`);
   const transporter = createTransporter();
-  await transporter.sendMail({ from: emailFrom(), to: user.email, subject, html });
-  console.log(`[Email] Verificação enviada para ${user.email}`);
+  const startedAt = Date.now();
+  try {
+    await transporter.sendMail({ from: emailFrom(), to: user.email, subject, html });
+  } catch (err) {
+    // Elapsed time is half the diagnosis: a failure at exactly the timeout is
+    // a different problem from one that is refused immediately.
+    const { code, hint } = describeMailError(err);
+    console.error(`[Email] FALHOU após ${Date.now() - startedAt}ms — ${code}: ${hint}`);
+    err.mailCode = code;
+    throw err;
+  }
+  console.log(`[Email] Verificação enviada para ${user.email} (${Date.now() - startedAt}ms)`);
 }
 
 function ensureDatabaseReady(res) {
@@ -303,7 +334,13 @@ async function resendVerification(req, res) {
     return res.json({ message: 'Email de confirmação reenviado.' });
   } catch (err) {
     console.error('resendVerification error:', err);
-    return res.status(502).json({ error: 'Não foi possível reenviar o email. Tente novamente em instantes.' });
+    // The code travels to the caller too. Reading it from a browser's network
+    // tab is the difference between knowing and redeploying to find out, and
+    // "ETIMEDOUT" gives away nothing a port scan would not.
+    return res.status(502).json({
+      error: 'Não foi possível reenviar o email. Tente novamente em instantes.',
+      code: err?.mailCode || 'UNKNOWN',
+    });
   }
 }
 

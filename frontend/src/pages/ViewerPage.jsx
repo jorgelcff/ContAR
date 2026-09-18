@@ -1,5 +1,7 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { pickNarration } from '../utils/narration';
+import ViewerError from '../components/ui/ViewerError';
+import { classifyViewerError } from '../utils/viewerError';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +37,7 @@ export default function ViewerPage() {
   useEffect(() => {
     getScene(id)
       .then((data) => { setScene(data); setLoading(false); })
-      .catch((err) => { setError(`${t('errorLoading')}: ${err.message}`); setLoading(false); });
+      .catch((err) => { setError(classifyViewerError(err)); setLoading(false); });
   }, [id, t]);
 
   // Load and play audio when scene data arrives
@@ -80,7 +82,7 @@ export default function ViewerPage() {
     return (
       <div className="flex flex-col h-dvh bg-gray-900 text-white">
         <Header />
-        <div className="flex-1 flex items-center justify-center text-red-400">{error}</div>
+        <ViewerError kind={error} onRetry={() => window.location.reload()} />
       </div>
     );
   }

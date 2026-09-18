@@ -59,6 +59,13 @@ function createTransporter() {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT) || 587,
     secure: false, // STARTTLS
+    // Force IPv4. smtp.gmail.com resolves to both families, Node will happily
+    // pick the AAAA record, and the container this runs in has no IPv6 route —
+    // so the connection fails with ENETUNREACH against an address like
+    // 2607:f8b0:400e:c05::6d and then sits there until the timeout expires.
+    // Nothing about the port or the credentials is wrong; it is dialling an
+    // address the host cannot reach.
+    family: 4,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,

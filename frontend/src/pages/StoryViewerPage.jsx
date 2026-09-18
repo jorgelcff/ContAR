@@ -9,6 +9,8 @@ import { getPublicStory, getScene, markStoryFinished } from '../api/sceneApi';
 import { sceneAdvanceMs } from '../utils/sceneAdvance';
 import { pickNarration, narrationLanguages } from '../utils/narration';
 import i18n from '../i18n';
+import ViewerError from '../components/ui/ViewerError';
+import { classifyViewerError } from '../utils/viewerError';
 
 // How long a scene will wait for a narration file before giving up on it.
 const NARRATION_WAIT_LIMIT_MS = 12000;
@@ -52,7 +54,10 @@ export default function StoryViewerPage() {
   const [scale, setScale]               = useState(1);
   const [sceneProgress, setSceneProgress] = useState(0);
   const [loading, setLoading]           = useState(true);
+  // The kind of failure, not its message: a story that is gone, a connection
+  // that did not complete and a server that broke want different offers.
   const [error, setError]               = useState('');
+  const [reloadKey, setReloadKey]       = useState(0);
   const [fullscreen, setFullscreen]     = useState(false);
 
   const playbackBaseMsRef   = useRef(0);
@@ -83,7 +88,7 @@ export default function StoryViewerPage() {
       })
       .catch((err) => {
         if (!active) return;
-        setError(err?.response?.data?.error || err.message || 'Failed to load story');
+        setError(classifyViewerError(err));
       })
       .finally(() => { if (active) setLoading(false); });
 
@@ -92,7 +97,7 @@ export default function StoryViewerPage() {
   // visit, and re-running it because the tag changed would count the same
   // person twice.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, reloadKey]);
 
   // ── User starts the story (gesture → unlocks audio) ──────────
   // Reported once per visit: watching it twice is one person who stayed.
@@ -347,7 +352,7 @@ export default function StoryViewerPage() {
           <div className="flex-1 rounded-xl bg-gray-800/60" />
         </div>
       ) : error ? (
-        <div className="flex-1 flex items-center justify-center text-red-400">{error}</div>
+        <ViewerError kind={error} onRetry={() => { setError(''); setReloadKey((n) => n + 1); }} />
       ) : (
         <>
           {/* Top bar */}

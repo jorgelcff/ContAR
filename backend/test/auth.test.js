@@ -414,6 +414,13 @@ describe('the endpoints that wait on the mail server', () => {
         expect(opts[key], `${key} must clear the slowest handshake observed`).toBeGreaterThanOrEqual(25000);
         expect(opts[key], `${key} must answer before the gateway does`).toBeLessThanOrEqual(60000);
       }
+
+      // smtp.gmail.com publishes both A and AAAA records. Left to choose, Node
+      // took the IPv6 one in a container with no IPv6 route, and every send
+      // died with ENETUNREACH against an address like 2607:f8b0:400e:c05::6d —
+      // after sitting on it for the full connection timeout. Nothing was wrong
+      // with the port or the password; it was dialling somewhere unreachable.
+      expect(opts.family, 'the transport must not be left to pick IPv6').toBe(4);
     } finally {
       spy.mockRestore();
       process.env.SMTP_USER = prev.user;

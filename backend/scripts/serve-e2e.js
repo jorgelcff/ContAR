@@ -18,12 +18,31 @@ process.env.AUTH_RATE_LIMIT_MAX = process.env.AUTH_RATE_LIMIT_MAX || '2000';
 // with ECONNRESET). A low cost here only weakens throwaway E2E accounts in
 // an in-memory DB that's destroyed when the process exits.
 process.env.BCRYPT_COST = process.env.BCRYPT_COST || '4';
-// This process loads the real backend/.env, so it inherits real SMTP
-// credentials. A suite run registers dozens of throwaway users, and sending is
-// gated on these being present — leaving them set would fire that many real
-// messages from the developer's own mailbox at fake addresses on every run.
+// Nothing below is loaded from backend/.env — dotenv is required only by
+// server.js, and this script boots app.js directly. That is worth stating
+// because an earlier comment here claimed the opposite, and a comment that
+// misstates which credentials a test run is holding is worse than none.
+//
+// The blanking stays anyway, and is the point: it is what the isolation
+// *rests on* rather than a side effect of an import graph nobody is
+// maintaining. The day someone adds dotenv to app.js — a one-line change that
+// looks harmless — a suite run would otherwise fire dozens of real messages
+// from the developer's own mailbox, and upload every test file to the real
+// media account.
 process.env.SMTP_USER = '';
 process.env.SMTP_PASS = '';
+// Uploads fall back to backend/uploads/ on disk without these. No test
+// attaches a file today, so nothing has ever reached the real account — but
+// that is a property of the tests, not of the harness, and the first test that
+// uploads should not be the thing that discovers it.
+process.env.CLOUDINARY_CLOUD_NAME = '';
+process.env.CLOUDINARY_API_KEY = '';
+process.env.CLOUDINARY_API_SECRET = '';
+// Same reasoning for the paid APIs: a test that reaches them should fail
+// loudly on a missing key, not quietly spend money.
+process.env.OPENAI_API_KEY = '';
+process.env.AZURE_SPEECH_KEY = '';
+process.env.ELEVENLABS_API_KEY = '';
 // Which leaves no mailbox to click a confirmation link in, and publishing now
 // requires a confirmed account. Opt-in, and only ever set here.
 process.env.AUTO_VERIFY_EMAIL = '1';

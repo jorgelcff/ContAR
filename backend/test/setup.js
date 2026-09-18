@@ -6,6 +6,19 @@ const mongoose = require('mongoose');
 process.env.AUTH_JWT_SECRET = 'test_only_secret_do_not_use_in_prod';
 process.env.NODE_ENV = 'test';
 
+// Unit tests require app.js, which does not load dotenv — so these are empty
+// already. Setting them is the guarantee rather than a consequence: no test
+// run may reach the real media account, mailbox, or a paid API, whatever the
+// import graph looks like later.
+process.env.CLOUDINARY_CLOUD_NAME = '';
+process.env.CLOUDINARY_API_KEY = '';
+process.env.CLOUDINARY_API_SECRET = '';
+process.env.SMTP_USER = '';
+process.env.SMTP_PASS = '';
+process.env.OPENAI_API_KEY = '';
+process.env.AZURE_SPEECH_KEY = '';
+process.env.ELEVENLABS_API_KEY = '';
+
 let mongod;
 
 // Every test file starts its own mongod, and vitest runs files in parallel, so

@@ -98,3 +98,31 @@ describe('budgets are per account, not per address', () => {
     expect(quietRemaining).toBeGreaterThan(heavyRemaining);
   });
 });
+
+// The isolation used to be accidental: the suite never reached the real media
+// account or mailbox because app.js happens not to load dotenv, and because no
+// test happens to attach a file. Both are true today and neither is enforced
+// by anything. Adding `require('dotenv').config()` to app.js is a one-line
+// change that looks harmless and would hand every test run the production
+// credentials — this is what would fail.
+describe('the test environment holds no real credentials', () => {
+  const mustBeEmpty = [
+    'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
+    'SMTP_USER', 'SMTP_PASS',
+    'OPENAI_API_KEY', 'AZURE_SPEECH_KEY', 'ELEVENLABS_API_KEY',
+  ];
+
+  for (const name of mustBeEmpty) {
+    it(`${name} is not set`, () => {
+      expect(
+        process.env[name] || '',
+        `${name} is set during tests — a run could reach the real service`,
+      ).toBe('');
+    });
+  }
+
+  it('uploads fall back to disk, so nothing can reach the real media account', async () => {
+    const { cloudinaryConfigured } = require('../config/cloudinary');
+    expect(cloudinaryConfigured, 'tests must never upload to the real account').toBe(false);
+  });
+});

@@ -34,16 +34,24 @@ function sanitizeUser(user) {
   };
 }
 
-// Nodemailer's own timeouts are measured in minutes — greeting 30s, connect
-// 2min, socket 10min. A managed host gives an HTTP request far less than that
-// (Render cuts at about 100s and answers 502 Bad Gateway), so an SMTP port that
-// hangs rather than refusing turns into a gateway error with nothing in the
-// logs. Bounded well under the platform's ceiling, a stuck send surfaces as a
-// real error from this process instead.
+// Two ceilings to sit between, and the first attempt at this sat too close to
+// the wrong one.
+//
+// Above: a managed host gives an HTTP request about 100 seconds before it
+// answers 502, and nodemailer's own defaults are longer than that (greeting
+// 30s, connect 2min, socket 10min) — so a mail port that hangs rather than
+// refusing becomes a gateway error with nothing in the logs.
+//
+// Below: this SMTP path is genuinely slow and genuinely erratic. Measured
+// against the real server, three consecutive handshakes took 1.6s, 22.5s and
+// 2.1s. The first version of this capped the greeting at 10s, which would have
+// killed that middle one — turning a slow send that worked into a failure. A
+// timeout has to be past the worst case you have actually seen, not past the
+// typical one.
 const SMTP_TIMEOUTS = {
-  connectionTimeout: 10_000,
-  greetingTimeout: 10_000,
-  socketTimeout: 15_000,
+  connectionTimeout: 30_000,
+  greetingTimeout: 30_000,
+  socketTimeout: 45_000,
 };
 
 function createTransporter() {

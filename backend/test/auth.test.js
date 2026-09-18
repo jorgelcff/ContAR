@@ -387,9 +387,12 @@ describe('the endpoints that wait on the mail server', () => {
     }
   });
 
-  it('carries bounded timeouts, so a stuck port cannot outlive the request', async () => {
-    // The defaults are greeting 30s, connect 2min, socket 10min — all longer
-    // than a managed host will hold an HTTP request open.
+  it('carries timeouts that fit between a slow handshake and the gateway', async () => {
+    // Bounded at the top because the platform answers 502 at about 100s, and
+    // nodemailer's defaults (greeting 30s, connect 2min, socket 10min) run
+    // past that. Bounded at the bottom because this SMTP path has been
+    // measured taking 22.5s to shake hands — a ceiling under that would fail
+    // sends that were about to work.
     const nodemailer = require('nodemailer');
     let opts = null;
     const spy = vi.spyOn(nodemailer, 'createTransport').mockImplementation((o) => {
@@ -405,9 +408,10 @@ describe('the endpoints that wait on the mail server', () => {
         .post('/api/auth/resend-verification')
         .set('Authorization', user.authHeader)
         .send({});
-      expect(opts.connectionTimeout).toBeLessThanOrEqual(15000);
-      expect(opts.greetingTimeout).toBeLessThanOrEqual(15000);
-      expect(opts.socketTimeout).toBeLessThanOrEqual(20000);
+      for (const key of ['connectionTimeout', 'greetingTimeout', 'socketTimeout']) {
+        expect(opts[key], `${key} must clear the slowest handshake observed`).toBeGreaterThanOrEqual(25000);
+        expect(opts[key], `${key} must answer before the gateway does`).toBeLessThanOrEqual(60000);
+      }
     } finally {
       spy.mockRestore();
       process.env.SMTP_USER = prev.user;

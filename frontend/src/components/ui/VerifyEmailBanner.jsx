@@ -18,6 +18,12 @@ import Icon from './Icon';
  */
 const RESEND_COOLDOWN_SECONDS = 60;
 
+// Dismissing hides the banner for this visit, not forever. Confirming is what
+// unlocks publishing, so an account that never confirms should meet the nudge
+// again next time — but being unable to get rid of it while working is its own
+// kind of rude. sessionStorage is exactly that boundary.
+const DISMISSED_KEY = 'contar:verify-banner-dismissed';
+
 export default function VerifyEmailBanner() {
   const { t } = useTranslation();
   const { isAuthenticated, emailVerified, resendVerificationEmail } = useAuth();
@@ -28,6 +34,9 @@ export default function VerifyEmailBanner() {
   // mail server is contacted. The countdown makes the wait visible instead of
   // handing out errors, and still lets a real retry through once it expires.
   const [cooldown, setCooldown] = useState(0);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return sessionStorage.getItem(DISMISSED_KEY) === '1'; } catch { return false; }
+  });
 
   useEffect(() => {
     if (cooldown <= 0) return undefined;
@@ -35,7 +44,12 @@ export default function VerifyEmailBanner() {
     return () => clearTimeout(id);
   }, [cooldown]);
 
-  if (!isAuthenticated || emailVerified) return null;
+  if (!isAuthenticated || emailVerified || dismissed) return null;
+
+  const dismiss = () => {
+    setDismissed(true);
+    try { sessionStorage.setItem(DISMISSED_KEY, '1'); } catch { /* ignore */ }
+  };
 
   const resend = async () => {
     if (state === 'sending' || cooldown > 0) return;
@@ -76,6 +90,15 @@ export default function VerifyEmailBanner() {
           : waiting
             ? t('verifyBannerCooldown', { seconds: cooldown })
             : t('verifyBannerResend')}
+      </button>
+
+      <button
+        onClick={dismiss}
+        aria-label={t('verifyBannerDismiss')}
+        title={t('verifyBannerDismiss')}
+        className="ml-1 rounded p-1 text-amber-200/70 transition-colors hover:bg-amber-900/40 hover:text-amber-100"
+      >
+        <Icon name="close" className="h-3.5 w-3.5" />
       </button>
     </div>
   );

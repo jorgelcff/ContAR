@@ -6,6 +6,7 @@ import useTheme from '../../context/useTheme';
 import HelpModal from './HelpModal';
 import VerifyEmailBanner from './VerifyEmailBanner';
 import Icon from './Icon';
+import HeaderMenu from './HeaderMenu';
 
 /** Top navigation bar with title and language/theme toggles. */
 export default function Header() {
@@ -35,6 +36,17 @@ export default function Header() {
       { system: "light", light: "dark", dark: "system" }[theme] || "system";
     setTheme(nextTheme);
   };
+
+  // The same destinations the desktop row shows, for the phone menu — kept
+  // here so the two can never drift into offering different things.
+  const navItems = [
+    ...(isAuthenticated ? [
+      { to: '/scenes', label: t('headerScenes'), icon: 'scene' },
+      { to: '/stories', label: t('headerStories'), icon: 'story' },
+    ] : []),
+    { to: '/ar', label: t('ar'), icon: 'cube' },
+    ...(isAuthenticated ? [{ to: '/account', label: t('headerAccount'), icon: 'user' }] : []),
+  ].map((item) => ({ ...item, active: isActive(item.to) }));
 
   return (
     <>
@@ -91,6 +103,7 @@ export default function Header() {
           >
             <Icon name={themeIcon} className="h-4 w-4" />
           </button>
+          <HeaderMenu items={navItems} />
           <button
             onClick={() => setShowHelp(true)}
             title={t("helpTitle")}

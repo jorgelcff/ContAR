@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const Scene = require('../models/Scene');
+const Story = require('../models/Story');
 const { getAuthSecret } = require('../config/auth');
 const { verificationEmail, passwordResetEmail } = require('../emails/templates');
 const { sendMail, emailConfigured } = require('../emails/send');
@@ -340,4 +342,50 @@ async function changePassword(req, res) {
   }
 }
 
-module.exports = { register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification, updateAccount, changePassword };
+/**
+ * DELETE /api/auth/account — remove the account and everything it owns.
+ *
+ * Someone who signed up at a stand had no way back out: there was no route for
+ * this at all, so erasing a person meant an administrator running a script
+ * against the database. That is not a reasonable answer to give someone who
+ * asks, and under the LGPD it is not an optional feature either.
+ *
+ * The current password is required. A session is enough to change things; it
+ * should not be enough to erase someone, because a borrowed or forgotten
+ * browser is exactly the case this protects against.
+ */
+async function deleteAccount(req, res) {
+  try {
+    if (!ensureDatabaseReady(res)) return;
+    const password = String(req.body?.password || '');
+    if (!password) return res.status(400).json({ error: 'password is required' });
+
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'Senha incorreta' });
+
+    const ownerId = String(user._id);
+    // Content first: an account removed before its rows would leave them
+    // ownerless and no longer reachable by owner.
+    const [scenes, stories] = await Promise.all([
+      Scene.deleteMany({ ownerId }),
+      Story.deleteMany({ ownerId }),
+    ]);
+    await User.deleteOne({ _id: user._id });
+
+    console.log(`[Account] Conta removida: ${user.email} (${scenes.deletedCount} cenas, ${stories.deletedCount} histórias)`);
+    return res.json({
+      deleted: true,
+      scenes: scenes.deletedCount,
+      stories: stories.deletedCount,
+    });
+  } catch (err) {
+    console.error('deleteAccount error:', err);
+    return res.status(500).json({ error: 'Não foi possível apagar a conta.' });
+  }
+}
+
+module.exports = {
+  deleteAccount, register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification, updateAccount, changePassword };

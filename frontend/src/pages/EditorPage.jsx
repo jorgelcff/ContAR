@@ -454,6 +454,41 @@ export default function EditorPage() {
   }, [currentSceneId, sceneTitle, setSceneTitlesById]);
 
   // ── Handlers ─────────────────────────────────────────────────
+  /**
+   * Copies a scene in the story and drops the copy right after it.
+   *
+   * Building eleven scenes that differ only in their line meant rebuilding the
+   * avatar, the pose, the framing and the pacing eleven times. The copy is a
+   * new scene of its own from the first moment — editing it must never reach
+   * back into the original.
+   */
+  const handleDuplicateScene = async (index) => {
+    if (isAddingScene) return;
+    const item = storyScenes[index];
+    if (!item?.sceneId) return;
+    setIsAddingScene(true);
+    setError('');
+    try {
+      const source = await getScene(item.sceneId);
+      const title = source?.metadata?.title || t('epUntitledScene');
+      const copy = await saveScene({
+        // No sceneId: the server mints a new one rather than writing over the
+        // scene being copied.
+        metadata: { ...(source?.metadata || {}), title: t('epCopyOf', { title }) },
+        content: source?.content || {},
+      });
+      if (!copy?.sceneId) throw new Error('missing sceneId');
+
+      useSceneStore.getState().insertStoryScene(index + 1, { ...item, sceneId: copy.sceneId });
+      useSceneStore.getState().setSceneTitlesById({ [copy.sceneId]: t('epCopyOf', { title }) });
+      addToast(t('epSceneDuplicated'), 'success', 3000);
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message || 'Failed to duplicate scene');
+    } finally {
+      setIsAddingScene(false);
+    }
+  };
+
   const handleAddCurrentSceneToStory = async () => {
     // Guard against double-click creating multiple blank entries
     if (isAddingScene) return;
@@ -680,6 +715,7 @@ export default function EditorPage() {
       <div className="flex flex-1 overflow-hidden">
         <LeftPanel
           onAddCurrentSceneToStory={guard('save', handleAddCurrentSceneToStory)}
+          onDuplicateScene={guard('save', handleDuplicateScene)}
           onAddSceneIdToStory={guard('save', handleAddSceneIdToStory)}
           onSaveStory={guard('save', handleSaveStory)}
           onPublishStory={guard('publish', handlePublishStory)}
@@ -784,7 +820,11 @@ export default function EditorPage() {
               </button>
             </div>
           </div>
-          <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} isAddingScene={isAddingScene} />
+          <StoryBuilderPanel
+            onAddScene={handleAddCurrentSceneToStory}
+            onDuplicateScene={guard('save', handleDuplicateScene)}
+            isAddingScene={isAddingScene}
+          />
         </div>
       </div>
 

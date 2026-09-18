@@ -15,7 +15,7 @@ function resolveSceneTitle(sceneTitlesById, sceneId) {
   return raw;
 }
 
-export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
+export default function StoryBuilderPanel({ onAddScene, onDuplicateScene, isAddingScene }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const {
@@ -166,9 +166,21 @@ export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
                           className="w-20 shrink-0 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
                         />
                       )}
+                      {/* Eleven scenes that differ only in their line used to
+                          mean rebuilding the avatar, pose and pacing eleven
+                          times. The copy lands right after its original. */}
+                      <button
+                        onClick={() => onDuplicateScene?.(index)}
+                        disabled={isAddingScene}
+                        className="ml-auto shrink-0 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-xs text-white"
+                        title={t('duplicateSceneTitle')}
+                        aria-label={t('duplicateSceneTitle')}
+                      >
+                        <Icon name="copy" className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => handleEditScene(item.sceneId)}
-                        className="ml-auto shrink-0 px-2 py-1 rounded bg-cyan-700 hover:bg-cyan-600 text-xs text-white"
+                        className="shrink-0 px-2 py-1 rounded bg-cyan-700 hover:bg-cyan-600 text-xs text-white"
                         title={t('editSceneTitle')}
                       >
                         <Icon name="edit" className="w-3.5 h-3.5" />

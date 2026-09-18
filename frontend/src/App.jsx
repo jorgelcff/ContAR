@@ -1,4 +1,5 @@
 import React, { lazy, Suspense } from 'react';
+import PrivacyPage from './pages/PrivacyPage';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { GuestProvider } from './auth/GuestContext';
 import ReconnectingScreen from './components/ui/ReconnectingScreen';
@@ -113,6 +114,9 @@ export default function App() {
               </GuestProvider>
             }
           />
+          {/* Public on purpose: someone deciding whether to sign up needs to
+              read it before they have an account. */}
+          <Route path="/privacidade" element={<PrivacyPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route

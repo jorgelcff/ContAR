@@ -1,7 +1,7 @@
 const express = require('express');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const router = express.Router();
-const { register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification, updateAccount, changePassword } = require('../controllers/authController');
+const { register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification, updateAccount, changePassword, deleteAccount } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
 const WINDOW_MS = 15 * 60 * 1000;
@@ -56,5 +56,8 @@ router.post('/verify-email',          tokenLimiter(), verifyEmail);
 router.post('/resend-verification',   requireAuth, resendLimiter, resendVerification);
 router.put( '/account',               limiter,       requireAuth, updateAccount);
 router.put( '/change-password',       limiter,       requireAuth, changePassword);
+// Irreversible, and it removes everything the account owns. Behind the
+// password as well as the session — see the controller.
+router.delete('/account',             limiter,       requireAuth, deleteAccount);
 
 module.exports = router;

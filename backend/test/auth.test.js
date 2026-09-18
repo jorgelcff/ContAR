@@ -498,3 +498,82 @@ describe('a failed send says which failure it was', () => {
     });
   });
 });
+
+// Someone who signed up at a stand had no way back out: there was no route for
+// this, so erasing a person meant an administrator running a script against
+// the database. Under the LGPD that is not an optional feature.
+describe('DELETE /api/auth/account', () => {
+  const Scene = require('../models/Scene');
+  const Story = require('../models/Story');
+
+  async function withContent(user) {
+    await request(app).post('/api/scene').set('Authorization', user.authHeader)
+      .send({ avatarUrl: 'https://example.com/a.glb' });
+    await request(app).post('/api/story').set('Authorization', user.authHeader)
+      .send({ metadata: { title: 'Minha' }, scenes: [{ sceneId: '11111111-1111-4111-8111-111111111111', order: 0 }] });
+  }
+
+  it('refuses without a session', async () => {
+    const res = await request(app).delete('/api/auth/account').send({ password: 'password123' });
+    expect(res.status).toBe(401);
+  });
+
+  it('refuses without the password — a session is not enough to erase someone', async () => {
+    // A borrowed or forgotten browser is exactly the case this protects.
+    const user = await createAuthedUser();
+    const res = await request(app).delete('/api/auth/account')
+      .set('Authorization', user.authHeader).send({});
+    expect(res.status).toBe(400);
+    expect(await User.countDocuments({ email: user.email })).toBe(1);
+  });
+
+  it('refuses the wrong password, and changes nothing', async () => {
+    const user = await createAuthedUser();
+    await withContent(user);
+    const res = await request(app).delete('/api/auth/account')
+      .set('Authorization', user.authHeader).send({ password: 'not-my-password' });
+
+    expect(res.status).toBe(401);
+    expect(await User.countDocuments({ email: user.email })).toBe(1);
+    expect(await Scene.countDocuments({ ownerId: user.userId })).toBe(1);
+  });
+
+  it('removes the account and everything it owns', async () => {
+    const user = await createAuthedUser();
+    await withContent(user);
+
+    const res = await request(app).delete('/api/auth/account')
+      .set('Authorization', user.authHeader).send({ password: user.password });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ deleted: true, scenes: 1, stories: 1 });
+    expect(await User.countDocuments({ email: user.email })).toBe(0);
+    expect(await Scene.countDocuments({ ownerId: user.userId })).toBe(0);
+    expect(await Story.countDocuments({ ownerId: user.userId })).toBe(0);
+  });
+
+  it('touches nobody else', async () => {
+    // Deleting by owner is easy to get wrong in a way that only shows up when
+    // there is more than one account in the database.
+    const leaving = await createAuthedUser();
+    const staying = await createAuthedUser();
+    await withContent(leaving);
+    await withContent(staying);
+
+    await request(app).delete('/api/auth/account')
+      .set('Authorization', leaving.authHeader).send({ password: leaving.password });
+
+    expect(await User.countDocuments({ email: staying.email })).toBe(1);
+    expect(await Scene.countDocuments({ ownerId: staying.userId })).toBe(1);
+    expect(await Story.countDocuments({ ownerId: staying.userId })).toBe(1);
+  });
+
+  it('the session stops working afterwards', async () => {
+    const user = await createAuthedUser();
+    await request(app).delete('/api/auth/account')
+      .set('Authorization', user.authHeader).send({ password: user.password });
+
+    const after = await request(app).get('/api/auth/me').set('Authorization', user.authHeader);
+    expect(after.status).toBe(404);
+  });
+});

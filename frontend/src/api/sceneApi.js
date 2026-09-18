@@ -267,6 +267,16 @@ export async function pingHealth() {
   return data;
 }
 
+/**
+ * Removes the account and everything it owns. Irreversible, and the password
+ * is required — a session is enough to change things, not to erase someone.
+ */
+export async function deleteAccount(password) {
+  const { data } = await api.delete('/auth/account', { data: { password } });
+  logoutUser();
+  return data;
+}
+
 export async function getStats() {
   const { data } = await api.get('/stats');
   return data;

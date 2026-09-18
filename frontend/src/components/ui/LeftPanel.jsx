@@ -530,7 +530,7 @@ export default function LeftPanel({
                 ) : (
                   <p className="text-[10px] text-gray-400">
                     {t('lpDownloadVrmaAt')}{' '}
-                    <a href="https://hub.vroid.com" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">hub.vroid.com</a>
+                    <a href="https://hub.vroid.com" target="_blank" rel="noreferrer" className="text-cyan-400 underline underline-offset-2">hub.vroid.com</a>
                     {' '}→ Animations
                   </p>
                 )}
@@ -540,10 +540,14 @@ export default function LeftPanel({
             {/* Pose */}
             <div data-tour="pose-selector" className="flex flex-col gap-2">
               <div className="flex items-center gap-1">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pose</p>
+                <p id="pose-selector-label" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pose</p>
                 <TooltipIcon text={t('lpPoseTooltip')} />
               </div>
-              <select value={posePreset} onChange={(e) => handlePoseChange(e.target.value)}
+              {/* Named by the heading above it: a <p> sitting next to a select
+                  looks like a label and is tied to nothing. */}
+              <select
+                aria-labelledby="pose-selector-label"
+                value={posePreset} onChange={(e) => handlePoseChange(e.target.value)}
                 className="w-full rounded-xl bg-gray-700 border border-gray-600 text-white text-xs px-3 py-2 focus:outline-none focus:border-cyan-500">
                 {/* When a model's embedded animation is active, posePreset is
                     "clip:<name>", which matches none of the options below — the
@@ -624,6 +628,7 @@ export default function LeftPanel({
                   <input
                     type="range"
                     min="0.1" max="3" step="0.05"
+                    aria-label={t('lpSpeed')}
                     value={animSpeed ?? 1}
                     onChange={(e) => setAnimSpeed(parseFloat(e.target.value))}
                     className="flex-1 accent-cyan-400"
@@ -731,7 +736,7 @@ export default function LeftPanel({
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-gray-500">
+                <p className="text-[11px] text-gray-400">
                   {editingLanguage === narrationLanguage
                     ? t('lpNarrationOriginalHint')
                     : t('lpNarrationTranslationHint')}
@@ -805,6 +810,7 @@ export default function LeftPanel({
                         const v = Number(e.target.value);
                         audio.updateLipSyncConfig({ amplitudeMultiplier: 6 + (v - 1) * 3 });
                       }}
+                      aria-label={t('lpSpeechIntensity')}
                       className="w-full accent-cyan-400 cursor-pointer"
                     />
                     <div className="flex justify-between text-[10px] text-gray-400 select-none">
@@ -1026,7 +1032,7 @@ export default function LeftPanel({
                   <Icon name="eye" className="w-4 h-4" /> {t('lpPreviewStory')}
                 </a>
                 {!isStoryPublic && (
-                  <p className="text-[11px] text-gray-500 leading-snug">{t('lpPreviewStoryPrivate')}</p>
+                  <p className="text-[11px] text-gray-400 leading-snug">{t('lpPreviewStoryPrivate')}</p>
                 )}
               </>
             )}

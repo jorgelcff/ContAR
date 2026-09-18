@@ -7,12 +7,15 @@ const AxeBuilder = require('@axe-core/playwright').default;
 // future unmapped color or low-contrast text/background pairing fails CI
 // instead of waiting for someone to notice.
 //
-// Scoped to the single 'color-contrast' rule (not a full a11y audit) to match
-// what was actually manually verified: WCAG AA text/background contrast
-// across every page and both themes.
+// Was scoped to the single 'color-contrast' rule, to match what had actually
+// been verified by hand at the time. Running the full WCAG AA set turned up
+// five nodes in total across every page — a canvas carrying role="img" with no
+// name, and four inputs whose labels sat beside them rather than around them,
+// so they read as decoration to a screen reader. Both are fixed, so the audit
+// no longer has a reason to look away from the rest.
 async function contrastViolations(page) {
   const results = await new AxeBuilder({ page })
-    .withRules(['color-contrast'])
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
   return results.violations;
 }

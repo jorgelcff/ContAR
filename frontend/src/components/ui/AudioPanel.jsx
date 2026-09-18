@@ -117,6 +117,7 @@ export default function AudioPanel({
         {/* Azure: voice selector */}
         {provider === 'azure' && (
           <select
+            aria-label={t('apVoice')}
             value={selectedVoice}
             onChange={(e) => setSelectedVoice(e.target.value)}
             className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
@@ -130,6 +131,7 @@ export default function AudioPanel({
         {/* Web Speech: language selector */}
         {provider === 'webspeech' && (
           <select
+            aria-label={t('apLanguage')}
             value={selectedLang}
             onChange={(e) => setSelectedLang(e.target.value)}
             className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"

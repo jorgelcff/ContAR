@@ -937,6 +937,10 @@ export default function ARPage() {
             </div>
             <div className="shrink-0 rounded-xl bg-white p-3">
               <QRCodeCanvas
+                // A canvas carrying role="img" with no name is unreadable to a
+                // screen reader: it announces "image" and stops. The link is
+                // beside it in text, so the name only has to say what this is.
+                aria-label={t('qrButton')}
                 value={window.location.href}
                 size={512}
                 level="M"

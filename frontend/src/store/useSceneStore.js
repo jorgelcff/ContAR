@@ -172,6 +172,19 @@ const createStorySlice = (set, get) => ({
   addStoryScene: (sceneId, transitionText = '', durationSeconds = 8) => set((state) => ({
     storyScenes: [...state.storyScenes, { sceneId, transitionText, durationSeconds, markerUrl: '' }],
   })),
+  /**
+   * Puts a scene entry at a position rather than at the end — what duplicating
+   * needs, since a copy belongs beside its original and not after everything.
+   * Carries the whole entry, so the copy keeps the pacing and the marker the
+   * original had.
+   */
+  insertStoryScene: (index, entry) => set((state) => {
+    const next = [...state.storyScenes];
+    next.splice(Math.max(0, Math.min(index, next.length)), 0, {
+      transitionText: '', durationSeconds: 8, markerUrl: '', ...entry,
+    });
+    return { storyScenes: next };
+  }),
   removeStoryScene: (index) => set((state) => ({
     storyScenes: state.storyScenes.filter((_, i) => i !== index),
   })),

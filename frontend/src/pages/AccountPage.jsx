@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import ReachPanel from '../components/ui/ReachPanel';
+import DeleteAccountSection from '../components/ui/DeleteAccountSection';
 import { useAuth } from '../auth/AuthContext';
 import { updateAccount, changePassword, getStats } from '../api/sceneApi';
 import { useTranslation } from 'react-i18next';
@@ -91,14 +92,14 @@ export default function AccountPage() {
         <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 flex flex-col gap-4">
           <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">{t('accountProfileSection')}</h2>
           <form onSubmit={saveName} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">{t('accountProfileName')}</label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-gray-400">{t('accountProfileName')}</span>
               <input
                 type="text" value={name} onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-blue-500"
                 required
               />
-            </div>
+            </label>
             <div className="flex items-center gap-3">
               <button type="submit" disabled={nameSaving}
                 className="px-4 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white text-sm font-medium transition-colors">
@@ -123,27 +124,27 @@ export default function AccountPage() {
             </div>
           )}
           <form onSubmit={savePassword} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">{t('accountPasswordCurrent')}</label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-gray-400">{t('accountPasswordCurrent')}</span>
               <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)}
                 autoComplete="current-password" required
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-blue-500"
               />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">{t('accountPasswordNew')}</label>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-gray-400">{t('accountPasswordNew')}</span>
               <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)}
                 autoComplete="new-password" required minLength={6}
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-blue-500"
               />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">{t('accountPasswordConfirm')}</label>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-gray-400">{t('accountPasswordConfirm')}</span>
               <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)}
                 autoComplete="new-password" required
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-blue-500"
               />
-            </div>
+            </label>
             <button type="submit" disabled={pwSaving}
               className="self-start px-4 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white text-sm font-medium transition-colors">
               {pwSaving ? t('accountPasswordSaving') : t('accountPasswordSave')}
@@ -151,9 +152,12 @@ export default function AccountPage() {
           </form>
         </section>
 
-        <div className="border-t border-gray-800 pt-4 flex gap-4">
+        <DeleteAccountSection />
+
+        <div className="border-t border-gray-800 pt-4 flex flex-wrap gap-4">
           <Link to="/scenes"  className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">{t('accountLinksScenes')}</Link>
           <Link to="/stories" className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">{t('accountLinksStories')}</Link>
+          <Link to="/privacidade" className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">{t('headerPrivacy')}</Link>
         </div>
       </div>
     </div>

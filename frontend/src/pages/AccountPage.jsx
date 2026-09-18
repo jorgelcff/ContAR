@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import ReachPanel from '../components/ui/ReachPanel';
@@ -14,6 +14,12 @@ export default function AccountPage() {
   // for everyone else, so a null here simply means "not for you" and the panel
   // never renders.
   const [stats, setStats] = useState(null);
+  // Exposed so the panel can refresh itself: the same request that updates the
+  // numbers is also the traffic that keeps a free host from going to sleep.
+  const loadStats = useCallback(
+    () => getStats().then((data) => { setStats(data); return data; }),
+    [],
+  );
   useEffect(() => {
     let active = true;
     getStats()
@@ -79,7 +85,7 @@ export default function AccountPage() {
           <p className="text-sm text-gray-400 mt-0.5">{user?.email}</p>
         </div>
 
-        <ReachPanel stats={stats} />
+        <ReachPanel stats={stats} onRefresh={loadStats} />
 
         {/* Nome */}
         <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 flex flex-col gap-4">

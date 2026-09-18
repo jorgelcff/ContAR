@@ -257,6 +257,16 @@ export async function mapBones(boneNames) {
 
 /** Reach numbers for the deployment. 403 for anyone not in ADMIN_EMAILS, which
  *  is how the Account page decides whether to show the panel at all. */
+/**
+ * Cheapest thing the server answers: no database, no auth, no rate limiter.
+ * Used to keep a sleeping host awake, where the point is the request arriving
+ * rather than anything in the reply.
+ */
+export async function pingHealth() {
+  const { data } = await api.get('/health');
+  return data;
+}
+
 export async function getStats() {
   const { data } = await api.get('/stats');
   return data;

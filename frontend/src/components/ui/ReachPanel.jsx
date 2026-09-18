@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { pingHealth } from '../../api/sceneApi';
 
 /**
  * Reach, for whoever deployed this. It used to be two headline numbers and a
@@ -15,6 +16,22 @@ import { useTranslation } from 'react-i18next';
  * Both plot a single measure, so both use one hue (--chart-accent, validated
  * against the light and dark card surfaces) and neither carries a legend.
  */
+
+/**
+ * How often the panel refreshes itself while it is switched on.
+ *
+ * A free host suspends a service that has gone unvisited, and a suspended
+ * service cannot keep itself up — there is no process left to send anything,
+ * so two services pinging each other cannot work: whichever falls asleep first
+ * simply stops. What does work is a request from outside, and a browser with
+ * this page open is outside.
+ *
+ * So this is honest about what it is: a dashboard that refreshes, which as a
+ * side effect keeps the host awake for as long as the tab stays open. It is
+ * not a substitute for an external uptime ping when nobody is looking.
+ */
+const REFRESH_MS = 25_000;
+const KEEP_AWAKE_KEY = 'contar:keep-awake';
 
 /** 'YYYY-MM-DD' → a short local label, read as UTC so the day cannot shift. */
 function dayLabel(iso, language) {
@@ -111,8 +128,50 @@ function SignupTrend({ days, language }) {
   );
 }
 
-export default function ReachPanel({ stats }) {
+export default function ReachPanel({ stats, onRefresh }) {
   const { t, i18n } = useTranslation();
+
+  const [keepAwake, setKeepAwake] = useState(() => {
+    try { return localStorage.getItem(KEEP_AWAKE_KEY) === '1'; } catch { return false; }
+  });
+  // Seconds since the last refresh, counted rather than derived from the clock
+  // at render time — reading the clock during render is not reproducible.
+  const [secondsAgo, setSecondsAgo] = useState(null);
+  // Mirrored in an effect rather than assigned during render: the heartbeat
+  // below must not restart every time the parent hands down a new function,
+  // but writing a ref while rendering is not allowed either.
+  const refreshRef = useRef(onRefresh);
+  useEffect(() => { refreshRef.current = onRefresh; }, [onRefresh]);
+
+  useEffect(() => {
+    try { localStorage.setItem(KEEP_AWAKE_KEY, keepAwake ? '1' : '0'); } catch { /* ignore */ }
+  }, [keepAwake]);
+
+  useEffect(() => {
+    if (!keepAwake) return undefined;
+    let cancelled = false;
+    const beat = async () => {
+      try {
+        await refreshRef.current?.();
+      } catch {
+        // The numbers failing must not stop the heartbeat — keeping the host
+        // awake is the half that matters when nobody is watching the figures.
+        await pingHealth().catch(() => {});
+      }
+      if (!cancelled) setSecondsAgo(0);
+    };
+    beat();
+    const id = setInterval(beat, REFRESH_MS);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [keepAwake]);
+
+  // Advances the "updated Ns ago" line without re-fetching anything.
+  useEffect(() => {
+    if (!keepAwake) return undefined;
+    const id = setInterval(() => setSecondsAgo((n) => (n === null ? null : n + 1)), 1000);
+    return () => clearInterval(id);
+  }, [keepAwake]);
+
   if (!stats) return null;
 
   const days = Array.isArray(stats.signupsByDay) ? stats.signupsByDay : [];
@@ -150,6 +209,29 @@ export default function ReachPanel({ stats }) {
         <h3 className="text-xs text-gray-300">{t('statsFunnelTitle')}</h3>
         <Funnel stages={stages} total={stats.users || 0} />
       </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-700 pt-3">
+        <label className="flex items-center gap-2 text-xs text-gray-300">
+          <input
+            type="checkbox"
+            checked={keepAwake}
+            // Clearing the counter belongs to the act of switching it off, not
+            // to an effect reacting to it afterwards.
+            onChange={(e) => {
+              setKeepAwake(e.target.checked);
+              if (!e.target.checked) setSecondsAgo(null);
+            }}
+            className="h-4 w-4 accent-cyan-600"
+          />
+          {t('statsKeepAwake')}
+        </label>
+        <span className="text-[11px] tabular-nums text-gray-500">
+          {keepAwake
+            ? (secondsAgo === null ? t('statsKeepAwakeStarting') : t('statsKeepAwakeAgo', { count: secondsAgo }))
+            : t('statsKeepAwakeOff')}
+        </span>
+      </div>
+      <p className="-mt-2 text-[11px] leading-snug text-gray-500">{t('statsKeepAwakeHint')}</p>
 
       <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-gray-700 pt-3 text-xs text-gray-400">
         <span>{t('statsScenes', { count: stats.scenes })}</span>

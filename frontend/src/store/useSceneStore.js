@@ -40,17 +40,94 @@ const createAvatarSlice = (set) => ({
   setVrmExpression: (expr) => set({ vrmExpression: expr }),
 });
 
-const createSpeechSlice = (set) => ({
+const createSpeechSlice = (set, get) => ({
+  // ── Narration, per language ─────────────────────────────────────────────
+  // `narrations` is the authoritative store: every language the scene has,
+  // each with its own text and its own recording. `speechText` and
+  // `narrativeAudioUrl` stay as the working copy of whichever language is
+  // being edited, so every control that already reads them — the speech
+  // bubble, the audio panel, the preview — keeps working untouched.
+  narrations: {},
+  narrationLanguage: 'pt',  // which language the scene was authored in
+  editingLanguage: 'pt',    // which one the Fala tab is pointed at right now
+
   speechText: '',
   narrativeAudioUrl: '',
   // How narration text is shown over the avatar: 'bubble' | 'subtitle' | 'none'.
   // Persisted per scene so the editor, story viewer and AR all render the same way.
   textDisplayMode: 'bubble',
-  setSpeechText: (text) => set({ speechText: text }),
-  setNarrativeAudioUrl: (url) => set({ narrativeAudioUrl: url }),
+
+  setSpeechText: (text) => set((state) => ({
+    speechText: text,
+    narrations: { ...state.narrations, [state.editingLanguage]: {
+      ...(state.narrations[state.editingLanguage] || {}), text,
+    } },
+  })),
+  setNarrativeAudioUrl: (url) => set((state) => ({
+    narrativeAudioUrl: url,
+    narrations: { ...state.narrations, [state.editingLanguage]: {
+      ...(state.narrations[state.editingLanguage] || {}), audioUrl: url,
+    } },
+  })),
   setTextDisplayMode: (mode) => set({ textDisplayMode: mode }),
-  clearSpeech: () => set({ speechText: '', narrativeAudioUrl: '' }),
+  clearSpeech: () => set((state) => ({
+    speechText: '',
+    narrativeAudioUrl: '',
+    narrations: { ...state.narrations, [state.editingLanguage]: { text: '', audioUrl: '' } },
+  })),
+
+  /** Point the Fala tab at another language, loading whatever it already has. */
+  setEditingLanguage: (language) => set((state) => {
+    const entry = state.narrations[language] || {};
+    return {
+      editingLanguage: language,
+      speechText: entry.text || '',
+      narrativeAudioUrl: entry.audioUrl || '',
+    };
+  }),
+
+  /** Which language the scene was authored in; the one everything falls back to. */
+  setNarrationLanguage: (language) => set({ narrationLanguage: language }),
+
+  /** Languages this scene actually has something in — drives the editor's chips. */
+  filledNarrationLanguages: () => {
+    const { narrations } = get();
+    return Object.keys(narrations).filter((lang) => {
+      const entry = narrations[lang] || {};
+      return String(entry.text || '').trim() || String(entry.audioUrl || '').trim();
+    });
+  },
 });
+
+/**
+ * Folds the per-language working set back into what the API stores: the
+ * authored language as `text`/`audioUrl`, every other language under
+ * `translations`. Languages with nothing in them are left out entirely — an
+ * empty slot is one the editor happened to open, not a translation.
+ */
+function buildNarrative(state) {
+  const { narrations, narrationLanguage, textDisplayMode } = state;
+  const base = narrations[narrationLanguage] || {};
+  const translations = {};
+
+  for (const lang of Object.keys(narrations)) {
+    if (lang === narrationLanguage) continue;
+    const entry = narrations[lang] || {};
+    const text = String(entry.text || '');
+    const audioUrl = String(entry.audioUrl || '');
+    if (!text.trim() && !audioUrl.trim()) continue;
+    translations[lang] = { text, audioUrl };
+  }
+
+  return {
+    text: String(base.text || ''),
+    audioUrl: String(base.audioUrl || ''),
+    language: narrationLanguage,
+    translations,
+    displayMode: textDisplayMode || 'bubble',
+    bubbleStyle: { color: '#ffffff', fontSize: 14 },
+  };
+}
 
 const createStorySlice = (set, get) => ({
   sceneTitle: '',
@@ -144,6 +221,8 @@ const createStorySlice = (set, get) => ({
     // Always cleared — these describe the scene that was just finished.
     speechText: '',
     narrativeAudioUrl: '',
+    narrations: {},
+    editingLanguage: get().narrationLanguage,
     sceneTitle: '',
     currentSceneId: '',
     timelineBlocks: [],
@@ -151,7 +230,7 @@ const createStorySlice = (set, get) => ({
   }),
 
   buildScenePayload: (existingId) => {
-    const { sceneTitle, avatarUrl, posePreset, transform, speechText, narrativeAudioUrl, textDisplayMode, timelineBlocks, timelineDuration, animSpeed, animLoopOnce, vrmExpression, vrmaUrl } = get();
+    const { sceneTitle, avatarUrl, posePreset, transform, timelineBlocks, timelineDuration, animSpeed, animLoopOnce, vrmExpression, vrmaUrl } = get();
     return {
       sceneId: existingId !== undefined ? existingId : (get().currentSceneId || undefined),
       metadata: { title: sceneTitle || 'Untitled Scene', theme: '' },
@@ -178,12 +257,7 @@ const createStorySlice = (set, get) => ({
             scale: [transform.scale, transform.scale, transform.scale],
           },
         },
-        narrative: {
-          text: speechText,
-          audioUrl: narrativeAudioUrl || '',
-          displayMode: textDisplayMode || 'bubble',
-          bubbleStyle: { color: '#ffffff', fontSize: 14 },
-        },
+        narrative: buildNarrative(get()),
         timeline: {
           duration: timelineDuration,
           blocks: timelineBlocks,
@@ -209,6 +283,9 @@ export const useSceneStore = create(
         transform: state.transform,
         speechText: state.speechText,
         narrativeAudioUrl: sanitizeUrl(state.narrativeAudioUrl),
+        narrations: state.narrations,
+        narrationLanguage: state.narrationLanguage,
+        editingLanguage: state.editingLanguage,
         textDisplayMode: state.textDisplayMode,
         sceneTitle: state.sceneTitle,
         currentSceneId: state.currentSceneId,

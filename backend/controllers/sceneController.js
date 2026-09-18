@@ -7,6 +7,53 @@ function safeString(val) {
   return typeof val === 'string' ? val : undefined;
 }
 
+// The languages the interface itself speaks. Anything else is dropped rather
+// than stored: the switcher can only offer what it has labels for, and an
+// unbounded key space here is a map of arbitrary strings written straight into
+// the document by whoever can save a scene.
+const NARRATION_LANGUAGES = ['pt', 'en', 'es', 'fr'];
+const MAX_NARRATION_CHARS = 5000;
+
+/**
+ * `content` is otherwise handed to mongoose whole, and translations is a Mixed
+ * field — which means no schema is checking it. This is the check: known
+ * language keys, string values, bounded length.
+ */
+function sanitizeTranslations(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out = {};
+  for (const key of Object.keys(raw)) {
+    const lang = String(key).split('-')[0].toLowerCase();
+    if (!NARRATION_LANGUAGES.includes(lang)) continue;
+    const entry = raw[key];
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    const text = String(entry.text || '').slice(0, MAX_NARRATION_CHARS);
+    const audioUrl = String(entry.audioUrl || '').slice(0, 2000);
+    // An entry with neither is not a translation, just an empty slot the
+    // editor happened to open.
+    if (!text.trim() && !audioUrl.trim()) continue;
+    out[lang] = { text, audioUrl };
+  }
+  return out;
+}
+
+function sanitizeNarrative(content) {
+  const narrative =
+    content.narrative && typeof content.narrative === 'object' && !Array.isArray(content.narrative)
+      ? content.narrative : null;
+  if (!narrative) return content;
+
+  const language = String(narrative.language || '').split('-')[0].toLowerCase();
+  return {
+    ...content,
+    narrative: {
+      ...narrative,
+      language: NARRATION_LANGUAGES.includes(language) ? language : '',
+      translations: sanitizeTranslations(narrative.translations),
+    },
+  };
+}
+
 // POST /api/scene — save or update a scene
 async function saveScene(req, res) {
   try {
@@ -18,9 +65,10 @@ async function saveScene(req, res) {
     const metadata =
       body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)
         ? body.metadata : {};
-    const content =
+    const rawContent =
       body.content && typeof body.content === 'object' && !Array.isArray(body.content)
         ? body.content : {};
+    const content = sanitizeNarrative(rawContent);
 
     // Refuse to write over someone else's scene. The upsert used to match on
     // sceneId alone *and* set ownerId to the caller, so anyone posting a
@@ -123,4 +171,5 @@ async function deleteScene(req, res) {
   }
 }
 
-module.exports = { saveScene, listScenes, getScene, deleteScene };
+module.exports = {
+  NARRATION_LANGUAGES, saveScene, listScenes, getScene, deleteScene };

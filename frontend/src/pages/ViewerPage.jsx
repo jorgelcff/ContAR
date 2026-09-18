@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { pickNarration } from '../utils/narration';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -40,8 +41,11 @@ export default function ViewerPage() {
   // Load and play audio when scene data arrives
   useEffect(() => {
     if (!scene || audioLoadedRef.current) return;
-    const audioUrl = scene.content?.narrative?.audioUrl;
-    const text = scene.content?.narrative?.text;
+    // The visitor's own language decides, same as the story viewer — a shared
+    // /scene/:id link is scanned by whoever walks past it too.
+    const chosen = pickNarration(scene.content?.narrative, i18n.language);
+    const audioUrl = chosen.audioUrl;
+    const text = chosen.text;
 
     if (audioUrl) {
       audioLoadedRef.current = true;
@@ -118,7 +122,7 @@ export default function ViewerPage() {
               avatarUrl={scene?.content?.avatar?.modelUrl}
               transform={transform}
               posePreset={scene?.content?.avatar?.posePreset || 'idle'}
-              speechText={scene?.content?.narrative?.text}
+              speechText={pickNarration(scene?.content?.narrative, i18n.language).text}
               // Without these the viewer replayed the scene with default playback
               // settings — most visibly, narration always rendered as a bubble
               // even when the scene was authored with subtitles.

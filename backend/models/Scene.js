@@ -26,6 +26,17 @@ const SceneSchema = new mongoose.Schema({
     narrative: {
       text:     { type: String, default: '' },
       audioUrl: { type: String, default: '' },
+      // Which language `text` and `audioUrl` above are in. Empty on every
+      // scene saved before this existed, which the viewer reads as "the
+      // original, whatever it is" — it will not claim a fallback happened.
+      language: { type: String, default: '' },
+      // The same narration in other languages: { en: { text, audioUrl }, … }.
+      // A QR code left at a poster is read by whoever walks past it, and there
+      // is nobody standing there to explain which language it is in.
+      // Deliberately a separate audio file per language rather than one shared
+      // recording — see utils/narration.js on why a language is never applied
+      // by halves.
+      translations: { type: mongoose.Schema.Types.Mixed, default: {} },
       // How narration text is shown: 'bubble' | 'subtitle' | 'none'.
       displayMode: { type: String, default: 'bubble' },
       bubbleStyle: {

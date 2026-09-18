@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from 'react';
 import { sceneAdvanceMs, normalizeAdvanceOn, ADVANCE_ON_TIME } from '../../utils/sceneAdvance';
+import { pickNarration } from '../../utils/narration';
+import i18n from '../../i18n';
 import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -331,7 +333,7 @@ export function useARStory(storyId) {
   useEffect(() => {
     const el = audioRef.current;
     if (!el || !hasStarted) return undefined;
-    const audioUrl = currentScene?.content?.narrative?.audioUrl;
+    const audioUrl = pickNarration(currentScene?.content?.narrative, i18n.language).audioUrl;
     if (audioUrl) {
       el.src = audioUrl;
       el.load();
@@ -422,8 +424,8 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
     <div className={`pointer-events-auto ${compact ? 'absolute top-16 left-3 right-3 z-25' : ''} rounded-xl border border-white/10 bg-gray-900/80 px-3 py-2.5 backdrop-blur-sm`}>
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-xs text-cyan-300 font-medium truncate max-w-[75%]">
-          {story.currentScene?.content?.narrative?.text
-            ? `"${story.currentScene.content.narrative.text.slice(0, 55)}…"`
+          {pickNarration(story.currentScene?.content?.narrative, i18n.language).text
+            ? `"${pickNarration(story.currentScene?.content?.narrative, i18n.language).text.slice(0, 55)}…"`
             : story.story?.metadata?.title}
         </p>
         <p className="text-xs text-gray-500 shrink-0 ml-2">{story.index + 1}/{story.scenes.length}</p>

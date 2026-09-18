@@ -247,6 +247,7 @@ export default function EditorPage() {
       sceneTitle: '',
       posePreset: 'idle',
       narrativeAudioUrl: '',
+      narrations: {},
       textDisplayMode: 'bubble',
       // Reset with the rest: these used to survive here, so opening a second
       // scene inherited the previous one's playback settings.
@@ -279,8 +280,26 @@ export default function EditorPage() {
             rotationZ: ((rot[2] ?? 0) * 180) / Math.PI,
             scale: scale[0] ?? 1,
           },
-          speechText: narrative.text || '',
-          narrativeAudioUrl: narrative.audioUrl || '',
+          // Unpack the stored narration into the per-language working set. A
+          // scene saved before this existed has no stated language; treat it as
+          // the authored one so nothing is presented as a translation of
+          // something that does not exist.
+          ...(() => {
+            const authored = narrative.language || 'pt';
+            const narrations = { [authored]: {
+              text: narrative.text || '', audioUrl: narrative.audioUrl || '',
+            } };
+            for (const [lang, entry] of Object.entries(narrative.translations || {})) {
+              narrations[lang] = { text: entry?.text || '', audioUrl: entry?.audioUrl || '' };
+            }
+            return {
+              narrations,
+              narrationLanguage: authored,
+              editingLanguage: authored,
+              speechText: narrative.text || '',
+              narrativeAudioUrl: narrative.audioUrl || '',
+            };
+          })(),
           textDisplayMode: narrative.displayMode || 'bubble',
           animSpeed: Number(avatar.animSpeed) || 1,
           animLoopOnce: Boolean(avatar.animLoopOnce),

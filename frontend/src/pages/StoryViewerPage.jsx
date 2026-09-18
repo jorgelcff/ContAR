@@ -7,6 +7,8 @@ import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
 import { getPublicStory, getScene } from '../api/sceneApi';
 import { sceneAdvanceMs } from '../utils/sceneAdvance';
+import { pickNarration, narrationLanguages } from '../utils/narration';
+import i18n from '../i18n';
 
 // How long a scene will wait for a narration file before giving up on it.
 const NARRATION_WAIT_LIMIT_MS = 12000;
@@ -30,6 +32,10 @@ export default function StoryViewerPage() {
   // ran before the scene arrived, read "no narration" off a null, and fell
   // straight back to counting seconds — the very thing it replaces.
   const [loadedSceneId, setLoadedSceneId] = useState('');
+  // Which language the visitor is hearing. Starts from their own browser — a
+  // QR code at a poster has nobody standing next to it to ask — and can be
+  // changed from the control in the top bar.
+  const [narrationLang, setNarrationLang] = useState(() => i18n.language);
   const [sceneData, setSceneData]       = useState(null);
   const [hasStarted, setHasStarted]     = useState(false); // user must click ▶ first
   const [isPlaying, setIsPlaying]       = useState(false);
@@ -84,6 +90,12 @@ export default function StoryViewerPage() {
     audio.play().catch(() => {});
   };
 
+  // Which narration this visitor gets, resolved once and used by everything
+  // below: what plays, what the bubble shows, and how long the scene holds.
+  // Declared here because the auto-advance effect right underneath needs it.
+  const narration = pickNarration(sceneData?.content?.narrative, narrationLang);
+  const offeredLanguages = narrationLanguages(sceneData?.content?.narrative);
+
   // ── Scene progress / auto-advance ─────────────────────────────
   useEffect(() => {
     if (loading || error || !storyScenes.length || !isPlaying) return undefined;
@@ -93,7 +105,7 @@ export default function StoryViewerPage() {
     const durationMs = sceneAdvanceMs({
       advanceOn: storyScenes[index]?.advanceOn,
       durationSeconds: storyScenes[index]?.durationSeconds,
-      hasNarrationAudio: Boolean(sceneData?.content?.narrative?.audioUrl),
+      hasNarrationAudio: Boolean(narration.audioUrl),
       audioDuration: audio.audioDuration,
       audioUnavailable: narrationUnavailable,
     });
@@ -136,7 +148,7 @@ export default function StoryViewerPage() {
       }
       window.cancelAnimationFrame(progressFrameRef.current);
     };
-  }, [error, index, isPlaying, loading, storyScenes, sceneData, loadedSceneId, audio.audioDuration, narrationUnavailable]);
+  }, [error, index, isPlaying, loading, storyScenes, sceneData, loadedSceneId, audio.audioDuration, narrationUnavailable, narration.audioUrl]);
 
   useEffect(() => {
     if (!storyScenes.length) return;
@@ -165,8 +177,8 @@ export default function StoryViewerPage() {
 
   // ── Load audio when scene changes ─────────────────────────────
   useEffect(() => {
-    const narrativeAudioUrl = sceneData?.content?.narrative?.audioUrl;
-    const text = sceneData?.content?.narrative?.text || '';
+    const narrativeAudioUrl = narration.audioUrl;
+    const text = narration.text;
     setNarrationUnavailable(false);
 
     if (narrativeAudioUrl) {
@@ -183,7 +195,7 @@ export default function StoryViewerPage() {
     audio.clearVisemeTimeline();
     return undefined;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sceneData]);
+  }, [sceneData, narration.audioUrl, narration.text]);
 
   // ── Sync play / pause with audio ──────────────────────────────
   // Only called after hasStarted — audio element already unlocked by handleStart()
@@ -321,9 +333,32 @@ export default function StoryViewerPage() {
                     {t('viewerPrivatePreview')}
                   </span>
                 )}
+                {/* Only when there is something to switch to. The visitor's own
+                    browser already chose; this is for when it chose wrong. */}
+                {offeredLanguages.length > 1 && (
+                  <label className="flex items-center gap-1 text-[11px] text-gray-400">
+                    <select
+                      data-testid="narration-language"
+                      aria-label={t('viewerNarrationLanguage')}
+                      value={narration.language || offeredLanguages[0]}
+                      onChange={(e) => setNarrationLang(e.target.value)}
+                      className="rounded border border-gray-600 bg-gray-700 px-1.5 py-0.5 text-[11px] text-white focus:border-cyan-500 focus:outline-none"
+                    >
+                      {offeredLanguages.map((lang) => (
+                        <option key={lang} value={lang}>{lang.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </div>
               {story?.metadata?.description && (
                 <p className="text-xs text-gray-400">{linkifyText(story.metadata.description)}</p>
+              )}
+              {/* Said plainly rather than silently substituted: someone who
+                  scanned a code expecting their own language should know why
+                  they are hearing another. */}
+              {narration.isFallback && (
+                <p className="text-[11px] text-amber-300">{t('viewerNarrationFallback')}</p>
               )}
             </div>
             <div className="hidden md:flex items-center gap-2">
@@ -493,7 +528,7 @@ export default function StoryViewerPage() {
                         avatarUrl={sceneData.content.avatar.modelUrl}
                         transform={transform}
                         posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
-                        speechText={sceneData?.content?.narrative?.text || ''}
+                        speechText={narration.text}
                         textDisplayMode={sceneData?.content?.narrative?.displayMode || 'bubble'}
                         vrmaUrl={sceneData?.content?.avatar?.vrmaUrl || ''}
                         animSpeed={sceneData?.content?.avatar?.animSpeed ?? 1}

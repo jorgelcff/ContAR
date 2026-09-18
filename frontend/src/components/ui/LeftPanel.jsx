@@ -33,6 +33,14 @@ const TAB_DEFS = [
 // mean uploading the same file per scene. Kept on the device: the upload
 // endpoint has no listing, and this covers the case that actually hurts —
 // building several scenes in a row.
+// The four the interface speaks; the backend drops anything else.
+const NARRATION_LANGUAGES = [
+  { code: 'pt', label: 'PT' },
+  { code: 'en', label: 'EN' },
+  { code: 'es', label: 'ES' },
+  { code: 'fr', label: 'FR' },
+];
+
 const VRMA_RECENTS_KEY = 'contar:vrma-recents';
 
 export default function LeftPanel({
@@ -65,6 +73,7 @@ export default function LeftPanel({
     transform, setTransform, setFullTransform,
     posePreset, setPosePreset,
     speechText, setSpeechText,
+    narrationLanguage, editingLanguage, setEditingLanguage, filledNarrationLanguages,
     sceneTitle, setSceneTitle,
     storyTitle, setStoryTitle,
     storyDescription, setStoryDescription,
@@ -135,6 +144,9 @@ export default function LeftPanel({
 
   // Fala tab state
   const [speechInput, setSpeechInput] = useState(speechText);
+  // Which languages already have something recorded or written, so the picker
+  // can show at a glance what is still missing.
+  const filledLanguages = filledNarrationLanguages();
 
   // História tab state
   const [manualSceneId, setManualSceneId] = useState('');
@@ -144,7 +156,10 @@ export default function LeftPanel({
   useEffect(() => { setUrlInput(avatarUrl || ''); }, [avatarUrl]);
   // Keep the speech input in sync with the store — e.g. when a scene is loaded
   // for editing, its narration text should appear in the field, ready to edit.
-  useEffect(() => { setSpeechInput(speechText || ''); }, [speechText]);
+  // Also on a language change: without it, switching languages left whatever
+  // was in the box still sitting there, so the Portuguese draft looked like it
+  // had become the English one.
+  useEffect(() => { setSpeechInput(speechText || ''); }, [speechText, editingLanguage]);
 
   useEffect(() => () => {
     if (localBlobUrlRef.current) {
@@ -683,6 +698,46 @@ export default function LeftPanel({
                 {t('speech')}
               </p>
               <p className="text-xs text-gray-400">{t('lpSpeechHint')}</p>
+
+              {/* Which language this narration is for. One scene can carry the
+                  same line in several, each with its own recording, so a QR
+                  code left at a poster serves whoever scans it. The text and
+                  audio controls below always act on the language picked here. */}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs font-medium text-gray-400">{t('lpNarrationLanguage')}</p>
+                <div className="flex flex-wrap gap-1">
+                  {NARRATION_LANGUAGES.map(({ code, label }) => {
+                    const filled = filledLanguages.includes(code);
+                    const active = editingLanguage === code;
+                    return (
+                      <button
+                        key={code}
+                        onClick={() => {
+                          // Keep what is in the box before moving on — losing
+                          // a typed line to a language switch is not a thing
+                          // anyone would expect.
+                          if (speechInput !== speechText) setSpeechText(speechInput);
+                          setEditingLanguage(code);
+                        }}
+                        title={code === narrationLanguage ? t('lpNarrationOriginal') : undefined}
+                        className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] transition-colors ${
+                          active ? 'bg-cyan-700 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        {label}
+                        {code === narrationLanguage && <span aria-hidden className="opacity-70">★</span>}
+                        {filled && !active && <Icon name="check" className="h-3 w-3 text-emerald-400" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500">
+                  {editingLanguage === narrationLanguage
+                    ? t('lpNarrationOriginalHint')
+                    : t('lpNarrationTranslationHint')}
+                </p>
+              </div>
+
               <textarea
                 rows={4}
                 value={speechInput}

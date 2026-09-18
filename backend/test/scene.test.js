@@ -199,3 +199,124 @@ describe('DELETE /api/scene/:id', () => {
     expect(getRes.status).toBe(404);
   });
 });
+
+// A scene can carry the same narration in several languages, so one QR code
+// serves whoever scans it. `content` is handed to mongoose whole and
+// translations is a Mixed field, so nothing in the schema checks it — the
+// controller is the only thing standing between that document and whatever a
+// client sends.
+describe('narration in more than one language', () => {
+  const withTranslations = (translations, language = 'pt') => ({
+    content: {
+      narrative: { text: 'Olá', audioUrl: 'https://cdn/pt.mp3', language, translations },
+    },
+  });
+
+  async function save(user, body) {
+    const res = await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send(body);
+    expect(res.status).toBe(200);
+    const stored = await request(app).get(`/api/scene/${res.body.sceneId}`);
+    return stored.body.content.narrative;
+  }
+
+  it('stores a translation per language, each with its own audio', async () => {
+    const user = await createAuthedUser();
+    const narrative = await save(user, withTranslations({
+      en: { text: 'Hello', audioUrl: 'https://cdn/en.mp3' },
+      es: { text: 'Hola', audioUrl: 'https://cdn/es.mp3' },
+    }));
+
+    expect(narrative.language).toBe('pt');
+    expect(narrative.translations.en).toEqual({ text: 'Hello', audioUrl: 'https://cdn/en.mp3' });
+    expect(narrative.translations.es.audioUrl).toBe('https://cdn/es.mp3');
+    // The original is untouched by any of it.
+    expect(narrative.text).toBe('Olá');
+  });
+
+  it('drops languages the interface cannot label', async () => {
+    const user = await createAuthedUser();
+    const narrative = await save(user, withTranslations({
+      en: { text: 'Hello' },
+      kl: { text: 'Klingon' },
+      __proto__: { text: 'nope' },
+      'not a language at all': { text: 'nope' },
+    }));
+    expect(Object.keys(narrative.translations)).toEqual(['en']);
+  });
+
+  it('normalizes a region tag onto its language', async () => {
+    const user = await createAuthedUser();
+    const narrative = await save(user, withTranslations({ 'en-GB': { text: 'Hello' } }, 'pt-BR'));
+    expect(narrative.translations.en.text).toBe('Hello');
+    expect(narrative.language).toBe('pt');
+  });
+
+  it('ignores an empty slot the editor merely opened', async () => {
+    const user = await createAuthedUser();
+    const narrative = await save(user, withTranslations({
+      en: { text: '', audioUrl: '' },
+      es: { text: 'Hola' },
+    }));
+    expect(narrative.translations.en).toBeUndefined();
+    expect(narrative.translations.es.text).toBe('Hola');
+  });
+
+  // An empty map is not serialized back, which is the same thing as having no
+  // translations — and removing the last one really does remove it, checked
+  // below rather than assumed.
+  const stored = (narrative) => narrative.translations || {};
+
+  it('refuses shapes that are not translations', async () => {
+    const user = await createAuthedUser();
+    for (const translations of ['a string', 42, ['en'], null]) {
+      expect(stored(await save(user, withTranslations(translations)))).toEqual({});
+    }
+    expect(stored(await save(user, withTranslations({ en: 'Hello' })))).toEqual({});
+  });
+
+  it('a translation removed from a scene stays removed', async () => {
+    const user = await createAuthedUser();
+    const created = await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send(withTranslations({ en: { text: 'Hello' } }));
+    const { sceneId } = created.body;
+
+    const added = await request(app).get(`/api/scene/${sceneId}`);
+    expect(added.body.content.narrative.translations.en.text).toBe('Hello');
+
+    await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send({ sceneId, ...withTranslations({}) });
+
+    const after = await request(app).get(`/api/scene/${sceneId}`);
+    expect(stored(after.body.content.narrative)).toEqual({});
+  });
+
+  it('bounds what one scene can store', async () => {
+    const user = await createAuthedUser();
+    const narrative = await save(user, withTranslations({
+      en: { text: 'x'.repeat(9000), audioUrl: `https://cdn/${'y'.repeat(3000)}.mp3` },
+    }));
+    expect(narrative.translations.en.text.length).toBe(5000);
+    expect(narrative.translations.en.audioUrl.length).toBe(2000);
+  });
+
+  it('leaves a scene saved before any of this existed alone', async () => {
+    const user = await createAuthedUser();
+    const res = await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send({ content: { narrative: { text: 'Uma cena antiga', audioUrl: 'https://cdn/old.mp3' } } });
+    expect(res.status).toBe(200);
+
+    const saved = await request(app).get(`/api/scene/${res.body.sceneId}`);
+    expect(saved.body.content.narrative.text).toBe('Uma cena antiga');
+    expect(saved.body.content.narrative.language).toBe('');
+    expect(stored(saved.body.content.narrative)).toEqual({});
+  });
+});

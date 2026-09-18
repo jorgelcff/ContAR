@@ -1,4 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { pickNarration } from '../utils/narration';
+import i18n from '../i18n';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -82,7 +84,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   effectivePoseRef.current = effectivePosePreset;
   const effectiveDisplayMode = resolveSceneDisplayMode(story, storyId, displayMode);
   const narrationText = storyId
-    ? (story.hasStarted ? (story.currentScene?.content?.narrative?.text || '') : '')
+    ? (story.hasStarted ? pickNarration(story.currentScene?.content?.narrative, i18n.language).text : '')
     : (narrativeText || '');
   const pseudoHref = useMemo(
     () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined }),

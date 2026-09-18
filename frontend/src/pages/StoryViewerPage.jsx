@@ -1,11 +1,11 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import { useTranslation } from 'react-i18next';
 import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
-import { getPublicStory, getScene } from '../api/sceneApi';
+import { getPublicStory, getScene, markStoryFinished } from '../api/sceneApi';
 import { sceneAdvanceMs } from '../utils/sceneAdvance';
 import { pickNarration, narrationLanguages } from '../utils/narration';
 import i18n from '../i18n';
@@ -37,6 +37,11 @@ export default function StoryViewerPage() {
   // with no indication anything had finished — at the exact moment they were
   // most interested.
   const [hasFinished, setHasFinished] = useState(false);
+  // Which QR code or link this visit came from, so the author can tell the
+  // poster from the slide from the handout. Read once — it is a property of
+  // the arrival, not of the session.
+  const [searchParams] = useSearchParams();
+  const sourceTag = searchParams.get('from') || '';
   // Which language the visitor is hearing. Starts from their own browser — a
   // QR code at a poster has nobody standing next to it to ask — and can be
   // changed from the control in the top bar.
@@ -60,7 +65,7 @@ export default function StoryViewerPage() {
     setLoading(true);
     setError('');
 
-    getPublicStory(id)
+    getPublicStory(id, sourceTag)
       .then((data) => {
         if (!active) return;
         setStory(data);
@@ -83,9 +88,21 @@ export default function StoryViewerPage() {
       .finally(() => { if (active) setLoading(false); });
 
     return () => { active = false; };
+  // sourceTag is deliberately not a dependency: this fetch is what counts the
+  // visit, and re-running it because the tag changed would count the same
+  // person twice.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // ── User starts the story (gesture → unlocks audio) ──────────
+  // Reported once per visit: watching it twice is one person who stayed.
+  const reportedFinishRef = useRef(false);
+  useEffect(() => {
+    if (!hasFinished || reportedFinishRef.current || !id) return;
+    reportedFinishRef.current = true;
+    markStoryFinished(id);
+  }, [hasFinished, id]);
+
   const restart = () => {
     setHasFinished(false);
     setIndex(0);
@@ -455,8 +472,10 @@ export default function StoryViewerPage() {
                       was nothing here at all. */}
                   <div className="w-full border-t border-gray-800 pt-4">
                     <p className="text-xs text-gray-400">{t('viewerMakeYourOwnHint')}</p>
+                    {/* Into the editor, not a sign-up form: they can change
+                        the words and hear it before being asked for anything. */}
                     <Link
-                      to="/login"
+                      to="/experimentar"
                       className="mt-2 inline-block text-sm font-semibold text-cyan-300 underline-offset-4 hover:underline"
                     >
                       {t('viewerMakeYourOwn')}

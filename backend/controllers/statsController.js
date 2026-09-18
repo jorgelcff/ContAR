@@ -65,7 +65,7 @@ async function getStats(req, res) {
       Story.countDocuments({ isPublic: true }),
       // Sign-ups miss the audience a shared link is for entirely — people who
       // watch and leave without ever making an account.
-      Story.aggregate([{ $group: { _id: null, total: { $sum: '$views' } } }]),
+      Story.aggregate([{ $group: { _id: null, total: { $sum: '$views' }, finished: { $sum: '$completions' } } }]),
       Scene.distinct('ownerId', { ownerId: { $nin: ['', null] } }),
       Story.distinct('ownerId', { isPublic: true, ownerId: { $nin: ['', null] } }),
       User.aggregate([
@@ -92,6 +92,7 @@ async function getStats(req, res) {
       stories,
       publishedStories: published,
       storyViews: viewRows?.[0]?.total || 0,
+      storyCompletions: viewRows?.[0]?.finished || 0,
       lastSignupAt: newest?.createdAt || null,
       signupsByDay: zeroFilledDays(counts, TREND_DAYS, now),
     });

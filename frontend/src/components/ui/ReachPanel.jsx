@@ -155,6 +155,7 @@ export default function ReachPanel({ stats }) {
         <span>{t('statsScenes', { count: stats.scenes })}</span>
         <span>{t('statsStories', { count: stats.stories })}</span>
         <span>{t('statsPublished', { count: stats.publishedStories })}</span>
+        <span>{t('statsCompletions')}: {stats.storyCompletions ?? 0}</span>
       </div>
     </section>
   );

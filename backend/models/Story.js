@@ -40,6 +40,15 @@ const StorySchema = new mongoose.Schema({
   // so the number that matters most was the one number nobody had.
   views: { type: Number, default: 0 },
   lastViewedAt: { type: Date, default: null },
+  // How many of those watched it through to the end. Opens alone say a link
+  // was scanned; this says whether the story held anyone — the difference
+  // between reach and retention, and the one a reader of the work will ask
+  // about.
+  completions: { type: Number, default: 0 },
+  // Opens broken down by where the link was handed out: { poster: 12,
+  // slide: 3, direct: 27 }. Print a different tag on each QR code and the
+  // numbers say which channel actually worked.
+  viewsBySource: { type: mongoose.Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

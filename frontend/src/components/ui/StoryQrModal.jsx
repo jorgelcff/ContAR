@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -8,6 +8,14 @@ import { QRCodeCanvas } from 'qrcode.react';
 export default function StoryQrModal({ url, title, onClose }) {
   const { t } = useTranslation();
   const canvasRef = useRef(null);
+
+  // A tag for where this particular code is going: the poster, a slide, a
+  // handout. It rides along in the link and the server tallies opens per tag,
+  // so printing two codes tells you which one people actually scanned. Kept to
+  // what the server will accept as a key rather than silently discarded there.
+  const [source, setSource] = useState('');
+  const cleanSource = source.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24);
+  const qrUrl = cleanSource ? `${url}?from=${cleanSource}` : url;
 
   const storyTitle = title?.trim() || t('qrModalTitle');
 
@@ -21,7 +29,7 @@ export default function StoryQrModal({ url, title, onClose }) {
     if (!dataUrl) return;
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = `qr-${storyTitle.replace(/[^\w-]+/g, '_').slice(0, 40) || 'historia'}.png`;
+    a.download = `qr-${storyTitle.replace(/[^\w-]+/g, '_').slice(0, 40) || 'historia'}${cleanSource ? `-${cleanSource}` : ''}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -56,7 +64,7 @@ export default function StoryQrModal({ url, title, onClose }) {
     <h1>${esc(storyTitle)}</h1>
     <p class="scan">${esc(t('qrScanToView'))}</p>
     <img src="${dataUrl}" alt="QR Code" onload="window.focus();window.print();" />
-    <p class="url">${esc(url)}</p>
+    <p class="url">${esc(qrUrl)}</p>
   </div>
 </body></html>`);
     win.document.close();
@@ -76,10 +84,22 @@ export default function StoryQrModal({ url, title, onClose }) {
           <p className="mt-1 text-xs text-gray-400">{t('qrInstructions')}</p>
         </div>
 
+        <label className="flex w-full flex-col gap-1">
+          <span className="text-[11px] text-gray-400">{t('qrSourceLabel')}</span>
+          <input
+            type="text"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder={t('qrSourcePlaceholder')}
+            className="w-full rounded-lg border border-gray-600 bg-gray-700 px-2.5 py-1.5 text-xs text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none"
+          />
+          <span className="text-[11px] text-gray-500">{t('qrSourceHint')}</span>
+        </label>
+
         {/* QR preview (also the source canvas for print/download) */}
         <div ref={canvasRef} className="rounded-2xl bg-white p-4">
           <QRCodeCanvas
-            value={url}
+            value={qrUrl}
             size={1024}
             level="M"
             marginSize={2}
@@ -87,7 +107,7 @@ export default function StoryQrModal({ url, title, onClose }) {
           />
         </div>
 
-        <p className="text-[10px] font-mono text-gray-500 break-all text-center">{url}</p>
+        <p className="text-[10px] font-mono text-gray-500 break-all text-center">{qrUrl}</p>
 
         <div className="grid w-full grid-cols-2 gap-2">
           <button

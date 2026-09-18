@@ -2,6 +2,8 @@ import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { normalizeAdvanceOn } from '../utils/sceneAdvance';
 import { pickPreviewSource } from '../utils/scenePreview';
+import { useGuest, useGuestGuard } from '../auth/useGuest';
+import GuestInvitation from '../components/ui/GuestInvitation';
 import { Link } from 'react-router-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +24,10 @@ const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function EditorPage() {
+  // Trying it without an account: the character, the words and the browser's
+  // own voice all work; anything that needs the server asks first.
+  const { isGuest } = useGuest();
+  const guard = useGuestGuard();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -111,6 +117,23 @@ export default function EditorPage() {
   const [avatarClips, setAvatarClips] = useState([]);
   const [jawApi, setJawApi] = useState(null);
 
+  // A guest arrives with an empty studio otherwise, which demonstrates
+  // nothing. Seed the bundled character and a line to hear it say, once.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!isGuest || seededRef.current) return;
+    seededRef.current = true;
+    const store = useSceneStore.getState();
+    if (!store.avatarUrl) {
+      useSceneStore.setState({
+        avatarUrl: '/default_model.glb',
+        posePreset: 'speaker',
+        sceneTitle: t('guestDemoTitle'),
+      });
+      store.setSpeechText(t('guestDemoLine'));
+    }
+  }, [isGuest, t]);
+
   useEffect(() => {
     if (hadLocalAvatarOnInit()) {
       addToast(t('epLocalAvatarRemoved'), 'info', 5000);
@@ -141,6 +164,10 @@ export default function EditorPage() {
   const [saveConflict, setSaveConflict] = useState(false);
 
   useEffect(() => {
+    // A guest has nowhere to autosave to — every attempt would be a 401 every
+    // five seconds, and an "unsaved" badge nagging about work that was never
+    // going to be kept.
+    if (isGuest) return;
     // Only autosave when there is meaningful content to preserve
     const hasContent = Boolean(avatarUrl || speechText || sceneTitle);
     if (!hasContent) {
@@ -612,13 +639,18 @@ export default function EditorPage() {
 
   return (
     <div className="flex flex-col h-dvh bg-gray-900 text-white overflow-hidden">
-      {showOnboarding && (
+      {/* Not for a guest. Someone who just scanned a QR code has ten seconds
+          of patience, and an eleven-step tour in front of "change the words
+          and hear it" is the friction this mode exists to remove. The banner
+          and a scene that is already filled in are the guidance here; the tour
+          is waiting for them in the real editor once they have an account. */}
+      {showOnboarding && !isGuest && (
         <OnboardingOverlay onDone={() => {
           setShowOnboarding(false);
           if (shouldShowTour()) setShowTour(true);
         }} />
       )}
-      <WalkthroughTour isOpen={showTour} onClose={() => setShowTour(false)} />
+      <WalkthroughTour isOpen={showTour && !isGuest} onClose={() => setShowTour(false)} />
       <Header />
       {error && (
         <div className="shrink-0 bg-red-900/80 text-red-200 text-sm px-4 py-2 border-b border-red-700 flex items-center justify-between gap-2">
@@ -647,11 +679,11 @@ export default function EditorPage() {
       </div>
       <div className="flex flex-1 overflow-hidden">
         <LeftPanel
-          onAddCurrentSceneToStory={handleAddCurrentSceneToStory}
-          onAddSceneIdToStory={handleAddSceneIdToStory}
-          onSaveStory={handleSaveStory}
-          onPublishStory={handlePublishStory}
-          onUnpublishStory={handleUnpublishStory}
+          onAddCurrentSceneToStory={guard('save', handleAddCurrentSceneToStory)}
+          onAddSceneIdToStory={guard('save', handleAddSceneIdToStory)}
+          onSaveStory={guard('save', handleSaveStory)}
+          onPublishStory={guard('publish', handlePublishStory)}
+          onUnpublishStory={guard('publish', handleUnpublishStory)}
           isStorySaving={isStorySaving}
           isStoryLinked={isStoryLinked}
           isStoryPublic={isStoryPublic}
@@ -747,6 +779,17 @@ export default function EditorPage() {
           <StoryBuilderPanel onAddScene={handleAddCurrentSceneToStory} isAddingScene={isAddingScene} />
         </div>
       </div>
+
+      {isGuest && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-cyan-800/40 bg-cyan-950/30 px-4 py-2 text-xs text-cyan-100">
+          <span>{t('guestBannerText')}</span>
+          <Link to="/login?create=1" className="font-semibold text-cyan-300 underline-offset-4 hover:underline">
+            {t('guestBannerCreate')}
+          </Link>
+        </div>
+      )}
+
+      <GuestInvitation />
 
       {/* Mobile bottom navigation */}
       <BottomNav

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { GuestProvider } from './auth/GuestContext';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Landing and login stay eager: they are the first thing an anonymous visitor
 // paints, and they are light. Every other route is split out — between them
@@ -85,8 +86,21 @@ export default function App() {
             path="/editor"
             element={
               <ProtectedRoute>
-                <EditorPage />
+                <GuestProvider>
+                  <EditorPage />
+                </GuestProvider>
               </ProtectedRoute>
+            }
+          />
+          {/* The same editor with no account behind it. Someone who has just
+              watched a story can change the words and hear the character say
+              them before being asked for anything. */}
+          <Route
+            path="/experimentar"
+            element={
+              <GuestProvider isGuest>
+                <EditorPage />
+              </GuestProvider>
             }
           />
           <Route path="/reset-password" element={<ResetPasswordPage />} />

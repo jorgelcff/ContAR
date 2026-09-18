@@ -409,3 +409,92 @@ describe('counting who watched', () => {
     }
   });
 });
+
+// Opens say a link was scanned. These two say whether the story held anyone,
+// and which QR code they scanned it from — the difference between a number and
+// a result.
+describe('where the audience came from, and whether they stayed', () => {
+  async function publish(user) {
+    const created = await request(app)
+      .post('/api/story')
+      .set('Authorization', user.authHeader)
+      .send(sampleStory);
+    await request(app)
+      .put(`/api/story/${created.body.storyId}/publish`)
+      .set('Authorization', user.authHeader)
+      .send({ isPublic: true });
+    return created.body.storyId;
+  }
+
+  const cardFor = async (user, storyId) => {
+    const list = await request(app).get('/api/story').set('Authorization', user.authHeader);
+    return list.body.stories.find((s) => s.storyId === storyId);
+  };
+
+  it('splits opens by the tag printed on the link', async () => {
+    const author = await createAuthedUser();
+    const storyId = await publish(author);
+
+    await request(app).get(`/api/story/public/${storyId}?from=poster`);
+    await request(app).get(`/api/story/public/${storyId}?from=poster`);
+    await request(app).get(`/api/story/public/${storyId}?from=slide`);
+    await request(app).get(`/api/story/public/${storyId}`);
+
+    const card = await cardFor(author, storyId);
+    expect(card.views).toBe(4);
+    expect(card.viewsBySource).toEqual({ poster: 2, slide: 1, direct: 1 });
+  });
+
+  it('refuses a tag it would have to write into the document verbatim', async () => {
+    const author = await createAuthedUser();
+    const storyId = await publish(author);
+
+    // The tag becomes a key in a Mixed field. Anything unrecognisable counts
+    // as an untagged visit rather than creating a key of its own.
+    // __proto__ and friends match the shape but must never become keys in a
+    // document JavaScript later spreads and reads back.
+    for (const bad of ['A Very Long Tag That Goes On', '__proto__', 'constructor', 'prototype', 'has spaces', '../escape', '']) {
+      await request(app).get(`/api/story/public/${storyId}?from=${encodeURIComponent(bad)}`);
+    }
+
+    const card = await cardFor(author, storyId);
+    expect(card.viewsBySource).toEqual({ direct: 7 });
+  });
+
+  it('counts a visitor who watched it through', async () => {
+    const author = await createAuthedUser();
+    const storyId = await publish(author);
+
+    await request(app).post(`/api/story/${storyId}/finished`);
+    await request(app).post(`/api/story/${storyId}/finished`);
+
+    expect((await cardFor(author, storyId)).completions).toBe(2);
+  });
+
+  it('does not count the author watching their own story through', async () => {
+    const author = await createAuthedUser();
+    const storyId = await publish(author);
+
+    await request(app)
+      .post(`/api/story/${storyId}/finished`)
+      .set('Authorization', author.authHeader);
+
+    expect((await cardFor(author, storyId)).completions).toBe(0);
+  });
+
+  it('says nothing about a story that is not public, including whether it exists', async () => {
+    const author = await createAuthedUser();
+    const draft = await request(app)
+      .post('/api/story')
+      .set('Authorization', author.authHeader)
+      .send(sampleStory);
+
+    const onDraft = await request(app).post(`/api/story/${draft.body.storyId}/finished`);
+    const onNothing = await request(app).post('/api/story/22222222-2222-4222-8222-222222222222/finished');
+
+    // Both answer the same way — a 404 here would leak which ids are real.
+    expect(onDraft.status).toBe(200);
+    expect(onNothing.status).toBe(200);
+    expect((await cardFor(author, draft.body.storyId)).completions).toBe(0);
+  });
+});

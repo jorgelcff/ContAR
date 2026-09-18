@@ -92,6 +92,9 @@ function StoryCard({ story, onDelete, deleting }) {
           <>
             {' · '}
             {t('storiesCardViews', { count: story.views ?? 0 })}
+            {story.views > 0 && (
+              <>{' · '}{t('storiesCardCompleted', { count: story.completions ?? 0 })}</>
+            )}
           </>
         )}
       </p>

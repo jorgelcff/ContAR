@@ -25,6 +25,28 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Guest mode has no token, so every server write comes back 401 anyway.
+// Rather than wrap each button — and miss one — the viewer registers a handler
+// here and hears about all of them: text-to-speech, uploads, saves, whatever
+// gets added later.
+let unauthorizedHandler = null;
+export function onUnauthorized(handler) {
+  unauthorizedHandler = handler;
+  return () => { if (unauthorizedHandler === handler) unauthorizedHandler = null; };
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401 && unauthorizedHandler) {
+      // The handler decides whether this is worth interrupting for; a signed-in
+      // user whose token expired should still get the normal error path.
+      unauthorizedHandler(error);
+    }
+    return Promise.reject(error);
+  },
+);
+
 export function getStoredAuthToken() {
   return localStorage.getItem(AUTH_TOKEN_KEY) || '';
 }
@@ -89,10 +111,29 @@ export async function getStory(id) {
   return data;
 }
 
-/** Load a public story by ID (share link). */
-export async function getPublicStory(id) {
-  const { data } = await api.get(`/story/public/${id}`);
+/**
+ * Load a public story by ID (share link).
+ * `from` is the tag printed on whichever QR code or link brought the visitor
+ * here — the server keeps a tally per tag so the author can tell which one
+ * actually worked.
+ */
+export async function getPublicStory(id, from = '') {
+  const query = from ? `?from=${encodeURIComponent(from)}` : '';
+  const { data } = await api.get(`/story/public/${id}${query}`);
   return data;
+}
+
+/**
+ * Tell the server a visitor reached the last scene. Bookkeeping: it answers
+ * with ok no matter what, and nothing in the viewer waits on it or reacts to
+ * it failing.
+ */
+export async function markStoryFinished(id) {
+  try {
+    await api.post(`/story/${id}/finished`);
+  } catch {
+    // A counter is never worth showing the visitor an error over.
+  }
 }
 
 /** List latest stories. */

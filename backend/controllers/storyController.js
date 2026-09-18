@@ -4,6 +4,21 @@ const User = require('../models/User');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+// Where a link was handed out, as a short tag the author chooses when they
+// print the QR. Bounded on purpose: it becomes a key in a Mixed field, so an
+// unbounded one is arbitrary strings written into the document by anyone who
+// can construct a URL.
+const SOURCE_RE = /^[a-z0-9_-]{1,24}$/;
+// Legal by the pattern above and still not safe to use as a key: these land in
+// a document that JavaScript later spreads and reads back.
+const RESERVED_SOURCES = new Set(['__proto__', 'constructor', 'prototype']);
+
+function safeSource(val) {
+  const tag = String(val || '').trim().toLowerCase();
+  if (!SOURCE_RE.test(tag) || RESERVED_SOURCES.has(tag)) return 'direct';
+  return tag;
+}
+
 function safeString(val) {
   return typeof val === 'string' ? val : undefined;
 }
@@ -105,7 +120,7 @@ async function listStories(_req, res) {
 
     const stories = await Story.find(
       { ownerId },
-      { _id: 0, storyId: 1, metadata: 1, scenes: 1, isPublic: 1, views: 1, createdAt: 1, updatedAt: 1 }
+      { _id: 0, storyId: 1, metadata: 1, scenes: 1, isPublic: 1, views: 1, completions: 1, viewsBySource: 1, createdAt: 1, updatedAt: 1 }
     )
       .sort({ updatedAt: -1 })
       .limit(100);
@@ -117,6 +132,8 @@ async function listStories(_req, res) {
         sceneCount: Array.isArray(s.scenes) ? s.scenes.length : 0,
         isPublic:   Boolean(s.isPublic),
         views:      Number(s.views) || 0,
+        completions: Number(s.completions) || 0,
+        viewsBySource: s.viewsBySource || {},
         createdAt:  s.createdAt,
         updatedAt:  s.updatedAt,
       })),
@@ -155,8 +172,14 @@ async function getPublicStory(req, res) {
     // reach to measure. Fire-and-forget — a counter must never be the reason
     // a page fails to load.
     if (story.isPublic && !isAuthor) {
-      Story.updateOne({ storyId }, { $inc: { views: 1 }, $set: { lastViewedAt: new Date() } })
-        .catch((err) => console.error('view count failed:', err.message));
+      const source = safeSource(req.query?.from);
+      Story.updateOne(
+        { storyId },
+        {
+          $inc: { views: 1, [`viewsBySource.${source}`]: 1 },
+          $set: { lastViewedAt: new Date() },
+        },
+      ).catch((err) => console.error('view count failed:', err.message));
     }
 
     const { ownerId: _ownerId, ...publicStory } = story.toObject();
@@ -164,6 +187,32 @@ async function getPublicStory(req, res) {
   } catch (err) {
     console.error('getPublicStory error:', err);
     return res.status(500).json({ error: 'Failed to load story' });
+  }
+}
+
+// POST /api/story/:id/finished — the visitor reached the last scene.
+// Separate from the view count because it answers a different question, and
+// happens at a different moment. Open to anonymous callers for the same reason
+// the public link is: the audience this measures has no account.
+async function markStoryFinished(req, res) {
+  try {
+    const storyId = safeString(req.params?.id);
+    if (!storyId || !UUID_RE.test(storyId)) {
+      return res.status(400).json({ error: 'Invalid story ID' });
+    }
+
+    const story = await Story.findOne({ storyId }, { isPublic: 1, ownerId: 1 });
+    // Same silence as the public fetch: never reveal whether a story exists.
+    if (!story || !story.isPublic) return res.json({ ok: true });
+    // An author watching their own story through is not an audience.
+    if (req.user?.userId && req.user.userId === story.ownerId) return res.json({ ok: true });
+
+    await Story.updateOne({ storyId }, { $inc: { completions: 1 } });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('markStoryFinished error:', err);
+    // Never a reason for the viewer to show an error — this is bookkeeping.
+    return res.json({ ok: true });
   }
 }
 
@@ -231,4 +280,5 @@ async function deleteStory(req, res) {
   }
 }
 
-module.exports = { saveStory, getStory, listStories, getPublicStory, setStoryPublished, deleteStory };
+module.exports = {
+  markStoryFinished, saveStory, getStory, listStories, getPublicStory, setStoryPublished, deleteStory };

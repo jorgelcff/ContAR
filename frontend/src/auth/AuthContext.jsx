@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { classifyAuthFailure, retryDelay, EXPIRED } from './sessionRecovery';
 import {
   AUTH_TOKEN_KEY,
@@ -22,9 +22,17 @@ export function AuthProvider({ children }) {
   // The server said this token is no good. Only a 401 sets this.
   const [sessionExpired, setSessionExpired] = useState(false);
 
+  // One session check at a time. The waiting screen polls while it is up and
+  // there is a button on it too, so without this a second loop starts on top
+  // of the first and they race each other's state.
+  const inFlightRef = useRef(false);
+
   const loadUser = useCallback(async () => {
     const token = getStoredAuthToken();
     if (!token) { setIsLoading(false); return; }
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    try {
 
     // Every failure used to delete the token, so a cold start on a suspended
     // host — a timeout, a 502 while it boots — signed people out and threw
@@ -61,6 +69,9 @@ export function AuthProvider({ children }) {
         setIsLoading(false);
         await new Promise((resolve) => setTimeout(resolve, wait));
       }
+    }
+    } finally {
+      inFlightRef.current = false;
     }
   }, []);
 

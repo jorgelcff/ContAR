@@ -64,3 +64,52 @@ test.describe('A session when the server is asleep', () => {
     expect(await page.evaluate(() => localStorage.getItem('auth:token'))).toBeNull();
   });
 });
+
+// The waiting screen is not only an explanation — it is the thing doing the
+// waking. A suspended host comes back because requests arrive, and the session
+// check gives up after about fifty seconds, which a cold start can outlast.
+test.describe('While it waits, it keeps knocking', () => {
+  test('requests keep reaching the server past the retry budget', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    const user = await registerUser(request);
+    await page.addInitScript((t) => localStorage.setItem('auth:token', t), user.token);
+
+    let health = 0;
+    await page.route('**/api/health', (route) => {
+      health += 1;
+      return route.fulfill({ status: 502, body: '' }); // still booting
+    });
+    await page.route('**/api/auth/me', (route) => route.fulfill({ status: 502, body: '' }));
+
+    await page.goto('/stories');
+    await expect(page.getByRole('heading', { name: /acordando o servidor|waking the server/i }))
+      .toBeVisible({ timeout: 20000 });
+
+    // Past the point where the session check has run out of attempts.
+    await page.waitForTimeout(25_000);
+    expect(health, 'the screen should still be reaching for the server').toBeGreaterThan(0);
+  });
+
+  test('it lets itself back in when the server answers, with nobody watching', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    const user = await registerUser(request);
+    await page.addInitScript((t) => localStorage.setItem('auth:token', t), user.token);
+
+    let asleep = true;
+    await page.route('**/api/health', (route) => (
+      asleep ? route.fulfill({ status: 502, body: '' }) : route.continue()
+    ));
+    await page.route('**/api/auth/me', (route) => (
+      asleep ? route.fulfill({ status: 502, body: '' }) : route.continue()
+    ));
+
+    await page.goto('/stories');
+    await expect(page.getByRole('heading', { name: /acordando o servidor|waking the server/i }))
+      .toBeVisible({ timeout: 20000 });
+
+    // The host comes back. Nothing is clicked.
+    asleep = false;
+    await expect(page.getByRole('heading', { name: /minhas histórias|my stories/i }))
+      .toBeVisible({ timeout: 40000 });
+  });
+});

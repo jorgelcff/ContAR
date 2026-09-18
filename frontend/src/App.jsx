@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { GuestProvider } from './auth/GuestContext';
+import ReconnectingScreen from './components/ui/ReconnectingScreen';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Landing and login stay eager: they are the first thing an anonymous visitor
 // paints, and they are light. Every other route is split out — between them
@@ -41,14 +42,23 @@ const routerBasename = (() => {
 })();
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isReconnecting, sessionExpired } = useAuth();
 
   if (isLoading) {
     return <div className="min-h-dvh bg-gray-950 text-gray-300 flex items-center justify-center">Loading...</div>;
   }
 
+  // Not signed out — unheard. A suspended host takes the better part of a
+  // minute to come back, and bouncing someone to the login screen for it loses
+  // whatever they were doing over a server that is merely waking up.
+  if (!isAuthenticated && isReconnecting) {
+    return <ReconnectingScreen />;
+  }
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // The query tells the login page to explain itself rather than appearing
+    // for no visible reason.
+    return <Navigate to={sessionExpired ? '/login?expired=1' : '/login'} replace />;
   }
 
   return children;

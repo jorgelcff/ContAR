@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { classifyAuthFailure, retryDelay, EXPIRED } from './sessionRecovery';
 import {
   AUTH_TOKEN_KEY,
   getCurrentUser,
@@ -15,18 +16,51 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser]         = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  // The server is not answering, but the session is probably fine. Kept apart
+  // from "not signed in" so the app can wait instead of throwing someone out.
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  // The server said this token is no good. Only a 401 sets this.
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const loadUser = useCallback(async () => {
     const token = getStoredAuthToken();
     if (!token) { setIsLoading(false); return; }
-    try {
-      const data = await getCurrentUser();
-      setUser(data?.user || null);
-    } catch {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
+
+    // Every failure used to delete the token, so a cold start on a suspended
+    // host — a timeout, a 502 while it boots — signed people out and threw
+    // away the token, which meant reloading did not help either.
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        const data = await getCurrentUser();
+        setUser(data?.user || null);
+        setIsReconnecting(false);
+        setSessionExpired(false);
+        setIsLoading(false);
+        return;
+      } catch (err) {
+        if (classifyAuthFailure(err) === EXPIRED) {
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+          setUser(null);
+          setSessionExpired(true);
+          setIsReconnecting(false);
+          setIsLoading(false);
+          return;
+        }
+
+        const wait = retryDelay(attempt);
+        if (wait === null) {
+          // Out of attempts, but still not the server's word — keep the token
+          // so a reload, or the host finally waking, picks the session back up.
+          setUser(null);
+          setIsReconnecting(true);
+          setIsLoading(false);
+          return;
+        }
+
+        setIsReconnecting(true);
+        setIsLoading(false);
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
     }
   }, []);
 
@@ -37,6 +71,11 @@ export function AuthProvider({ children }) {
       user,
       isLoading,
       isAuthenticated:  Boolean(user),
+      isReconnecting,
+      sessionExpired,
+      /** Try the session check again — the "try now" on the waiting screen. */
+      retryConnection: loadUser,
+      acknowledgeExpiry: () => setSessionExpired(false),
       emailVerified:    Boolean(user?.emailVerified),
 
       async login(email, password) {
@@ -64,7 +103,7 @@ export function AuthProvider({ children }) {
         return resendVerification();
       },
     }),
-    [user, isLoading]
+    [user, isLoading, isReconnecting, sessionExpired, loadUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

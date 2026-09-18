@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { forgotPassword } from '../api/sceneApi';
@@ -116,6 +116,10 @@ export default function LoginPage() {
   const [email, setEmail]         = useState('');
   const [password, setPassword]   = useState('');
   const [error, setError]         = useState('');
+  // Set by ProtectedRoute when the server rejected the stored token. Without
+  // it this page appears for no visible reason, which reads as a bug.
+  const [searchParams] = useSearchParams();
+  const [expiredNotice, setExpiredNotice] = useState(() => searchParams.get('expired') === '1');
   const [shake, setShake]         = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -196,6 +200,20 @@ export default function LoginPage() {
             </span>
           </Link>
         </div>
+
+        {expiredNotice && (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-700/50 bg-amber-950/40 px-3 py-2.5 text-xs text-amber-100">
+            <Icon name="info" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span className="flex-1">{t('loginSessionExpired')}</span>
+            <button
+              onClick={() => setExpiredNotice(false)}
+              aria-label={t('close')}
+              className="shrink-0 rounded p-0.5 text-amber-200/70 transition-colors hover:text-amber-100"
+            >
+              <Icon name="close" className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Title + subtitle */}
         <div>

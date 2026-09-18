@@ -2,10 +2,10 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const { getAuthSecret } = require('../config/auth');
 const { verificationEmail, passwordResetEmail } = require('../emails/templates');
+const { sendMail, emailConfigured } = require('../emails/send');
 
 // bcrypt's cost factor is deliberately CPU-expensive (that's what makes it
 // brute-force resistant) — fine for real traffic, but the E2E suite creates
@@ -34,65 +34,12 @@ function sanitizeUser(user) {
   };
 }
 
-// Two ceilings to sit between, and the first attempt at this sat too close to
-// the wrong one.
-//
-// Above: a managed host gives an HTTP request about 100 seconds before it
-// answers 502, and nodemailer's own defaults are longer than that (greeting
-// 30s, connect 2min, socket 10min) — so a mail port that hangs rather than
-// refusing becomes a gateway error with nothing in the logs.
-//
-// Below: this SMTP path is genuinely slow and genuinely erratic. Measured
-// against the real server, three consecutive handshakes took 1.6s, 22.5s and
-// 2.1s. The first version of this capped the greeting at 10s, which would have
-// killed that middle one — turning a slow send that worked into a failure. A
-// timeout has to be past the worst case you have actually seen, not past the
-// typical one.
-const SMTP_TIMEOUTS = {
-  connectionTimeout: 30_000,
-  greetingTimeout: 30_000,
-  socketTimeout: 45_000,
-};
-
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: false, // STARTTLS
-    // Force IPv4. smtp.gmail.com resolves to both families, Node will happily
-    // pick the AAAA record, and the container this runs in has no IPv6 route —
-    // so the connection fails with ENETUNREACH against an address like
-    // 2607:f8b0:400e:c05::6d and then sits there until the timeout expires.
-    // Nothing about the port or the credentials is wrong; it is dialling an
-    // address the host cannot reach.
-    family: 4,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    ...SMTP_TIMEOUTS,
-  });
-}
-
-// Whether this server can send at all. The check used to be for
-// RESEND_API_KEY, which nothing in the codebase reads — mail goes out through
-// nodemailer over SMTP — so on a server with working SMTP credentials the
-// verification email was silently never sent, while password resets (which
-// never had that gate) went out fine.
-function emailConfigured() {
-  return Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
-}
-
-function emailFrom() {
-  return process.env.EMAIL_FROM || `ContAR <${process.env.SMTP_USER}>`;
-}
-
 /**
  * Why a send failed, in the two words that decide what to do about it.
  *
- * Every failure here looked the same from outside — one 502 and a sentence
- * telling the user to try again — so diagnosing it meant guessing between a
- * blocked port, a slow handshake and bad credentials. Nodemailer already knows
+ * Every failure looked the same from outside — one 502 and a sentence telling
+ * the user to try again — so diagnosing it meant guessing between a blocked
+ * port, a slow handshake and bad credentials. The transport already knows
  * which; it just was not being written down.
  */
 function describeMailError(err) {
@@ -102,8 +49,9 @@ function describeMailError(err) {
     ESOCKET: 'a conexao caiu — normalmente TLS ou porta bloqueada',
     ECONNECTION: 'nao foi possivel abrir a conexao — host/porta errados ou saida bloqueada',
     ECONNREFUSED: 'a conexao foi recusada — saida SMTP bloqueada pela hospedagem',
-    EAUTH: 'as credenciais foram recusadas — usuario ou senha de app invalidos',
+    EAUTH: 'as credenciais foram recusadas — usuario, senha de app ou chave de API invalidos',
     EENVELOPE: 'o endereco de destino foi recusado pelo servidor',
+    EHTTP: 'a API de email respondeu com erro',
   };
   return { code, hint: hints[code] || err?.message || 'sem detalhe' };
 }
@@ -114,19 +62,18 @@ async function sendVerificationEmail(user, language) {
   const { subject, html } = verificationEmail(language, link);
 
   console.log(`[Email] Enviando verificação para: ${user.email} (${language || 'fallback'})`);
-  const transporter = createTransporter();
   const startedAt = Date.now();
   try {
-    await transporter.sendMail({ from: emailFrom(), to: user.email, subject, html });
+    const { transport } = await sendMail({ to: user.email, subject, html });
+    console.log(`[Email] Verificação enviada para ${user.email} via ${transport} (${Date.now() - startedAt}ms)`);
   } catch (err) {
     // Elapsed time is half the diagnosis: a failure at exactly the timeout is
-    // a different problem from one that is refused immediately.
+    // a different problem from one refused immediately.
     const { code, hint } = describeMailError(err);
     console.error(`[Email] FALHOU após ${Date.now() - startedAt}ms — ${code}: ${hint}`);
     err.mailCode = code;
     throw err;
   }
-  console.log(`[Email] Verificação enviada para ${user.email} (${Date.now() - startedAt}ms)`);
 }
 
 function ensureDatabaseReady(res) {
@@ -255,9 +202,8 @@ async function forgotPassword(req, res) {
     const language = String(req.body?.language || '');
     const { subject, html } = passwordResetEmail(language, resetUrl);
     console.log(`[Email] Enviando redefinição de senha para: ${email} (${language || 'fallback'})`);
-    const transporter = createTransporter();
-    await transporter.sendMail({ from: emailFrom(), to: email, subject, html });
-    console.log(`[Email] Redefinição enviada para ${email}`);
+    const { transport } = await sendMail({ to: email, subject, html });
+    console.log(`[Email] Redefinição enviada para ${email} via ${transport}`);
 
     return res.json({ message: SUCCESS_MSG });
   } catch (err) {

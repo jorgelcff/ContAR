@@ -59,11 +59,69 @@ test.describe('Running a scene inside the editor', () => {
     // navigation, which Playwright still reports as visible but a thumb cannot
     // press. Whatever is on top at the button's centre has to be the button.
     const topmostIsTheButton = await page.evaluate(() => {
-      const btn = [...document.querySelectorAll('button')].find((b) => /reproduzir cena/i.test(b.textContent || ''));
+      // By label, not text: the control is a round icon button with no words
+      // in it, so it can sit beside a caption at any width.
+      const btn = [...document.querySelectorAll('button')]
+        .find((b) => /reproduzir cena|parar/i.test(b.getAttribute('aria-label') || ''));
       const r = btn.getBoundingClientRect();
       const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       return top === btn || btn.contains(top);
     });
     expect(topmostIsTheButton, 'the run control is covered by something').toBe(true);
+  });
+});
+
+// Narration captions are centred along the bottom of the canvas and grow
+// upward. The play control was centred there too, so switching subtitles on
+// put the text straight over it.
+test.describe('The play control and the caption', () => {
+  async function editorWithSubtitles(page, request) {
+    const user = await registerUser(request);
+    await page.addInitScript((token) => localStorage.setItem('auth:token', token), user.token);
+    await page.goto('/editor');
+    await page.locator('[data-tour="scene-canvas"]').waitFor({ timeout: 20000 });
+    await dismissTourIfShown(page);
+    await page.locator('[data-tour="tab-fala"]').click();
+    await dismissTourIfShown(page);
+
+    await page.locator('textarea').first().fill(
+      'Uma narração comprida o bastante para a legenda ocupar bastante espaço na base do canvas e subir algumas linhas.',
+    );
+    await page.getByRole('button', { name: /definir texto da fala|definir fala/i }).first().click();
+    await page.getByRole('button', { name: /^legenda$/i }).click();
+    await page.getByTestId('narration-caption').waitFor({ timeout: 15000 });
+  }
+
+  test('they do not overlap once subtitles are on', async ({ page, request }) => {
+    test.setTimeout(60_000);
+    await editorWithSubtitles(page, request);
+
+    const overlap = await page.evaluate(() => {
+      const caption = document.querySelector('[data-testid="narration-caption"]');
+      const play = [...document.querySelectorAll('button')]
+        .find((b) => /reproduzir cena|parar/i.test(b.getAttribute('aria-label') || ''));
+      if (!caption || !play) return { missing: !caption ? 'caption' : 'play' };
+      const a = caption.getBoundingClientRect();
+      const b = play.getBoundingClientRect();
+      const intersects = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      return { intersects };
+    });
+
+    expect(overlap.missing, `${overlap.missing} not found`).toBeUndefined();
+    expect(overlap.intersects, 'the play control sits under the caption').toBe(false);
+  });
+
+  test('it is still reachable — nothing covers it', async ({ page, request }) => {
+    test.setTimeout(60_000);
+    await editorWithSubtitles(page, request);
+
+    const topmostIsThePlay = await page.evaluate(() => {
+      const play = [...document.querySelectorAll('button')]
+        .find((b) => /reproduzir cena|parar/i.test(b.getAttribute('aria-label') || ''));
+      const r = play.getBoundingClientRect();
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return top === play || play.contains(top);
+    });
+    expect(topmostIsThePlay).toBe(true);
   });
 });

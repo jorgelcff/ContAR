@@ -108,7 +108,7 @@ describe('budgets are per account, not per address', () => {
 describe('the test environment holds no real credentials', () => {
   const mustBeEmpty = [
     'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
-    'SMTP_USER', 'SMTP_PASS',
+    'SMTP_USER', 'SMTP_PASS', 'RESEND_API_KEY',
     'OPENAI_API_KEY', 'AZURE_SPEECH_KEY', 'ELEVENLABS_API_KEY',
   ];
 

@@ -15,6 +15,7 @@ process.env.CLOUDINARY_API_KEY = '';
 process.env.CLOUDINARY_API_SECRET = '';
 process.env.SMTP_USER = '';
 process.env.SMTP_PASS = '';
+process.env.RESEND_API_KEY = '';
 process.env.OPENAI_API_KEY = '';
 process.env.AZURE_SPEECH_KEY = '';
 process.env.ELEVENLABS_API_KEY = '';

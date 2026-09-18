@@ -63,6 +63,10 @@ export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
             return (
               <div
                 key={`${item.sceneId}-${index}`}
+                // A fixed 288px in a horizontal strip: anything added to a row
+                // in here has to be measured against this box, not the
+                // viewport. The hook is so a test can find it exactly.
+                data-scene-card
                 className={`w-72 min-w-72 snap-start rounded-lg border p-2 flex flex-col gap-2 transition-colors ${
                   isPendingDelete
                     ? 'border-red-600 bg-red-950/40'
@@ -125,40 +129,53 @@ export default function StoryBuilderPanel({ onAddScene, isAddingScene }) {
                       placeholder={t('markerUrlPlaceholder')}
                       className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
                     />
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="number"
-                        min={0}
-                        value={item.durationSeconds}
-                        onChange={(e) => updateStoryScene(index, 'durationSeconds', e.target.value)}
-                        placeholder={t('durationSeconds')}
-                        disabled={normalizeAdvanceOn(item.advanceOn) === ADVANCE_ON_NARRATION}
-                        title={normalizeAdvanceOn(item.advanceOn) === ADVANCE_ON_NARRATION
-                          ? t('advanceOnNarrationHint')
-                          : t('durationSeconds')}
-                        className="w-20 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500 disabled:opacity-40"
-                      />
-                      {/* What ends the scene. Counting seconds was the only
-                          option, so a line longer than the number was cut off
-                          mid-sentence and a shorter one left silence. */}
+                    {/* What ends the scene, on its own line. Four controls
+                        shared one row when this was added and the card is a
+                        fixed width in a horizontal strip — the row did not
+                        fit, and the overflow pushed the card's own text out
+                        past its left edge. */}
+                    <label className="flex items-center gap-2">
+                      <span className="shrink-0 text-[10px] uppercase tracking-wider text-gray-400">
+                        {t('advanceOnLabel')}
+                      </span>
                       <select
                         value={normalizeAdvanceOn(item.advanceOn)}
                         onChange={(e) => updateStoryScene(index, 'advanceOn', e.target.value)}
-                        className="rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 focus:outline-none focus:border-cyan-500"
+                        className="min-w-0 flex-1 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 focus:outline-none focus:border-cyan-500"
                       >
                         <option value="time">{t('advanceOnTime')}</option>
                         <option value="narration">{t('advanceOnNarration')}</option>
                       </select>
+                    </label>
+
+                    <div className="flex gap-2 items-center">
+                      {/* Hidden rather than disabled when the narration decides:
+                          a greyed-out box still reads as something to fill in. */}
+                      {normalizeAdvanceOn(item.advanceOn) === ADVANCE_ON_NARRATION ? (
+                        <span className="truncate text-[11px] text-gray-500">
+                          {t('advanceOnNarrationShort')}
+                        </span>
+                      ) : (
+                        <input
+                          type="number"
+                          min={0}
+                          value={item.durationSeconds}
+                          onChange={(e) => updateStoryScene(index, 'durationSeconds', e.target.value)}
+                          placeholder={t('durationSeconds')}
+                          title={t('durationSeconds')}
+                          className="w-20 shrink-0 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
+                        />
+                      )}
                       <button
                         onClick={() => handleEditScene(item.sceneId)}
-                        className="ml-auto px-2 py-1 rounded bg-cyan-700 hover:bg-cyan-600 text-xs text-white"
+                        className="ml-auto shrink-0 px-2 py-1 rounded bg-cyan-700 hover:bg-cyan-600 text-xs text-white"
                         title={t('editSceneTitle')}
                       >
                         <Icon name="edit" className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(index)}
-                        className="px-2 py-1 rounded bg-red-900 hover:bg-red-700 text-xs text-white"
+                        className="shrink-0 px-2 py-1 rounded bg-red-900 hover:bg-red-700 text-xs text-white"
                         title={t('removeFromStoryTitle')}
                       >
                         <Icon name="close" className="w-3.5 h-3.5" />

@@ -40,6 +40,7 @@ process.env.CLOUDINARY_API_KEY = '';
 process.env.CLOUDINARY_API_SECRET = '';
 // Same reasoning for the paid APIs: a test that reaches them should fail
 // loudly on a missing key, not quietly spend money.
+process.env.RESEND_API_KEY = '';
 process.env.OPENAI_API_KEY = '';
 process.env.AZURE_SPEECH_KEY = '';
 process.env.ELEVENLABS_API_KEY = '';

@@ -762,17 +762,25 @@ export default function EditorPage() {
               </ErrorBoundary>
             </Suspense>
 
-            {/* Sits over the canvas rather than in a side panel, so it is
-                reachable whichever tab is open, and on a phone too. */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-20 md:bottom-4 flex justify-center px-4">
+            {/* Over the canvas rather than in a side panel, so it is reachable
+                whichever tab is open and on a phone too — but in the corner,
+                not the middle. Narration captions are centred along the bottom
+                and grow upward, so a centred control sat underneath the text
+                the moment subtitles were switched on. The caption cannot be
+                narrowed to make room: SceneCanvas draws it for the public
+                viewer and AR as well. So the control moved, and became round
+                and label-less to fit beside a caption at any width. */}
+            <div className="pointer-events-none absolute bottom-20 right-4 md:bottom-4">
               <button
                 onClick={runScene}
                 disabled={previewSource === 'none'}
-                title={previewSource === 'none' ? t('editorRunSceneEmpty') : undefined}
-                className="pointer-events-auto flex items-center gap-2 rounded-full bg-cyan-700 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-cyan-700"
+                title={previewSource === 'none'
+                  ? t('editorRunSceneEmpty')
+                  : (isPreviewing ? t('editorRunSceneStop') : t('editorRunScene'))}
+                aria-label={isPreviewing ? t('editorRunSceneStop') : t('editorRunScene')}
+                className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-cyan-700 text-white shadow-lg transition-colors hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-cyan-700"
               >
-                <Icon name={isPreviewing ? 'stop' : 'play'} className="h-4 w-4" />
-                {isPreviewing ? t('editorRunSceneStop') : t('editorRunScene')}
+                <Icon name={isPreviewing ? 'stop' : 'play'} className="h-5 w-5" />
               </button>
             </div>
           </div>

@@ -61,15 +61,23 @@ export function applyPosePreset(
   ensureRestPoseSnapshot(model);
   resetToRestPose(model);
 
+  // Presenter presets are deliberately absent: they are a procedural
+  // animation, not a clip.
+  //
+  // They used to be in here, and the consequence was the bug. pickAnimationClip
+  // falls back to idle so nothing ever shows a T-pose, so a clip was always
+  // found, the function returned early, and applySpeakerPose — the whole
+  // "arms down, held a little away from the body" stance — never ran at all.
+  // Worse, the gesture layer writes bone.quaternion outright rather than
+  // blending, so it overwrote the clip every frame using a rotation snapshotted
+  // on the first one. That first frame lands mid-crossfade out of the bind
+  // pose, which is a T-pose: the arms were pinned wide open for as long as the
+  // preset was selected, wobbling slightly. Hence "it looks like it is about to
+  // take off".
   const animatedPresets = ["idle", "walk", "walk_circle", "slow_run", "run", "dance"];
-  if (animatedPresets.includes(normalized) || isSpeakerPreset(normalized)) {
+  if (animatedPresets.includes(normalized)) {
     if (animationController) {
-      // Every presenter variant looks for the same clip as plain "speaker";
-      // the variation is in the gesture layer on top of it.
-      const clip = pickAnimationClip(
-        isSpeakerPreset(normalized) ? "speaker" : normalized,
-        idleClip, avatarClips, externalClips,
-      );
+      const clip = pickAnimationClip(normalized, idleClip, avatarClips, externalClips);
       if (clip) {
         animationController.play(clip, 0.35);
         model.updateMatrixWorld(true);
@@ -77,10 +85,8 @@ export function applyPosePreset(
       }
     }
 
-    if (!isSpeakerPreset(normalized)) {
-      model.updateMatrixWorld(true);
-      return;
-    }
+    model.updateMatrixWorld(true);
+    return;
   }
 
   if (normalized === "neutral") {

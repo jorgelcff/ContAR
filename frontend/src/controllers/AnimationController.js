@@ -860,8 +860,12 @@ export class AnimationController {
     // own does not read as gesturing in a direction — the turn is what sells
     // it, so both happen together or neither does.
     const turn = 0.20 * lateral;
-    const nearArm = 1 + 0.55 * lateral;   // character's left
-    const farArm = 1 - 0.55 * lateral;    // character's right
+    // Addressing a side turns the body and shifts the gesture; it does not
+    // change how far the arms rest from the ribs. Scaling the resting offsets
+    // by 0.55 did exactly that, opening the near arm halfway to a T-pose
+    // before a single gesture had been added.
+    const nearArm = 1 + 0.22 * lateral;   // character's left
+    const farArm = 1 - 0.22 * lateral;    // character's right
 
     // Helper: layered organic sine using golden ratio (φ) and silver ratio (δ)
     // φ = 1.618…  δ = 2.414…   These are incommensurable with each other and with 1.

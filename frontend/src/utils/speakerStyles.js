@@ -16,9 +16,13 @@
  */
 export const SPEAKER_STYLES = {
   speaker: { gain: 1, lateral: 0, tempo: 1 },
-  speaker_wide: { gain: 2.1, lateral: 0, tempo: 0.88 },
-  speaker_left: { gain: 1.5, lateral: 1, tempo: 0.97 },
-  speaker_right: { gain: 1.5, lateral: -1, tempo: 0.97 },
+  // Broader, but a presenter gesturing widely still has their arms down. The
+  // first numbers here were picked by eye and swung the arm out to roughly
+  // forty-five degrees at the peak of the cycle, which reads as wings rather
+  // than emphasis. Measured against the rig instead — see speakerGestures.test.
+  speaker_wide: { gain: 1.55, lateral: 0, tempo: 0.88 },
+  speaker_left: { gain: 1.25, lateral: 1, tempo: 0.97 },
+  speaker_right: { gain: 1.25, lateral: -1, tempo: 0.97 },
 };
 
 export const SPEAKER_PRESETS = Object.keys(SPEAKER_STYLES);

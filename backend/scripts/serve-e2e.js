@@ -33,7 +33,11 @@ const app = require('../app');
 const PORT = process.env.PORT || 3001;
 
 (async () => {
-  const mongod = await MongoMemoryServer.create();
+  // Same launch window as the unit-test setup: the library's ten-second
+  // default was missed often enough on this machine to fail whole runs before
+  // a single test executed, and the symptom (a webServer that "was not able to
+  // start") points nowhere near the cause.
+  const mongod = await MongoMemoryServer.create({ instance: { launchTimeout: 60_000 } });
   await mongoose.connect(mongod.getUri());
   console.log('[e2e] in-memory MongoDB ready');
 

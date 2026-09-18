@@ -3,8 +3,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const rateLimit = require('express-rate-limit');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { perAccountLimiter } = require('../middleware/rateLimits');
 const { cloudinaryConfigured, uploadBuffer, destroyByUrl } = require('../config/cloudinary');
 
 // Resolve the public base URL for constructing LOCAL file URLs (disk fallback).
@@ -77,17 +77,18 @@ const modelUpload = multer({
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 
-const audioLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60,  standardHeaders: true, legacyHeaders: false });
-// 60 model uploads per 15 min — generous enough for iterative testing while
-// still blocking brute-force abuse. Cloudinary deduplicates by content hash
-// so repeated uploads of the same file don't waste storage quota.
-const modelLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60,  standardHeaders: true, legacyHeaders: false });
+// Counted per account, not per address: a room of people behind one NAT used
+// to share these sixty, so one person iterating on an avatar could stop
+// everyone else from uploading. Cloudinary deduplicates by content hash, so
+// repeated uploads of the same file cost no storage either way.
+const audioLimiter = () => perAccountLimiter(60, 'MEDIA_AUDIO_RATE_LIMIT_MAX');
+const modelLimiter = () => perAccountLimiter(60, 'MEDIA_MODEL_RATE_LIMIT_MAX');
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 const router = express.Router();
 
-router.post('/audio', audioLimiter, requireAuth, audioUpload.single('file'), async (req, res) => {
+router.post('/audio', requireAuth, audioLimiter(), audioUpload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
   const ext = path.extname(req.file.originalname).toLowerCase() || '.mp3';
   try {
@@ -111,7 +112,7 @@ router.post('/audio', audioLimiter, requireAuth, audioUpload.single('file'), asy
 // Removes a previously-generated narration audio file from Cloudinary when it
 // is replaced by a new one. No-op (besides the response) when Cloudinary isn't
 // configured, since disk-fallback files are harmless local leftovers.
-router.delete('/audio', audioLimiter, requireAuth, async (req, res) => {
+router.delete('/audio', requireAuth, audioLimiter(), async (req, res) => {
   const { url } = req.body || {};
   if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL ausente' });
   if (!cloudinaryConfigured) return res.json({ ok: true });
@@ -136,7 +137,7 @@ function modelUploadMiddleware(req, res, next) {
   });
 }
 
-router.post('/model', modelLimiter, requireAuth, modelUploadMiddleware, async (req, res) => {
+router.post('/model', requireAuth, modelLimiter(), modelUploadMiddleware, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
   const ext = (path.extname(req.file.originalname).toLowerCase() || '.glb').replace('.', '');
   try {

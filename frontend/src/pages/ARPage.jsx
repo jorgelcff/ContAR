@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
@@ -1268,17 +1269,22 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
             </div>
           </div>
         }>
-          <SceneCanvas
-            avatarUrl={avatarUrl}
-            transform={transform}
-            posePreset={posePreset}
-            speechText={speechText}
-            textDisplayMode={currentScene?.content?.narrative?.displayMode || 'bubble'}
-            visemeTimeline={audio.visemeTimeline}
-            audioCurrentTime={audio.audioCurrentTime}
-            isSpeaking={audio.isSpeaking || audio.isPlaying}
-            lipSyncConfig={audio.lipSyncConfig}
-          />
+          {/* A model nobody has tested can throw while rendering; keeping
+              that inside the canvas leaves the rest of the screen usable.
+              Keyed on the avatar, so loading another one tries again. */}
+          <ErrorBoundary compact resetKey={avatarUrl}>
+            <SceneCanvas
+              avatarUrl={avatarUrl}
+              transform={transform}
+              posePreset={posePreset}
+              speechText={speechText}
+              textDisplayMode={currentScene?.content?.narrative?.displayMode || 'bubble'}
+              visemeTimeline={audio.visemeTimeline}
+              audioCurrentTime={audio.audioCurrentTime}
+              isSpeaking={audio.isSpeaking || audio.isPlaying}
+              lipSyncConfig={audio.lipSyncConfig}
+            />
+          </ErrorBoundary>
         </Suspense>
       </div>
 

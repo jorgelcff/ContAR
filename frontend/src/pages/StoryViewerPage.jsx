@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Link, useParams } from 'react-router-dom';
 import * as THREE from 'three';
 import { useTranslation } from 'react-i18next';
@@ -484,22 +485,27 @@ export default function StoryViewerPage() {
                       </div>
                     </div>
                   }>
-                    <SceneCanvas
-                      avatarUrl={sceneData.content.avatar.modelUrl}
-                      transform={transform}
-                      posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
-                      speechText={sceneData?.content?.narrative?.text || ''}
-                      textDisplayMode={sceneData?.content?.narrative?.displayMode || 'bubble'}
-                      vrmaUrl={sceneData?.content?.avatar?.vrmaUrl || ''}
-                      animSpeed={sceneData?.content?.avatar?.animSpeed ?? 1}
-                      animLoopOnce={Boolean(sceneData?.content?.avatar?.animLoopOnce)}
-                      vrmExpression={sceneData?.content?.avatar?.vrmExpression || ''}
-                      analyserRef={audio.analyserRef}
-                      lipSyncConfig={audio.lipSyncConfig}
-                      visemeTimeline={audio.visemeTimeline}
-                      audioCurrentTime={audio.audioCurrentTime}
-                      isSpeaking={audio.isSpeaking || audio.isPlaying}
-                    />
+                    {/* A model nobody has tested can throw while rendering; keeping
+                        that inside the canvas leaves the rest of the screen usable.
+                        Keyed on the avatar, so loading another one tries again. */}
+                    <ErrorBoundary compact resetKey={sceneData.content.avatar.modelUrl}>
+                      <SceneCanvas
+                        avatarUrl={sceneData.content.avatar.modelUrl}
+                        transform={transform}
+                        posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
+                        speechText={sceneData?.content?.narrative?.text || ''}
+                        textDisplayMode={sceneData?.content?.narrative?.displayMode || 'bubble'}
+                        vrmaUrl={sceneData?.content?.avatar?.vrmaUrl || ''}
+                        animSpeed={sceneData?.content?.avatar?.animSpeed ?? 1}
+                        animLoopOnce={Boolean(sceneData?.content?.avatar?.animLoopOnce)}
+                        vrmExpression={sceneData?.content?.avatar?.vrmExpression || ''}
+                        analyserRef={audio.analyserRef}
+                        lipSyncConfig={audio.lipSyncConfig}
+                        visemeTimeline={audio.visemeTimeline}
+                        audioCurrentTime={audio.audioCurrentTime}
+                        isSpeaking={audio.isSpeaking || audio.isPlaying}
+                      />
+                    </ErrorBoundary>
                   </Suspense>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center bg-gray-900 gap-4 px-6 text-center">

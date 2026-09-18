@@ -1,4 +1,5 @@
 import React, { lazy, Suspense } from 'react';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Landing and login stay eager: they are the first thing an anonymous visitor
 // paints, and they are light. Every other route is split out — between them
@@ -57,6 +58,9 @@ export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter basename={routerBasename}>
+        {/* Inside the router, so the fallback's "back to start" is a real
+            navigation and not a full page load. */}
+        <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -111,6 +115,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </ToastProvider>
   );

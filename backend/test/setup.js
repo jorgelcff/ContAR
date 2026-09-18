@@ -8,8 +8,26 @@ process.env.NODE_ENV = 'test';
 
 let mongod;
 
+// Every test file starts its own mongod, and vitest runs files in parallel, so
+// a handful of them race to boot at once on one machine. The library's default
+// launch window is ten seconds, which several of them missed — the whole file
+// then failed before a single test ran, reported as "N tests skipped", which
+// reads like a catastrophe rather than a slow start. A longer window and one
+// retry cost nothing when things are healthy.
+const LAUNCH_TIMEOUT_MS = 60_000;
+
+async function startMongo(attemptsLeft = 2) {
+  try {
+    return await MongoMemoryServer.create({ instance: { launchTimeout: LAUNCH_TIMEOUT_MS } });
+  } catch (err) {
+    if (attemptsLeft <= 0) throw err;
+    console.warn(`[test] mongod did not start (${err.message}) — retrying`);
+    return startMongo(attemptsLeft - 1);
+  }
+}
+
 beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
+  mongod = await startMongo();
   await mongoose.connect(mongod.getUri());
 });
 
@@ -21,5 +39,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   await mongoose.disconnect();
-  await mongod.stop();
+  // Guarded: when the start above failed outright there is nothing to stop,
+  // and the resulting TypeError buried the real reason the file failed.
+  if (mongod) await mongod.stop();
 });

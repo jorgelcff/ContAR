@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { normalizeAdvanceOn } from '../utils/sceneAdvance';
 import { pickPreviewSource } from '../utils/scenePreview';
 import { Link } from 'react-router-dom';
@@ -684,25 +685,30 @@ export default function EditorPage() {
                 </div>
               </div>
             }>
-              <SceneCanvas
-                avatarUrl={avatarUrl}
-                transform={transform}
-                posePreset={posePreset}
-                speechText={speechText}
-                analyserRef={audio.analyserRef}
-                lipSyncConfig={audio.lipSyncConfig}
-                visemeTimeline={audio.visemeTimeline}
-                audioCurrentTime={audio.audioCurrentTime}
-                isSpeaking={audio.isSpeaking || audio.isPlaying}
-                vrmaUrl={vrmaUrl}
-                animSpeed={animSpeed}
-                animLoopOnce={animLoopOnce}
-                vrmExpression={vrmExpression}
-                textDisplayMode={textDisplayMode}
-                showRigTools
-                onAvatarClips={setAvatarClips}
-                onJawApi={setJawApi}
-              />
+              {/* A model nobody has tested can throw while rendering; keeping
+                  that inside the canvas leaves the rest of the screen usable.
+                  Keyed on the avatar, so loading another one tries again. */}
+              <ErrorBoundary compact resetKey={avatarUrl}>
+                <SceneCanvas
+                  avatarUrl={avatarUrl}
+                  transform={transform}
+                  posePreset={posePreset}
+                  speechText={speechText}
+                  analyserRef={audio.analyserRef}
+                  lipSyncConfig={audio.lipSyncConfig}
+                  visemeTimeline={audio.visemeTimeline}
+                  audioCurrentTime={audio.audioCurrentTime}
+                  isSpeaking={audio.isSpeaking || audio.isPlaying}
+                  vrmaUrl={vrmaUrl}
+                  animSpeed={animSpeed}
+                  animLoopOnce={animLoopOnce}
+                  vrmExpression={vrmExpression}
+                  textDisplayMode={textDisplayMode}
+                  showRigTools
+                  onAvatarClips={setAvatarClips}
+                  onJawApi={setJawApi}
+                />
+              </ErrorBoundary>
             </Suspense>
 
             {/* Sits over the canvas rather than in a side panel, so it is

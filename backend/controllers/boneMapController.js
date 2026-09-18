@@ -17,12 +17,16 @@ exports.mapBones = async (req, res) => {
   if (bones.length > 300) {
     return res.status(400).json({ error: 'Too many bones (max 300)' });
   }
-  // This route stays open on purpose — the public viewer and AR need it for
-  // avatars whose rig the regex mapper cannot place, and there is no session
-  // there to require. That makes it a spend endpoint anyone can reach, so the
-  // prompt it can be made to build is bounded as well as the array length:
-  // a real bone name is short, and 300 unbounded strings would otherwise be a
-  // blank cheque against the OpenAI key.
+  // This route used to stay open, so the public viewer and AR could upgrade the
+  // mapping for rigs the regex mapper cannot place. That also made spending the
+  // deployment's OpenAI credit available to anyone who could send a POST, which
+  // no rate limit fixes — it caps the rate, not who. It now requires an account
+  // (see routes/boneMapRoutes.js). An anonymous viewer loses the upgrade and
+  // keeps playback: BoneMapper.enhanceWithAI catches the refusal, caches it so
+  // it is not retried, and leaves the generic mapping in place.
+  //
+  // The prompt this can be made to build stays bounded regardless: a real bone
+  // name is short, and 300 unbounded strings would be a blank cheque.
   const names = bones.filter((b) => typeof b === 'string' && b.length <= 100);
   if (names.length !== bones.length) {
     return res.status(400).json({ error: 'Bone names must be strings of at most 100 characters' });

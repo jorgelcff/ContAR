@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getScene } from '../api/sceneApi';
@@ -109,25 +110,30 @@ export default function ViewerPage() {
             </div>
           </div>
         }>
-          <SceneCanvas
-            avatarUrl={scene?.content?.avatar?.modelUrl}
-            transform={transform}
-            posePreset={scene?.content?.avatar?.posePreset || 'idle'}
-            speechText={scene?.content?.narrative?.text}
-            // Without these the viewer replayed the scene with default playback
-            // settings — most visibly, narration always rendered as a bubble
-            // even when the scene was authored with subtitles.
-            textDisplayMode={scene?.content?.narrative?.displayMode || 'bubble'}
-            vrmaUrl={scene?.content?.avatar?.vrmaUrl || ''}
-            animSpeed={scene?.content?.avatar?.animSpeed ?? 1}
-            animLoopOnce={Boolean(scene?.content?.avatar?.animLoopOnce)}
-            vrmExpression={scene?.content?.avatar?.vrmExpression || ''}
-            analyserRef={audio.analyserRef}
-            lipSyncConfig={audio.lipSyncConfig}
-            visemeTimeline={audio.visemeTimeline}
-            audioCurrentTime={audio.audioCurrentTime}
-            isSpeaking={audio.isSpeaking || audio.isPlaying}
-          />
+          {/* A model nobody has tested can throw while rendering; keeping
+              that inside the canvas leaves the rest of the screen usable.
+              Keyed on the avatar, so loading another one tries again. */}
+          <ErrorBoundary compact resetKey={scene?.content?.avatar?.modelUrl}>
+            <SceneCanvas
+              avatarUrl={scene?.content?.avatar?.modelUrl}
+              transform={transform}
+              posePreset={scene?.content?.avatar?.posePreset || 'idle'}
+              speechText={scene?.content?.narrative?.text}
+              // Without these the viewer replayed the scene with default playback
+              // settings — most visibly, narration always rendered as a bubble
+              // even when the scene was authored with subtitles.
+              textDisplayMode={scene?.content?.narrative?.displayMode || 'bubble'}
+              vrmaUrl={scene?.content?.avatar?.vrmaUrl || ''}
+              animSpeed={scene?.content?.avatar?.animSpeed ?? 1}
+              animLoopOnce={Boolean(scene?.content?.avatar?.animLoopOnce)}
+              vrmExpression={scene?.content?.avatar?.vrmExpression || ''}
+              analyserRef={audio.analyserRef}
+              lipSyncConfig={audio.lipSyncConfig}
+              visemeTimeline={audio.visemeTimeline}
+              audioCurrentTime={audio.audioCurrentTime}
+              isSpeaking={audio.isSpeaking || audio.isPlaying}
+            />
+          </ErrorBoundary>
         </Suspense>
       </div>
     </div>

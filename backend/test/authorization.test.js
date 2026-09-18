@@ -77,26 +77,25 @@ describe('write routes are scoped to the caller', () => {
   });
 });
 
-// Left deliberately open: the public viewer and AR need it for rigs the regex
-// mapper cannot place, and there is no session there. It spends money, so its
-// inputs are bounded instead.
-describe('AI bone mapping is bounded rather than gated', () => {
-  it('rejects an oversized bone list', async () => {
+// This was left open so the public viewer and AR could upgrade the mapping for
+// rigs the regex mapper cannot place. Being open also meant anyone who could
+// send a POST could spend the deployment's OpenAI credit, which bounded inputs
+// do not address — they cap what one request costs, not who may make one. It
+// is gated now; an anonymous viewer keeps playback on the generic mapping.
+// The input bounds still apply once signed in, and are asserted in
+// paidRoutes.test.js alongside the rest of the spending routes.
+describe('AI bone mapping is gated', () => {
+  it('refuses a caller with no session', async () => {
+    const res = await request(app)
+      .post('/api/bones/map')
+      .send({ bones: ['Hips', 'Spine'] });
+    expect(res.status).toBe(401);
+  });
+
+  it('refuses even a well-formed request, so the bounds are not the only guard', async () => {
     const res = await request(app)
       .post('/api/bones/map')
       .send({ bones: Array.from({ length: 400 }, (_, i) => `Bone${i}`) });
-    expect(res.status).toBe(400);
-  });
-
-  it('rejects bone names long enough to pad out the prompt', async () => {
-    const res = await request(app)
-      .post('/api/bones/map')
-      .send({ bones: ['Hips', 'x'.repeat(5000)] });
-    expect(res.status).toBe(400);
-  });
-
-  it('rejects a request with no bones at all', async () => {
-    const res = await request(app).post('/api/bones/map').send({ bones: [] });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
   });
 });

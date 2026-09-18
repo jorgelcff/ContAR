@@ -1,4 +1,4 @@
-const { rateLimit } = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const WINDOW_MS = 15 * 60 * 1000;
 
@@ -35,4 +35,27 @@ function writeLimiter() {
   });
 }
 
-module.exports = { readLimiter, writeLimiter, WINDOW_MS };
+/**
+ * Counts per signed-in account rather than per address.
+ *
+ * Everything here is behind requireAuth, so there is a better key available
+ * than the IP — and the IP is the wrong one. Behind a single NAT (a conference
+ * hall, a classroom) every visitor shares one address, so a per-IP budget is
+ * one budget for the whole room: the first person to generate thirty voices
+ * locks out everyone else from the feature they came to see. Per account, one
+ * enthusiastic user only ever throttles themselves.
+ *
+ * MUST be mounted after requireAuth, or req.user is not populated yet and this
+ * silently degrades back to counting by address.
+ */
+function perAccountLimiter(defaultMax, envVar, windowMs = WINDOW_MS) {
+  return rateLimit({
+    windowMs,
+    limit: Number(process.env[envVar]) || defaultMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => (req.user?.userId ? `user:${req.user.userId}` : ipKeyGenerator(req.ip)),
+  });
+}
+
+module.exports = { readLimiter, writeLimiter, perAccountLimiter, WINDOW_MS };

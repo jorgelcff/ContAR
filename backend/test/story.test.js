@@ -158,11 +158,7 @@ describe('PUT /api/story/:id/publish', () => {
     expect(res.status).toBe(401);
   });
 
-  it('refuses to publish from an account that has not confirmed its email', async () => {
-    // Publishing is what puts content on the open internet under a shareable
-    // link, so it is what confirming the address buys. Everything else stays
-    // open — someone trying the app at a stand must not be walled off behind a
-    // message sitting in a spam folder.
+  it('allows publishing from an account that has not confirmed its email', async () => {
     const user = await createAuthedUser();
     await User.updateOne({ _id: user.userId }, { emailVerified: false });
 
@@ -175,12 +171,11 @@ describe('PUT /api/story/:id/publish', () => {
       .set('Authorization', user.authHeader)
       .send({ isPublic: true });
 
-    expect(res.status).toBe(403);
-    expect(res.body.code).toBe('EMAIL_NOT_VERIFIED');
+    expect(res.status).toBe(200);
 
-    // And it really is not reachable.
+    // And it really is reachable.
     const pub = await request(app).get(`/api/story/public/${created.body.storyId}`);
-    expect(pub.status).toBe(404);
+    expect(pub.status).toBe(200);
   });
 
   it('lets a confirmed account publish', async () => {

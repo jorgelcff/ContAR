@@ -701,14 +701,43 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
   );
 }
 
-function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId }) {
+function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId, narrativeAudioUrl, narrativeIsFallback }) {
   const { t } = useTranslation();
   const { audioRef, ...story } = useARStory(storyId);
+  const [speechPlaying, setSpeechPlaying] = useState(false);
 
   const iframeSrc = useMemo(
     () => buildQueryUrl('/ar-marker.html', { modelUrl, markerUrl, useHiro: useHiro ? '1' : '', scale: initialScale }),
     [markerUrl, modelUrl, useHiro, initialScale]
   );
+
+  // Toggle playback of the narration saved in the editor (non-story mode) —
+  // the marker view's avatar lives inside the AR.js iframe, so there's no
+  // lip sync to drive here, just the narration audio itself. Mirrors
+  // SurfaceARScene's toggleSpeech, reusing the same hidden <audio> element.
+  const toggleSpeech = () => {
+    const el = audioRef.current;
+    if (!el || !narrativeAudioUrl) return;
+    if (speechPlaying) {
+      el.pause();
+      setSpeechPlaying(false);
+      return;
+    }
+    if (el.src !== narrativeAudioUrl) {
+      el.src = narrativeAudioUrl;
+      el.load();
+    }
+    el.play().catch(() => {});
+    setSpeechPlaying(true);
+  };
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const onEnded = () => setSpeechPlaying(false);
+    el.addEventListener('ended', onEnded);
+    return () => el.removeEventListener('ended', onEnded);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative flex flex-col h-dvh bg-gray-950 text-white overflow-hidden">
@@ -739,6 +768,21 @@ function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId }
       {storyId && story.hasStarted && (
         <div className="shrink-0 border-t border-gray-800 bg-gray-900/95 px-4 py-3">
           <StoryOverlay story={story} storyId={storyId} />
+        </div>
+      )}
+
+      {/* Editor narration playback (non-story mode) — same play button the
+          other two AR modes already have. */}
+      {!storyId && narrativeAudioUrl && (
+        <div className="shrink-0 border-t border-gray-800 bg-gray-900/95 px-4 py-3">
+          <button
+            onClick={toggleSpeech}
+            className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold text-white transition-colors">
+            {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
+          </button>
+          {narrativeIsFallback && (
+            <p className="mt-1.5 text-center text-[11px] text-amber-300">{t('viewerNarrationFallback')}</p>
+          )}
         </div>
       )}
     </div>
@@ -911,6 +955,8 @@ export default function ARPage() {
         useHiro={searchParams.get('useHiro') === '1'}
         initialScale={startScale}
         storyId={searchParams.get('storyId') || ''}
+        narrativeAudioUrl={effectiveNarrativeAudioUrl}
+        narrativeIsFallback={effectiveNarrativeIsFallback}
       />
     );
   }

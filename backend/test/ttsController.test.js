@@ -29,8 +29,13 @@ describe('buildVisemeTimeline', () => {
       { offsetMs: 100, visemeId: 2 },
       { offsetMs: 200, visemeId: 0 },
     ]);
-    expect(timeline).toHaveLength(1);
+    // The first event is superseded at the same instant by the second, so it
+    // never gets its own span. The second still runs to the third event's
+    // offset, which in turn keeps its own synthetic trailing span — same
+    // fallback as the "each event into a span" case above.
+    expect(timeline).toHaveLength(2);
     expect(timeline[0]).toEqual({ start: 0.1, end: 0.2, value: 'A' });
+    expect(timeline[1]).toEqual({ start: 0.2, end: 0.28, value: 'X' });
   });
 
   it('returns nothing for no events', () => {

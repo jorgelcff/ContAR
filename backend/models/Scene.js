@@ -1,5 +1,16 @@
 const mongoose = require('mongoose');
 
+// No _id per entry — these are read back as a plain array and diffed/compared
+// wholesale, never addressed by their own id.
+const SentenceTimelineEntrySchema = new mongoose.Schema(
+  {
+    start: { type: Number, required: true },
+    end:   { type: Number, required: true },
+    text:  { type: String, default: '' },
+  },
+  { _id: false },
+);
+
 const SceneSchema = new mongoose.Schema({
   sceneId:  { type: String, required: true, unique: true },
   ownerId:  { type: String, default: '' },
@@ -43,11 +54,7 @@ const SceneSchema = new mongoose.Schema({
       // before this existed, or narrated via the Web Speech API fallback —
       // the pacing estimate in narrationGestures.js covers those.
       sentenceTimeline: {
-        type: [{
-          start: { type: Number, required: true },
-          end:   { type: Number, required: true },
-          text:  { type: String, default: '' },
-        }],
+        type: [SentenceTimelineEntrySchema],
         default: [],
       },
       // How narration text is shown: 'bubble' | 'subtitle' | 'none'.

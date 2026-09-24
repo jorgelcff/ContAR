@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Brand icons live in public/logo/. Vite rewrites these root-absolute
+         paths with the configured base at build time, so they survive a
+         deploy under a subpath (VITE_BASE_PATH). -->
+    <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg" />
+    <link rel="alternate icon" href="/logo/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/logo/apple-touch-icon.png" />
+    <link rel="manifest" href="/logo/manifest.webmanifest" />
+    <meta name="theme-color" content="#1B1A2E" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ContAR</title>
   </head>

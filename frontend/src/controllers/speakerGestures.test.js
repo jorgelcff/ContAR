@@ -285,3 +285,117 @@ describe('narration-driven gesture variation', () => {
     expect(rig.bones.LeftArm.quaternion.angleTo(before)).toBeLessThan(0.05);
   });
 });
+
+// setNarrationTimeline() + setNarrationTime() sync the same accent to REAL
+// audio timing (e.g. Azure's SentenceBoundary events) instead of a word-count
+// estimate — the host feeds the actual <audio> currentTime every frame. It
+// shares the variation/smoothing/clamp machinery with the text estimate, so
+// these tests focus on what's specific to it: priority over the estimate,
+// and actually following the given time rather than an internal clock.
+describe('real-timeline narration sync', () => {
+  /** Left arm quaternion after settling at `atSec` into the given timeline. */
+  function poseAt(preset, timeline, atSec, settleSeconds = 3) {
+    const rig = buildRig();
+    const controller = new AnimationController(rig.root, []);
+    controller.setProceduralMode(preset);
+    controller.setNarrationTimeline(timeline);
+    for (let i = 0; i < settleSeconds * 60; i += 1) {
+      controller.setNarrationTime(atSec);
+      controller.update(1 / 60);
+    }
+    return rig.bones.LeftArm.quaternion.clone();
+  }
+
+  /** Amplitude of the left arm's gesture cycle while parked at `atSec`. */
+  function amplitudeAt(preset, timeline, atSec, seconds = 4) {
+    const rig = buildRig();
+    const controller = new AnimationController(rig.root, []);
+    controller.setProceduralMode(preset);
+    controller.setNarrationTimeline(timeline);
+    let min = Infinity;
+    let max = -Infinity;
+    for (let i = 0; i < seconds * 60; i += 1) {
+      controller.setNarrationTime(atSec);
+      controller.update(1 / 60);
+      const v = rig.bones.LeftArm.quaternion.z;
+      min = Math.min(min, v);
+      max = Math.max(max, v);
+    }
+    return max - min;
+  }
+
+  const timeline = [
+    { start: 0, end: 1, text: 'Tudo bem.' },
+    { start: 1, end: 3, text: 'Isso é incrível! Uau!' },
+  ];
+
+  it('follows real audio time rather than an internal clock', () => {
+    const early = amplitudeAt('speaker', timeline, 0.5);
+    const late = amplitudeAt('speaker', timeline, 2);
+    expect(late).toBeGreaterThan(early);
+  });
+
+  it('takes priority over the text estimate when both are set', () => {
+    const rig = buildRig();
+    const controller = new AnimationController(rig.root, []);
+    controller.setProceduralMode('speaker');
+    // An all-neutral-tagged estimate (no exclamation/question/long/short
+    // cues) — on its own this reports the neutral gain (1.0) no matter when
+    // it's sampled, so any difference below isn't a timing coincidence.
+    controller.setNarrationText('tudo bem por aqui hoje sem pressa nenhuma');
+    // The real timing says this exact moment is a loud exclamation instead.
+    controller.setNarrationTimeline([{ start: 0, end: 10, text: 'Uau! Incrível!' }]);
+
+    let min = Infinity;
+    let max = -Infinity;
+    for (let i = 0; i < 4 * 60; i += 1) {
+      controller.setNarrationTime(2);
+      controller.update(1 / 60);
+      const v = rig.bones.LeftArm.quaternion.z;
+      min = Math.min(min, v);
+      max = Math.max(max, v);
+    }
+    const withRealTiming = max - min;
+    const neutralBaseline = amplitudeAt('speaker', [], 2); // no plan at all → neutral gain
+    expect(withRealTiming).toBeGreaterThan(neutralBaseline);
+  });
+
+  it('falls back to the text estimate once the real timeline is cleared', () => {
+    const rig = buildRig();
+    const controller = new AnimationController(rig.root, []);
+    controller.setProceduralMode('speaker');
+    controller.setNarrationTimeline(timeline);
+    controller.setNarrationTimeline([]); // e.g. switching to a translation with no timing
+
+    // Should behave exactly like never having called setNarrationTimeline.
+    const withCleared = poseAt('speaker', [], 2);
+    const rig2 = buildRig();
+    const controller2 = new AnimationController(rig2.root, []);
+    controller2.setProceduralMode('speaker');
+    for (let i = 0; i < 3 * 60; i += 1) controller2.update(1 / 60);
+    expect(withCleared.angleTo(rig2.bones.LeftArm.quaternion)).toBeLessThan(0.05);
+  });
+
+  it('never pushes the arms to full span, stacked on speaker_wide', () => {
+    const idleClip = new THREE.AnimationClip('Idle', 1, [
+      new THREE.QuaternionKeyframeTrack('Hips.quaternion', [0, 1], [0, 0, 0, 1, 0, 0, 0, 1]),
+    ]);
+    const rig = buildRig();
+    const controller = new AnimationController(rig.root, []);
+    applyPosePreset(rig.root, controller, idleClip, [], 'speaker_wide', null, {});
+    controller.setNarrationTimeline([{ start: 0, end: 10, text: 'Uau! Incrível! Fantástico!' }]);
+
+    let widest = 0;
+    for (let i = 0; i < 8 * 60; i += 1) {
+      controller.setNarrationTime(1);
+      controller.update(1 / 60);
+      rig.root.updateMatrixWorld(true);
+      const a = new THREE.Vector3();
+      const b = new THREE.Vector3();
+      rig.bones.LeftArm.getWorldPosition(a);
+      rig.bones.LeftForeArm.getWorldPosition(b);
+      widest = Math.max(widest, Math.abs(b.sub(a).normalize().x));
+    }
+    expect(widest, `the arms reach ${widest.toFixed(2)}, close to a T-pose`).toBeLessThan(0.8);
+  });
+});

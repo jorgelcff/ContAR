@@ -37,6 +37,36 @@ function withTimeout(promise, ms, message) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// Pulled out as pure functions (no Azure SDK, no network) so the event-array
+// → timeline shape can be unit tested directly.
+
+/** Builds the { start, end, value } lip-sync timeline from raw viseme events. */
+function buildVisemeTimeline(rawVisemes) {
+  return rawVisemes.map((v, i) => {
+    const start = v.offsetMs / 1000;
+    const end   = i < rawVisemes.length - 1
+      ? rawVisemes[i + 1].offsetMs / 1000
+      : start + 0.08;
+    return { start, end, value: AZURE_VISEME_TO_RHUBARB[v.visemeId] ?? 'X' };
+  }).filter((v) => v.end > v.start);
+}
+
+/**
+ * Builds the { start, end, text } sentence timeline from raw Azure
+ * SentenceBoundary events — real audio timing (not a word-count estimate),
+ * used to sync the narrator's gestures to the actual speech. See
+ * frontend/src/utils/narrationGestures.js for how it's consumed.
+ */
+function buildSentenceTimeline(rawSentences) {
+  return rawSentences
+    .map((s) => ({
+      start: s.offsetMs / 1000,
+      end: (s.offsetMs + s.durationMs) / 1000,
+      text: s.text,
+    }))
+    .filter((s) => s.end > s.start);
+}
+
 async function synthesizeWithAzure(text, voiceName) {
   const key    = process.env.AZURE_SPEECH_KEY;
   const region = process.env.AZURE_SPEECH_REGION;
@@ -45,6 +75,9 @@ async function synthesizeWithAzure(text, voiceName) {
   const speechConfig = sdk.SpeechConfig.fromSubscription(key, region);
   speechConfig.speechSynthesisVoiceName    = voiceName || 'pt-BR-FranciscaNeural';
   speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3;
+  // Off by default — without this, wordBoundary never fires for sentences,
+  // only individual words (which we have no use for here).
+  speechConfig.setProperty(sdk.PropertyId.SpeechServiceResponse_RequestSentenceBoundary, 'true');
 
   // null audio config = capture to memory (no speaker)
   const synthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
@@ -52,6 +85,18 @@ async function synthesizeWithAzure(text, voiceName) {
   const rawVisemes = [];
   synthesizer.visemeReceived = (_s, e) => {
     rawVisemes.push({ offsetMs: e.audioOffset / 10_000, visemeId: e.visemeId });
+  };
+
+  const rawSentences = [];
+  synthesizer.wordBoundary = (_s, e) => {
+    // This handler also fires per-word (and per-punctuation) once sentence
+    // boundaries are requested — only the sentence-level events matter here.
+    if (e.boundaryType !== sdk.SpeechSynthesisBoundaryType.Sentence) return;
+    rawSentences.push({
+      offsetMs: e.audioOffset / 10_000,
+      durationMs: e.duration / 10_000,
+      text: e.text,
+    });
   };
 
   return new Promise((resolve, reject) => {
@@ -64,17 +109,10 @@ async function synthesizeWithAzure(text, voiceName) {
         }
 
         const audioBase64 = Buffer.from(result.audioData).toString('base64');
+        const visemeTimeline = buildVisemeTimeline(rawVisemes);
+        const sentenceTimeline = buildSentenceTimeline(rawSentences);
 
-        // Build { start, end, value } timeline from Azure viseme events
-        const visemeTimeline = rawVisemes.map((v, i) => {
-          const start = v.offsetMs / 1000;
-          const end   = i < rawVisemes.length - 1
-            ? rawVisemes[i + 1].offsetMs / 1000
-            : start + 0.08;
-          return { start, end, value: AZURE_VISEME_TO_RHUBARB[v.visemeId] ?? 'X' };
-        }).filter((v) => v.end > v.start);
-
-        resolve({ audioBase64, visemeTimeline });
+        resolve({ audioBase64, visemeTimeline, sentenceTimeline });
       },
       (err) => {
         synthesizer.close();
@@ -116,3 +154,7 @@ exports.generateTTS = async (req, res) => {
     }
   }
 };
+
+// Exported for unit testing — pure functions, no Azure SDK/network involved.
+exports.buildVisemeTimeline = buildVisemeTimeline;
+exports.buildSentenceTimeline = buildSentenceTimeline;

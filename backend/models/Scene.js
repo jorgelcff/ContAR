@@ -37,6 +37,19 @@ const SceneSchema = new mongoose.Schema({
       // recording — see utils/narration.js on why a language is never applied
       // by halves.
       translations: { type: mongoose.Schema.Types.Mixed, default: {} },
+      // Per-sentence timing from Azure's synthesis (real audio seconds, not a
+      // word-count estimate), so the narrator's gestures can sync to the
+      // actual speech instead of guessing its pace. Empty for scenes recorded
+      // before this existed, or narrated via the Web Speech API fallback —
+      // the pacing estimate in narrationGestures.js covers those.
+      sentenceTimeline: {
+        type: [{
+          start: { type: Number, required: true },
+          end:   { type: Number, required: true },
+          text:  { type: String, default: '' },
+        }],
+        default: [],
+      },
       // How narration text is shown: 'bubble' | 'subtitle' | 'none'.
       displayMode: { type: String, default: 'bubble' },
       bubbleStyle: {

@@ -71,11 +71,16 @@ export default function EditorPage() {
   // points the scene's narrativeAudioUrl at it, and removes the previous
   // narration file (if any) so regenerating audio doesn't leave orphaned
   // uploads behind.
-  const persistGeneratedAudio = async (blob) => {
+  const persistGeneratedAudio = async (blob, meta) => {
     const previousUrl = useSceneStore.getState().narrativeAudioUrl;
     try {
       const url = await uploadAudio(blob);
       useSceneStore.getState().setNarrativeAudioUrl(url);
+      // Only an Azure TTS generation carries real sentence timing (see
+      // useAudio.generateWithAzure); a file upload or recording has none, and
+      // clearing it here is correct — the previous recording's timing no
+      // longer describes this audio.
+      useSceneStore.getState().setNarrativeSentenceTimeline(meta?.sentenceTimeline || []);
       if (previousUrl && previousUrl !== url) {
         deleteAudio(previousUrl).catch(() => {});
       }
@@ -111,6 +116,10 @@ export default function EditorPage() {
       // The precise provider timeline isn't persisted, so fall back to the
       // text-derived one — same as opening the scene does.
       if (entry.text) audio.generateVisemeTimelineFromText(entry.text);
+      // Only the original language ever has real sentence timing (see
+      // buildNarrative) — a translation falls back to the word-count estimate,
+      // which is what an empty array here already means downstream.
+      audio.applySentenceTimeline(entry.sentenceTimeline);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingLanguage]);
@@ -324,6 +333,7 @@ export default function EditorPage() {
         sceneTitle: beforeClear.sceneTitle,
         posePreset: beforeClear.posePreset,
         narrativeAudioUrl: beforeClear.narrativeAudioUrl,
+        narrativeSentenceTimeline: beforeClear.narrativeSentenceTimeline,
         narrations: beforeClear.narrations,
         textDisplayMode: beforeClear.textDisplayMode,
         animSpeed: beforeClear.animSpeed,
@@ -342,6 +352,7 @@ export default function EditorPage() {
       sceneTitle: '',
       posePreset: 'idle',
       narrativeAudioUrl: '',
+      narrativeSentenceTimeline: [],
       narrations: {},
       textDisplayMode: 'bubble',
       // Reset with the rest: these used to survive here, so opening a second
@@ -391,6 +402,7 @@ export default function EditorPage() {
             const authored = narrative.language || 'pt';
             const narrations = { [authored]: {
               text: narrative.text || '', audioUrl: narrative.audioUrl || '',
+              sentenceTimeline: Array.isArray(narrative.sentenceTimeline) ? narrative.sentenceTimeline : [],
             } };
             for (const [lang, entry] of Object.entries(narrative.translations || {})) {
               narrations[lang] = { text: entry?.text || '', audioUrl: entry?.audioUrl || '' };
@@ -401,6 +413,7 @@ export default function EditorPage() {
               editingLanguage: authored,
               speechText: narrative.text || '',
               narrativeAudioUrl: narrative.audioUrl || '',
+              narrativeSentenceTimeline: Array.isArray(narrative.sentenceTimeline) ? narrative.sentenceTimeline : [],
             };
           })(),
           textDisplayMode: narrative.displayMode || 'bubble',
@@ -435,12 +448,16 @@ export default function EditorPage() {
         // Load this scene's previously generated narration audio (if any) so
         // playback and lip sync reflect THIS scene, not whatever was loaded
         // before. The precise provider viseme timeline isn't persisted, so
-        // fall back to the text-derived heuristic for lip sync.
+        // fall back to the text-derived heuristic for lip sync — but the
+        // (much coarser, one-entry-per-sentence) narration gesture timing is
+        // persisted, and is restored here so it survives without regenerating
+        // the audio.
         if (narrative.audioUrl) {
           audio.loadUrl(narrative.audioUrl);
           if (narrative.text) {
             audio.generateVisemeTimelineFromText(narrative.text);
           }
+          audio.applySentenceTimeline(narrative.sentenceTimeline);
         }
       })
       .catch((err) => {
@@ -890,6 +907,7 @@ export default function EditorPage() {
                   transform={transform}
                   posePreset={posePreset}
                   speechText={speechText}
+                  sentenceTimeline={audio.sentenceTimeline}
                   analyserRef={audio.analyserRef}
                   lipSyncConfig={audio.lipSyncConfig}
                   visemeTimeline={audio.visemeTimeline}

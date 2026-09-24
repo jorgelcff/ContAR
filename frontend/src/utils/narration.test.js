@@ -63,8 +63,20 @@ describe('which narration a visitor gets', () => {
   });
 
   it('survives a scene with no narration at all', () => {
-    expect(pickNarration(undefined, 'en')).toEqual({ text: '', audioUrl: '', language: '', isFallback: false });
+    expect(pickNarration(undefined, 'en')).toEqual({
+      text: '', audioUrl: '', language: '', sentenceTimeline: [], isFallback: false,
+    });
     expect(pickNarration({}, 'en').text).toBe('');
+  });
+
+  it('carries the original narration\'s real sentence timing, never a translation\'s', () => {
+    const withTiming = {
+      ...scene,
+      sentenceTimeline: [{ start: 0, end: 0.9, text: 'Olá,' }, { start: 0.95, end: 1.8, text: 'bem-vindo' }],
+    };
+    expect(pickNarration(withTiming, 'pt').sentenceTimeline).toHaveLength(2);
+    // English is a separate recording this scene has no Azure timing for.
+    expect(pickNarration(withTiming, 'en').sentenceTimeline).toEqual([]);
   });
 });
 

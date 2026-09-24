@@ -47,11 +47,19 @@ function classifySentence(sentence) {
   return 'neutral';
 }
 
+/** The variation fields for one sentence's tag, plus its alternating lateral bias. */
+function variationFor(tag, index) {
+  const base = VARIATION_BY_TAG[tag] || VARIATION_BY_TAG.neutral;
+  const lateralBias = tag === 'neutral' ? LATERAL_CYCLE[index % LATERAL_CYCLE.length] : base.lateralBias;
+  return { gainMul: base.gainMul, tempoMul: base.tempoMul, lateralBias };
+}
+
 /**
  * Builds a sentence-by-sentence variation timeline for the given narration
  * text. Each segment's [startSec, endSec) is apportioned by word count
  * against an estimated total speech duration — good enough to pace *relative*
- * accents, without needing the real TTS audio duration.
+ * accents, without needing the real TTS audio duration. Used when no real
+ * timing is available; see buildNarrationPlanFromTimeline for when it is.
  */
 export function buildNarrationPlan(text, { wordsPerMinute = DEFAULT_WORDS_PER_MINUTE } = {}) {
   const sentences = splitSentences(text);
@@ -63,20 +71,31 @@ export function buildNarrationPlan(text, { wordsPerMinute = DEFAULT_WORDS_PER_MI
     const wordCount = sentence.split(/\s+/).filter(Boolean).length || 1;
     const duration = Math.max(0.4, wordCount / wordsPerSecond);
     const tag = classifySentence(sentence);
-    const base = VARIATION_BY_TAG[tag] || VARIATION_BY_TAG.neutral;
-    const lateralBias = tag === 'neutral' ? LATERAL_CYCLE[index % LATERAL_CYCLE.length] : base.lateralBias;
-
-    const segment = {
-      startSec: cursor,
-      endSec: cursor + duration,
-      tag,
-      gainMul: base.gainMul,
-      tempoMul: base.tempoMul,
-      lateralBias,
-    };
+    const segment = { startSec: cursor, endSec: cursor + duration, tag, ...variationFor(tag, index) };
     cursor += duration;
     return segment;
   });
+}
+
+/**
+ * The same per-sentence variation as buildNarrationPlan, but keyed to real
+ * audio timing instead of a word-count estimate — e.g. Azure's
+ * SentenceBoundary events (see backend ttsController.buildSentenceTimeline).
+ * Takes priority over the estimate whenever a scene has it.
+ *
+ * @param {Array<{start: number, end: number, text: string}>} segments
+ */
+export function buildNarrationPlanFromTimeline(segments) {
+  if (!Array.isArray(segments)) return [];
+  return segments
+    .map((s, index) => {
+      const startSec = Number(s?.start);
+      const endSec = Number(s?.end);
+      if (!Number.isFinite(startSec) || !Number.isFinite(endSec) || endSec <= startSec) return null;
+      const tag = classifySentence(String(s?.text || ''));
+      return { startSec, endSec, tag, ...variationFor(tag, index) };
+    })
+    .filter(Boolean);
 }
 
 /**

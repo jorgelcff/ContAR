@@ -320,3 +320,72 @@ describe('narration in more than one language', () => {
     expect(stored(saved.body.content.narrative)).toEqual({});
   });
 });
+
+// Real per-sentence audio timing from Azure's synthesis (see
+// ttsController.buildSentenceTimeline), used to sync the narrator's gestures
+// to the actual speech instead of a word-count estimate. Schema-typed (unlike
+// translations), but still worth bounding defensively in the controller.
+describe('sentence timeline (narration gesture sync)', () => {
+  const withTimeline = (sentenceTimeline) => ({
+    content: {
+      narrative: { text: 'Olá! Tudo bem?', audioUrl: 'https://cdn/pt.mp3', sentenceTimeline },
+    },
+  });
+
+  async function save(user, body) {
+    const res = await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send(body);
+    expect(res.status).toBe(200);
+    const stored = await request(app).get(`/api/scene/${res.body.sceneId}`);
+    return stored.body.content.narrative;
+  }
+
+  it('stores a sentence timeline alongside the narration', async () => {
+    const user = await createAuthedUser();
+    const narrative = await save(user, withTimeline([
+      { start: 0, end: 0.9, text: 'Olá!' },
+      { start: 0.95, end: 2.1, text: 'Tudo bem?' },
+    ]));
+    expect(narrative.sentenceTimeline).toEqual([
+      { start: 0, end: 0.9, text: 'Olá!' },
+      { start: 0.95, end: 2.1, text: 'Tudo bem?' },
+    ]);
+  });
+
+  it('drops entries with a zero/negative-length or non-numeric span', async () => {
+    const user = await createAuthedUser();
+    const narrative = await save(user, withTimeline([
+      { start: 0, end: 0.9, text: 'ok' },
+      { start: 1, end: 1, text: 'zero-length' },
+      { start: 2, end: 1.5, text: 'backwards' },
+      { start: 'nope', end: 3, text: 'not a number' },
+    ]));
+    expect(narrative.sentenceTimeline).toEqual([{ start: 0, end: 0.9, text: 'ok' }]);
+  });
+
+  it('refuses shapes that are not a sentence timeline', async () => {
+    const user = await createAuthedUser();
+    for (const sentenceTimeline of ['a string', 42, { start: 0, end: 1 }, null]) {
+      expect((await save(user, withTimeline(sentenceTimeline))).sentenceTimeline).toEqual([]);
+    }
+  });
+
+  it('bounds how many entries one scene can store', async () => {
+    const user = await createAuthedUser();
+    const huge = Array.from({ length: 600 }, (_, i) => ({ start: i, end: i + 0.5, text: 'x' }));
+    const narrative = await save(user, withTimeline(huge));
+    expect(narrative.sentenceTimeline.length).toBe(500);
+  });
+
+  it('leaves a scene saved before any of this existed alone', async () => {
+    const user = await createAuthedUser();
+    const res = await request(app)
+      .post('/api/scene')
+      .set('Authorization', user.authHeader)
+      .send({ content: { narrative: { text: 'Uma cena antiga', audioUrl: 'https://cdn/old.mp3' } } });
+    const saved = await request(app).get(`/api/scene/${res.body.sceneId}`);
+    expect(saved.body.content.narrative.sentenceTimeline).toEqual([]);
+  });
+});

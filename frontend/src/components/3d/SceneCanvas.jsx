@@ -183,6 +183,9 @@ function normalizeAvatarUrl(url) {
  *   transform   – { positionX, positionY, positionZ, rotationY (deg), scale }
  *   posePreset  – idle | walk | run | dance | speaker | neutral | wave | hands_on_hips | salute | arms_crossed | t_pose | think | point | bow | pray | shrug
  *   speechText  – text to display in the speech bubble above the avatar's head
+ *   sentenceTimeline – real per-sentence audio timing for speechText (Azure
+ *                      SentenceBoundary events), if this scene has it — see
+ *                      AnimationController.setNarrationTimeline
  *   analyserRef – ref to a Web Audio API AnalyserNode used for real-time lip sync
  */
 export default function SceneCanvas({
@@ -190,6 +193,7 @@ export default function SceneCanvas({
   transform,
   posePreset,
   speechText,
+  sentenceTimeline,
   analyserRef,
   lipSyncConfig,
   visemeTimeline,
@@ -666,6 +670,10 @@ export default function SceneCanvas({
       animFrameRef.current = requestAnimationFrame(animate);
       clockRef.current.update();
       const delta = clockRef.current.getDelta();
+      // Real audio position, if a scene has real sentence timing — see
+      // AnimationController.setNarrationTimeline. Harmless when it doesn't:
+      // that plan stays null and this call is a no-op.
+      animControllerRef.current?.setNarrationTime(audioCurrentTimeRef.current);
       animControllerRef.current?.update(delta);
 
       // ── Lip sync: voice-band aware analysis + viseme mapping ──
@@ -1288,6 +1296,7 @@ export default function SceneCanvas({
           externalClipsRef.current,
         );
         animController.setNarrationText(speechText);
+        animController.setNarrationTimeline(sentenceTimeline);
 
         // Apply any .vrma animation that was set before this avatar finished loading
         if (vrmRef.current && vrmaUrlRef.current && vrmaLoaderRef.current) {
@@ -1401,6 +1410,12 @@ export default function SceneCanvas({
   useEffect(() => {
     animControllerRef.current?.setNarrationText(speechText);
   }, [speechText]);
+
+  // ── Real narration timing, when a scene has it — takes priority over the
+  // word-count estimate above (see AnimationController.setNarrationTimeline).
+  useEffect(() => {
+    animControllerRef.current?.setNarrationTimeline(sentenceTimeline);
+  }, [sentenceTimeline]);
 
   // ── Animation loop mode ──────────────────────────────────────
   useEffect(() => {

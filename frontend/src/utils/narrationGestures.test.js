@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { splitSentences, buildNarrationPlan, variationAt, NEUTRAL_VARIATION } from './narrationGestures';
+import {
+  splitSentences, buildNarrationPlan, buildNarrationPlanFromTimeline, variationAt, NEUTRAL_VARIATION,
+} from './narrationGestures';
 
 describe('splitSentences', () => {
   it('splits on sentence-ending punctuation, keeping order', () => {
@@ -52,6 +54,35 @@ describe('buildNarrationPlan', () => {
     for (const segment of plan) {
       if (segment.tag !== 'neutral') expect(segment.lateralBias).toBe(0);
     }
+  });
+});
+
+describe('buildNarrationPlanFromTimeline', () => {
+  it('turns real per-sentence audio timing into the same variation shape as the estimate', () => {
+    const plan = buildNarrationPlanFromTimeline([
+      { start: 0, end: 0.9, text: 'Isso é incrível!' },
+      { start: 0.95, end: 2.1, text: 'Você concorda?' },
+    ]);
+    expect(plan).toEqual([
+      { startSec: 0, endSec: 0.9, tag: 'exclaim', gainMul: 1.25, tempoMul: 1.15, lateralBias: 0 },
+      { startSec: 0.95, endSec: 2.1, tag: 'question', gainMul: 0.95, tempoMul: 0.92, lateralBias: 0 },
+    ]);
+  });
+
+  it('drops a zero/negative-length or non-numeric span rather than passing it through', () => {
+    const plan = buildNarrationPlanFromTimeline([
+      { start: 0, end: 0.9, text: 'ok' },
+      { start: 1, end: 1, text: 'zero-length' },
+      { start: 2, end: 1.5, text: 'backwards' },
+      { start: 'nope', end: 3, text: 'not a number' },
+    ]);
+    expect(plan).toHaveLength(1);
+    expect(plan[0].tag).toBe('short');
+  });
+
+  it('returns nothing for a missing or non-array input', () => {
+    expect(buildNarrationPlanFromTimeline(undefined)).toEqual([]);
+    expect(buildNarrationPlanFromTimeline(null)).toEqual([]);
   });
 });
 

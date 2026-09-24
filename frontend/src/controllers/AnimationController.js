@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { isSpeakerPreset, resolveSpeakerStyle, SPEAKER_STYLES } from '../utils/speakerStyles';
 import { retargetRotationTracks } from '../utils/retarget';
-import { buildNarrationPlan, variationAt, NEUTRAL_VARIATION } from '../utils/narrationGestures';
+import {
+  buildNarrationPlan, buildNarrationPlanFromTimeline, variationAt, NEUTRAL_VARIATION,
+} from '../utils/narrationGestures';
 
 // A rig only gets full world-space retargeting when its bones genuinely rest in
 // a different frame from the animation's own skeleton. Rigs on the Mixamo
@@ -130,6 +132,12 @@ export class AnimationController {
     this._narrationPlan = null;
     this._narrationClock = 0;
     this._narrationVariation = { gainMul: 1, tempoMul: 1, lateralBias: 0 };
+    // Real per-sentence audio timing (e.g. Azure SentenceBoundary events),
+    // when a scene has it — takes priority over the word-count estimate
+    // above. Fed frame-by-frame from actual playback position rather than an
+    // internal clock, via setNarrationTime(). See setNarrationTimeline().
+    this._narrationRealPlan = null;
+    this._narrationRealTime = 0;
 
     // Bind-pose local rotation of every bone, snapshotted before a single clip
     // has run. Retargeting needs it: Mixamo quaternions are authored against
@@ -621,6 +629,30 @@ export class AnimationController {
     this._narrationClock = 0;
   }
 
+  /**
+   * Real per-sentence audio timing for the current narration (e.g. Azure's
+   * SentenceBoundary events, persisted per scene — see backend
+   * ttsController.buildSentenceTimeline). Takes priority over the
+   * setNarrationText() word-count estimate whenever present; pass an empty
+   * array/undefined to fall back to that estimate (e.g. a translation with no
+   * timing of its own, or a scene recorded before this existed).
+   * @param {Array<{start: number, end: number, text: string}>} segments
+   */
+  setNarrationTimeline(segments) {
+    const plan = buildNarrationPlanFromTimeline(segments);
+    this._narrationRealPlan = plan.length ? plan : null;
+  }
+
+  /**
+   * The real playback position (seconds) that setNarrationTimeline's segments
+   * are indexed against — call every frame with the actual <audio> element's
+   * currentTime while a real timeline is set. Ignored (harmlessly) when it
+   * isn't — see setNarrationText's own self-advancing clock for that case.
+   */
+  setNarrationTime(sec) {
+    this._narrationRealTime = Number.isFinite(sec) ? sec : 0;
+  }
+
   update(delta) {
     this._mixer.update(delta);
     this._groundClamp();
@@ -880,11 +912,15 @@ export class AnimationController {
     // Narration clock only advances while actually gesturing as a speaker —
     // switching to another pose pauses it rather than losing the sentence
     // position. Smoothed (not snapped) so a sentence boundary nudges the
-    // gesture rather than popping it.
+    // gesture rather than popping it. Only used as a fallback: real audio
+    // timing (setNarrationTimeline + setNarrationTime), when present, takes
+    // priority and needs no clock of its own — it's told the actual time.
     this._narrationClock += delta;
-    const target = this._narrationPlan
-      ? variationAt(this._narrationPlan, this._narrationClock)
-      : NEUTRAL_VARIATION;
+    const target = this._narrationRealPlan
+      ? variationAt(this._narrationRealPlan, this._narrationRealTime)
+      : this._narrationPlan
+        ? variationAt(this._narrationPlan, this._narrationClock)
+        : NEUTRAL_VARIATION;
     const smoothing = 1 - Math.exp(-delta / 0.6);
     this._narrationVariation.gainMul += (target.gainMul - this._narrationVariation.gainMul) * smoothing;
     this._narrationVariation.tempoMul += (target.tempoMul - this._narrationVariation.tempoMul) * smoothing;

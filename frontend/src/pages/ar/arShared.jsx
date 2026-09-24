@@ -222,6 +222,18 @@ export class ARPoseRig {
     this.controller?.setNarrationText(text);
   }
 
+  // Real per-sentence audio timing, when this scene has it — takes priority
+  // over the text estimate above. See AnimationController.setNarrationTimeline.
+  setNarrationTimeline(segments) {
+    this.controller?.setNarrationTimeline(segments);
+  }
+
+  // Call every frame with the real <audio> element's currentTime while a
+  // timeline is set (see setNarrationTimeline) — harmless no-op otherwise.
+  setNarrationTime(sec) {
+    this.controller?.setNarrationTime(sec);
+  }
+
   // Merge manifest clips so animated presets (walk/dance/…) resolve, then
   // re-apply the current pose in case it depended on a now-available clip.
   setExternalClips(external) {

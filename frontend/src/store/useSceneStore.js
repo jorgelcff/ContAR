@@ -53,6 +53,11 @@ const createSpeechSlice = (set, get) => ({
 
   speechText: '',
   narrativeAudioUrl: '',
+  // Real per-sentence audio timing for narrativeAudioUrl (see backend
+  // ttsController.buildSentenceTimeline) — the working copy for whichever
+  // language the Fala tab is pointed at, mirroring narrativeAudioUrl. Empty
+  // for Web Speech API narration or scenes recorded before this existed.
+  narrativeSentenceTimeline: [],
   // How narration text is shown over the avatar: 'bubble' | 'subtitle' | 'none'.
   // Persisted per scene so the editor, story viewer and AR all render the same way.
   textDisplayMode: 'bubble',
@@ -69,11 +74,23 @@ const createSpeechSlice = (set, get) => ({
       ...(state.narrations[state.editingLanguage] || {}), audioUrl: url,
     } },
   })),
+  // A freshly generated/regenerated recording invalidates whatever sentence
+  // timing the previous one had, so this always replaces rather than merges.
+  setNarrativeSentenceTimeline: (timeline) => set((state) => {
+    const sentenceTimeline = Array.isArray(timeline) ? timeline : [];
+    return {
+      narrativeSentenceTimeline: sentenceTimeline,
+      narrations: { ...state.narrations, [state.editingLanguage]: {
+        ...(state.narrations[state.editingLanguage] || {}), sentenceTimeline,
+      } },
+    };
+  }),
   setTextDisplayMode: (mode) => set({ textDisplayMode: mode }),
   clearSpeech: () => set((state) => ({
     speechText: '',
     narrativeAudioUrl: '',
-    narrations: { ...state.narrations, [state.editingLanguage]: { text: '', audioUrl: '' } },
+    narrativeSentenceTimeline: [],
+    narrations: { ...state.narrations, [state.editingLanguage]: { text: '', audioUrl: '', sentenceTimeline: [] } },
   })),
 
   /** Point the Fala tab at another language, loading whatever it already has. */
@@ -83,6 +100,7 @@ const createSpeechSlice = (set, get) => ({
       editingLanguage: language,
       speechText: entry.text || '',
       narrativeAudioUrl: entry.audioUrl || '',
+      narrativeSentenceTimeline: Array.isArray(entry.sentenceTimeline) ? entry.sentenceTimeline : [],
     };
   }),
 
@@ -123,6 +141,10 @@ function buildNarrative(state) {
     text: String(base.text || ''),
     audioUrl: String(base.audioUrl || ''),
     language: narrationLanguage,
+    // Real audio timing for THIS recording only — never carried into
+    // translations, which are separate recordings with their own timing (or
+    // none yet). See backend ttsController.buildSentenceTimeline.
+    sentenceTimeline: Array.isArray(base.sentenceTimeline) ? base.sentenceTimeline : [],
     translations,
     displayMode: textDisplayMode || 'bubble',
     bubbleStyle: { color: '#ffffff', fontSize: 14 },
@@ -234,6 +256,7 @@ const createStorySlice = (set, get) => ({
     // Always cleared — these describe the scene that was just finished.
     speechText: '',
     narrativeAudioUrl: '',
+    narrativeSentenceTimeline: [],
     narrations: {},
     editingLanguage: get().narrationLanguage,
     sceneTitle: '',

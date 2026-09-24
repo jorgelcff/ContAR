@@ -7,8 +7,9 @@ Cores, tipografia e uso do logo da marca ContAR.
 Vale abrir com isto, porque muda como o resto se lê.
 
 Nenhuma cor desta paleta aparece em `frontend/src/`. As fontes não são carregadas.
-Os arquivos de logo existem em `frontend/public/logo/`, mas `index.html` ainda
-aponta para `/favicon.svg` — o ícone roxo antigo, de outra identidade.
+Os ícones da marca já estão ligados: `index.html` carrega os arquivos de
+`frontend/public/logo/`, e o favicon roxo antigo foi removido. Isso é a casca —
+a interface por dentro continua sem a marca.
 
 O que a interface usa hoje é um sistema separado, documentado no topo de
 [`frontend/src/index.css`](frontend/src/index.css): ciano como cor primária,
@@ -186,11 +187,11 @@ aparecer em componente nenhum — é o que permite trocar um tom da marca em um 
 Hoje há dois sistemas. Enquanto estiverem lado a lado, quem lê não sabe qual vale.
 Na ordem, do mais barato ao mais caro:
 
-1. **Ligar os ícones.** `index.html` aponta para `/favicon.svg` (o roxo antigo).
-   Trocar para `/logo/favicon.svg` e acrescentar `apple-touch-icon` e o
-   `manifest.webmanifest` que já existem em `public/logo/`.
-2. **Apagar o favicon antigo** em `public/favicon.svg`, para não restar dúvida
-   sobre qual é o certo.
+1. ~~**Ligar os ícones.**~~ Feito. `index.html` carrega o SVG, o `.ico`, o
+   `apple-touch-icon`, o manifest e `theme-color`. O Vite reescreve esses
+   caminhos com a base configurada, então funcionam sob subcaminho.
+2. ~~**Apagar o favicon antigo.**~~ Feito — `public/favicon.svg` não existe
+   mais, e nada o referenciava.
 3. **Carregar as fontes** e aplicá-las a `body` e títulos.
 4. **Trocar a paleta.** O caminho mais curto não é reescrever componentes: é
    remapear no `index.css`, no mesmo lugar onde o tema claro já sobrescreve os

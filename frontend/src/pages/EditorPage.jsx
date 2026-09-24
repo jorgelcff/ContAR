@@ -299,7 +299,12 @@ export default function EditorPage() {
   // Route to the /ar mode menu (not straight to Surface AR) so the user can pick
   // a mode their device supports — Surface AR needs WebXR hit-test, which many
   // phones lack even when they report immersive-ar support.
-  const arHref = avatarUrl ? `/ar?modelUrl=${encodeURIComponent(avatarUrl)}` : '/ar';
+  // sceneId lets a QR code scanned on another device fetch this scene's own
+  // narration from the backend instead of relying on this browser's
+  // localStorage (which a different device never has) — see ARPage.jsx.
+  const arHref = avatarUrl
+    ? `/ar?modelUrl=${encodeURIComponent(avatarUrl)}${currentSceneId ? `&sceneId=${encodeURIComponent(currentSceneId)}` : ''}`
+    : '/ar';
 
   // ── Load scene from ?sceneId= URL param ─────────────────────
   useEffect(() => {

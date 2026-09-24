@@ -21,7 +21,7 @@ export default function ViewerPage() {
   const audioLoadedRef = useRef(false);
 
   const arHref = scene?.content?.avatar?.modelUrl
-    ? `/ar?mode=surface&modelUrl=${encodeURIComponent(scene.content.avatar.modelUrl)}`
+    ? `/ar?mode=surface&modelUrl=${encodeURIComponent(scene.content.avatar.modelUrl)}&sceneId=${encodeURIComponent(id)}`
     : '/ar';
 
   const transform = scene

@@ -37,7 +37,7 @@ const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 // every render would retrigger the narration-timeline effect for no reason.
 const EMPTY_SENTENCE_TIMELINE = [];
 
-function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, displayMode, onBack }) {
+function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativeAudioUrl, narrativeText, narrativeIsFallback, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   // Root handed to WebXR as the dom-overlay: transparent and click-through, so
@@ -100,8 +100,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
     : EMPTY_SENTENCE_TIMELINE;
   sentenceTimelineRef.current = sentenceTimeline;
   const pseudoHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined }),
-    [modelUrl, initialScale, storyId]
+    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
+    [modelUrl, initialScale, storyId, sceneId]
   );
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
@@ -203,7 +203,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         setError(t('arCameraDenied'));
       } else if (err?.name === 'NotSupportedError') {
         setHitTestUnsupported(true);
-        setError('Este dispositivo não suporta sessões de Realidade Aumentada (WebXR). Use a AR Imersiva, que funciona neste aparelho.');
+        setError('Este dispositivo não suporta sessões de Realidade Aumentada (WebXR). Use a AR Rápida, que funciona neste aparelho.');
       } else {
         setError(t('arSessionFailed', { error: err?.message || err?.name || '—' }));
       }
@@ -569,6 +569,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         storyId={storyId}
         narrativeAudioUrl={narrativeAudioUrl}
         narrativeText={narrativeText}
+        narrativeIsFallback={narrativeIsFallback}
         onBack={onBack}
       />
     );
@@ -656,6 +657,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
                     className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
                     {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
                   </button>
+                )}
+                {!storyId && narrativeAudioUrl && narrativeIsFallback && (
+                  <p className="col-span-2 text-[11px] text-amber-300">{t('viewerNarrationFallback')}</p>
                 )}
               </div>
 
@@ -766,6 +770,10 @@ export default function ARPage() {
   const [markerUrl, setMarkerUrl] = useState(searchParams.get('markerUrl') || '');
   const [initialScale, setInitialScale] = useState(readSavedScale);
   const [storyId, setStoryId] = useState(searchParams.get('storyId') || '');
+  // Single (non-story) scene id, so a QR code opened on another device can
+  // fetch the scene's own narration instead of relying on this browser's
+  // localStorage — see the fetch effect below.
+  const [sceneId, setSceneId] = useState(searchParams.get('sceneId') || '');
   // null = checking, true/false = WebXR immersive-ar support result
   // (no navigator.xr at all means AR is definitely unsupported, no need to check)
   const [surfaceArSupported, setSurfaceArSupported] = useState(() => (navigator?.xr ? null : false));
@@ -779,7 +787,39 @@ export default function ARPage() {
     setModelUrl(resolveUrl(searchParams.get('modelUrl'), storedAvatarUrl));
     setMarkerUrl(searchParams.get('markerUrl') || '');
     setStoryId(searchParams.get('storyId') || '');
+    setSceneId(searchParams.get('sceneId') || '');
   }
+
+  // A QR/link scanned on a different device starts with empty localStorage,
+  // so the narration saved for this scene has to come from the backend
+  // instead of the (device-local) Zustand store below — mirrors how
+  // useARStory already fetches each story scene via getScene().
+  const effectiveSceneId = storyId ? '' : sceneId;
+  const [fetchedScene, setFetchedScene] = useState(null);
+  const [prevEffectiveSceneId, setPrevEffectiveSceneId] = useState(effectiveSceneId);
+  if (effectiveSceneId !== prevEffectiveSceneId) {
+    setPrevEffectiveSceneId(effectiveSceneId);
+    if (!effectiveSceneId) setFetchedScene(null);
+  }
+  useEffect(() => {
+    if (!effectiveSceneId) return undefined;
+    let active = true;
+    getScene(effectiveSceneId)
+      .then((d) => { if (active) setFetchedScene(d); })
+      .catch(() => { if (active) setFetchedScene(null); });
+    return () => { active = false; };
+  }, [effectiveSceneId]);
+
+  const fetchedNarration = fetchedScene
+    ? pickNarration(fetchedScene.content?.narrative, i18n.language)
+    : null;
+  const effectiveNarrativeAudioUrl = fetchedNarration?.audioUrl || storedNarrativeAudioUrl;
+  const effectiveSpeechText = fetchedNarration?.text || storedSpeechText;
+  const effectivePosePreset = fetchedScene?.content?.avatar?.posePreset || storedPosePreset;
+  const effectiveTextDisplayMode = fetchedScene?.content?.narrative?.displayMode || storedTextDisplayMode;
+  // Said plainly rather than silently substituted — same reasoning as the
+  // story viewer's own fallback notice (StoryViewerPage.jsx).
+  const effectiveNarrativeIsFallback = Boolean(fetchedNarration?.isFallback);
 
   // iOS Safari has no navigator.xr at all — detect this upfront so the
   // "Abrir AR de Superfície" button can be disabled instead of leading
@@ -806,16 +846,16 @@ export default function ARPage() {
     storedAvatarUrl?.startsWith('blob:') && !searchParams.get('modelUrl');
 
   const surfaceHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'surface', modelUrl, scale: initialScale, storyId: storyId || undefined }),
-    [modelUrl, initialScale, storyId]
+    () => buildQueryUrl('/ar', { mode: 'surface', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
+    [modelUrl, initialScale, storyId, sceneId]
   );
   const pseudoHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined }),
-    [modelUrl, initialScale, storyId]
+    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
+    [modelUrl, initialScale, storyId, sceneId]
   );
   const markerHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'marker', modelUrl, markerUrl, scale: initialScale, storyId: storyId || undefined }),
-    [markerUrl, modelUrl, initialScale, storyId]
+    () => buildQueryUrl('/ar', { mode: 'marker', modelUrl, markerUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
+    [markerUrl, modelUrl, initialScale, storyId, sceneId]
   );
 
   if (mode === "surface") {
@@ -829,10 +869,12 @@ export default function ARPage() {
         modelUrl={modelUrl}
         initialScale={startScale}
         storyId={searchParams.get("storyId") || ""}
-        narrativeAudioUrl={storedNarrativeAudioUrl}
-        narrativeText={storedSpeechText}
-        posePreset={storedPosePreset}
-        displayMode={storedTextDisplayMode}
+        sceneId={searchParams.get("sceneId") || ""}
+        narrativeAudioUrl={effectiveNarrativeAudioUrl}
+        narrativeText={effectiveSpeechText}
+        narrativeIsFallback={effectiveNarrativeIsFallback}
+        posePreset={effectivePosePreset}
+        displayMode={effectiveTextDisplayMode}
         onBack={() => window.location.assign(`${import.meta.env.BASE_URL}ar`)}
       />
     );
@@ -849,10 +891,11 @@ export default function ARPage() {
         modelUrl={modelUrl}
         initialScale={startScale}
         storyId={searchParams.get("storyId") || ""}
-        narrativeAudioUrl={storedNarrativeAudioUrl}
-        narrativeText={storedSpeechText}
-        posePreset={storedPosePreset}
-        displayMode={storedTextDisplayMode}
+        narrativeAudioUrl={effectiveNarrativeAudioUrl}
+        narrativeText={effectiveSpeechText}
+        narrativeIsFallback={effectiveNarrativeIsFallback}
+        posePreset={effectivePosePreset}
+        displayMode={effectiveTextDisplayMode}
         onBack={() => window.location.assign(`${import.meta.env.BASE_URL}ar`)}
       />
     );
@@ -1159,7 +1202,7 @@ export default function ARPage() {
   );
 }
 
-function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeText, onBack }) {
+function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeText, narrativeIsFallback, onBack }) {
   const { t } = useTranslation();
   const audio = useAudio();
   const [scale, setScale] = useState(1);
@@ -1355,6 +1398,9 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
             className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold text-white transition-colors">
             {audio.isPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
           </button>
+          {narrativeIsFallback && (
+            <p className="mt-1.5 text-center text-[11px] text-amber-300">{t('viewerNarrationFallback')}</p>
+          )}
         </div>
       )}
 

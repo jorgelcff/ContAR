@@ -344,7 +344,7 @@ export default function StoryViewerPage() {
   }, [sceneData]);
 
   const scaleLabel = `${Math.round(scale * 100)}%`;
-  // Sends the user to the /ar mode menu (Surface AR, Immersive/markerless AR,
+  // Sends the user to the /ar mode menu (Surface AR, Quick/markerless AR,
   // Marker AR) instead of a single hardcoded mode — not every device
   // supports WebXR hit-test, so the user needs to pick what works for them.
   // Carries the current scene's markerUrl (if set) so it's pre-filled if the

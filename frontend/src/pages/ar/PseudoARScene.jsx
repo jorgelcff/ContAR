@@ -30,7 +30,7 @@ const EMPTY_SENTENCE_TIMELINE = [];
 // feed and drives the virtual camera's rotation from the device gyroscope, so
 // the avatar appears anchored as the user pans the phone. No marker and no
 // WebXR session required — works on iOS Safari and Android Chrome alike.
-export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, displayMode, onBack }) {
+export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, narrativeIsFallback, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -464,6 +464,9 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
                   className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
                   {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
                 </button>
+              )}
+              {!storyId && narrativeAudioUrl && narrativeIsFallback && (
+                <p className="col-span-2 text-[11px] text-amber-300">{t('viewerNarrationFallback')}</p>
               )}
             </div>
 

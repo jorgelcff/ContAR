@@ -33,12 +33,6 @@
       "tags": ["slow_run", "jog"]
     },
     {
-      "name": "run",
-      "file": "run.glb",
-      "preset": "run",
-      "tags": ["run"]
-    },
-    {
       "name": "dance",
       "file": "dance.glb",
       "preset": "dance",

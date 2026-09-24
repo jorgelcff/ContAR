@@ -23,6 +23,12 @@ export const SPEAKER_STYLES = {
   speaker_wide: { gain: 1.55, lateral: 0, tempo: 0.88 },
   speaker_left: { gain: 1.25, lateral: 1, tempo: 0.97 },
   speaker_right: { gain: 1.25, lateral: -1, tempo: 0.97 },
+  // Energetic storytelling beat: bigger and quicker than speaker_wide, for an
+  // excited moment in a narration rather than a whole scene.
+  speaker_excited: { gain: 1.7, lateral: 0, tempo: 1.4 },
+  // A hushed, slow beat — smaller and slower than the neutral presenter, for a
+  // calm or intimate moment.
+  speaker_calm: { gain: 0.55, lateral: 0, tempo: 0.7 },
 };
 
 export const SPEAKER_PRESETS = Object.keys(SPEAKER_STYLES);

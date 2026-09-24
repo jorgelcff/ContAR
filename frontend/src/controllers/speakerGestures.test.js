@@ -149,7 +149,7 @@ describe('the presenter stance', () => {
     return { widest, lowest };
   }
 
-  for (const preset of ['speaker', 'speaker_wide', 'speaker_left', 'speaker_right']) {
+  for (const preset of ['speaker', 'speaker_wide', 'speaker_left', 'speaker_right', 'speaker_excited', 'speaker_calm']) {
     it(`${preset} gesticulates with the arms down, never at full span`, () => {
       const { widest, lowest } = armRange(preset);
 

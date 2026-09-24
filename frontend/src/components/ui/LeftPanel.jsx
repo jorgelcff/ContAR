@@ -571,6 +571,8 @@ export default function LeftPanel({
                   <option value="speaker_wide">{t('poseSpeakerWide')}</option>
                   <option value="speaker_left">{t('poseSpeakerLeft')}</option>
                   <option value="speaker_right">{t('poseSpeakerRight')}</option>
+                  <option value="speaker_excited">{t('poseSpeakerExcited')}</option>
+                  <option value="speaker_calm">{t('poseSpeakerCalm')}</option>
                 </optgroup>
                 <optgroup label="Estáticas">
                   <option value="neutral">{t('poseNeutral')}</option>
@@ -583,6 +585,8 @@ export default function LeftPanel({
                   <option value="bow">{t('poseBow')}</option>
                   <option value="pray">{t('posePray')}</option>
                   <option value="shrug">{t('poseShrug')}</option>
+                  <option value="celebrate">{t('poseCelebrate')}</option>
+                  <option value="present">{t('posePresent')}</option>
                   <option value="t_pose">{t('poseTPose')}</option>
                 </optgroup>
               </select>

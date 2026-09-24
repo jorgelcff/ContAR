@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { applyPosePreset } from './posePresets';
+import { applyPosePreset, pickAnimationClip } from './posePresets';
 
 /**
  * Builds a synthetic humanoid bound in a T-pose: arms straight out along X,
@@ -125,6 +125,30 @@ describe('static poses', () => {
     expect(hand.x).toBeLessThan(restHand.x);           // pulled in toward the body
   });
 
+  it('celebrate raises both arms overhead in a V, not a full T-pose', () => {
+    const rig = buildRig();
+    pose(rig, 'celebrate');
+    const left = direction(rig.bones, 'LeftArm', 'LeftForeArm');
+    const right = direction(rig.bones, 'RightArm', 'RightForeArm');
+    expect(left.y).toBeGreaterThan(0.7);
+    expect(right.y).toBeGreaterThan(0.7);
+    // Distinct from t_pose: arms lean up rather than sitting flat on the X axis.
+    expect(left.x).toBeLessThan(0.7);
+    expect(right.x).toBeGreaterThan(-0.7);
+  });
+
+  it('present opens both arms toward the front, not straight out to the sides', () => {
+    const rig = buildRig();
+    const chestZ = position(rig.bones, 'Spine1').z;
+    pose(rig, 'present');
+    const left = direction(rig.bones, 'LeftArm', 'LeftForeArm');
+    const right = direction(rig.bones, 'RightArm', 'RightForeArm');
+    expect(left.z).toBeGreaterThan(0.2);
+    expect(right.z).toBeGreaterThan(0.2);
+    expect(position(rig.bones, 'LeftHand').z).toBeGreaterThan(chestZ);
+    expect(position(rig.bones, 'RightHand').z).toBeGreaterThan(chestZ);
+  });
+
   it('poses the same way regardless of how the rig binds its bones', () => {
     // The property aimBone exists for: two rigs with identical geometry but
     // different local bone axes must reach the same pose. Offsetting from the
@@ -224,5 +248,37 @@ describe('poses reach toward the front of the character', () => {
     const odd = buildRig(twisted());
     pose(odd, 'point');
     expect(position(odd.bones, 'RightHand').z).toBeGreaterThan(position(odd.bones, 'Spine1').z);
+  });
+});
+
+// "Run" has no bundled clip of its own (see public/animations/manifest.json).
+// Without a fallback chain it dropped straight to idle, so selecting "Run"
+// looked identical to standing still — the same bug shape as the T-pose
+// defects above, just for an animated preset instead of a static one.
+describe('animation clip fallback', () => {
+  const clipNamed = (name) => new THREE.AnimationClip(name, 1, []);
+
+  it('falls back to the next closest gait, not straight to idle', () => {
+    const idle = clipNamed('idle');
+    const slowRun = clipNamed('slow_run');
+    expect(pickAnimationClip('run', idle, [], { slow_run: slowRun })).toBe(slowRun);
+  });
+
+  it('falls further to walk when even the closer gait is missing', () => {
+    const idle = clipNamed('idle');
+    const walk = clipNamed('walk');
+    expect(pickAnimationClip('run', idle, [], { walk })).toBe(walk);
+  });
+
+  it('still falls back to idle when nothing else is available', () => {
+    const idle = clipNamed('idle');
+    expect(pickAnimationClip('run', idle, [], {})).toBe(idle);
+  });
+
+  it('prefers a clip authored for the exact preset over the fallback chain', () => {
+    const idle = clipNamed('idle');
+    const run = clipNamed('run');
+    const slowRun = clipNamed('slow_run');
+    expect(pickAnimationClip('run', idle, [], { run, slow_run: slowRun })).toBe(run);
   });
 });

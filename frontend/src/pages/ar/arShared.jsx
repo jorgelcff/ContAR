@@ -141,7 +141,10 @@ export function ARNarration({ mode, text }) {
 let _arManifestPromise = null;
 export function loadAnimationManifest(gltfLoader) {
   if (_arManifestPromise) return _arManifestPromise;
-  const PRESETS = ['idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'speaker'];
+  const PRESETS = [
+    'idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'dance_samba',
+    'speaker', 'agree', 'disagree', 'sad', 'sneak',
+  ];
   _arManifestPromise = fetch(
     `${import.meta.env.BASE_URL}animations/manifest.json`,
   )
@@ -210,6 +213,25 @@ export class ARPoseRig {
       this.boneMapper,
       this.externalClips,
     );
+  }
+
+  // Feeds the scene's narration text to the speaker gesture layer, so it can
+  // accent sentences (see AnimationController.setNarrationText). Safe to call
+  // on every render — it no-ops when the text hasn't changed.
+  setNarrationText(text) {
+    this.controller?.setNarrationText(text);
+  }
+
+  // Real per-sentence audio timing, when this scene has it — takes priority
+  // over the text estimate above. See AnimationController.setNarrationTimeline.
+  setNarrationTimeline(segments) {
+    this.controller?.setNarrationTimeline(segments);
+  }
+
+  // Call every frame with the real <audio> element's currentTime while a
+  // timeline is set (see setNarrationTimeline) — harmless no-op otherwise.
+  setNarrationTime(sec) {
+    this.controller?.setNarrationTime(sec);
   }
 
   // Merge manifest clips so animated presets (walk/dance/…) resolve, then

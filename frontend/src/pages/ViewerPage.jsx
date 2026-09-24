@@ -125,6 +125,7 @@ export default function ViewerPage() {
               transform={transform}
               posePreset={scene?.content?.avatar?.posePreset || 'idle'}
               speechText={pickNarration(scene?.content?.narrative, i18n.language).text}
+              sentenceTimeline={pickNarration(scene?.content?.narrative, i18n.language).sentenceTimeline}
               // Without these the viewer replayed the scene with default playback
               // settings — most visibly, narration always rendered as a bubble
               // even when the scene was authored with subtitles.

@@ -74,7 +74,10 @@ export function applyPosePreset(
   // pose, which is a T-pose: the arms were pinned wide open for as long as the
   // preset was selected, wobbling slightly. Hence "it looks like it is about to
   // take off".
-  const animatedPresets = ["idle", "walk", "walk_circle", "slow_run", "run", "dance"];
+  const animatedPresets = [
+    "idle", "walk", "walk_circle", "slow_run", "run", "dance",
+    "dance_samba", "agree", "disagree", "sad", "sneak",
+  ];
   if (animatedPresets.includes(normalized)) {
     if (animationController) {
       const clip = pickAnimationClip(normalized, idleClip, avatarClips, externalClips);
@@ -115,27 +118,44 @@ export function applyPosePreset(
     applyPrayPose(model, boneMapper);
   } else if (normalized === "shrug") {
     applyShrugPose(model, boneMapper);
+  } else if (normalized === "celebrate") {
+    applyCelebratePose(model, boneMapper);
+  } else if (normalized === "present") {
+    applyPresentPose(model, boneMapper);
   }
 
   model.updateMatrixWorld(true);
 }
 
-function pickAnimationClip(preset, idleClip, avatarClips = [], externalClips = {}) {
-  const keywordsByPreset = {
-    idle:        [/idle/, /stand/],
-    walk:        [/^walk$/],
-    walk_circle: [/walk.?circle/, /circle.?walk/],
-    slow_run:    [/slow.?run/, /slow.?jog/],
-    run:         [/^run$/],
-    dance:       [/dance/],
-    speaker:     [/speak/, /talk/, /narrat/, /present/, /explain/, /lecture/],
-  };
+const KEYWORDS_BY_PRESET = {
+  idle:        [/idle/, /stand/],
+  walk:        [/^walk$/],
+  walk_circle: [/walk.?circle/, /circle.?walk/],
+  slow_run:    [/slow.?run/, /slow.?jog/],
+  run:         [/^run$/],
+  dance:       [/dance/],
+  dance_samba: [/samba/],
+  speaker:     [/speak/, /talk/, /narrat/, /present/, /explain/, /lecture/],
+  agree:       [/agree/, /\bnod\b/],
+  disagree:    [/disagree/, /head.?shake/, /shake.?head/],
+  sad:         [/sad/],
+  sneak:       [/sneak/, /tiptoe/],
+};
 
-  const patterns = keywordsByPreset[preset] || [];
-  const clips = Array.isArray(avatarClips) ? avatarClips : [];
+// A preset with no dedicated clip degrades to the next closest gait rather
+// than jumping straight to idle — "Run" with no run clip looks like jogging
+// (slow_run) or at worst walking, never like standing still.
+const ANIMATION_FALLBACK_CHAIN = {
+  run: ['slow_run', 'walk'],
+  slow_run: ['walk'],
+  walk_circle: ['walk'],
+};
+
+function findClipForPreset(preset, avatarClips, externalClips) {
+  const patterns = KEYWORDS_BY_PRESET[preset] || [];
 
   // 1. Avatar's own embedded clips (highest priority — rig-matched)
-  const fromAvatar = clips.find((clip) => {
+  const fromAvatar = avatarClips.find((clip) => {
     const name = String(clip?.name || "").toLowerCase();
     return patterns.some((re) => re.test(name));
   });
@@ -150,7 +170,18 @@ function pickAnimationClip(preset, idleClip, avatarClips = [], externalClips = {
     if (patterns.some((re) => re.test(name))) return clip;
   }
 
-  // 4. Fallback: use idle (external or legacy) so we never show a T-pose
+  return null;
+}
+
+export function pickAnimationClip(preset, idleClip, avatarClips = [], externalClips = {}) {
+  const clips = Array.isArray(avatarClips) ? avatarClips : [];
+
+  for (const name of [preset, ...(ANIMATION_FALLBACK_CHAIN[preset] || [])]) {
+    const found = findClipForPreset(name, clips, externalClips);
+    if (found) return found;
+  }
+
+  // Last resort: idle (external or legacy) so we never show a T-pose
   const fallbackIdle = externalClips.idle || idleClip;
   if (fallbackIdle) return fallbackIdle;
 
@@ -601,4 +632,29 @@ function applyShrugPose(model, boneMapper = null) {
   aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.62, 0.16, 0.77));
   aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.46, -0.87, -0.16));
   aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.62, 0.16, 0.77));
+}
+
+function applyCelebratePose(model, boneMapper = null) {
+  const arms = getArmChain(model, boneMapper);
+  // Both arms raised in a "V" above the head — a win/hooray moment, distinct
+  // from t_pose by staying well short of horizontal and closing into fists.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.34, 0.88, -0.05));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.20, 0.97, 0.05));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.34, 0.88, -0.05));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.20, 0.97, 0.05));
+
+  applyFingerPose(model, 'left', 'fist');
+  applyFingerPose(model, 'right', 'fist');
+}
+
+function applyPresentPose(model, boneMapper = null) {
+  const arms = getArmChain(model, boneMapper);
+  // Arms open out to the sides and forward, near shoulder height — a
+  // "here it is" / welcoming gesture for a narrator showcasing something,
+  // more open than speaker's at-rest stance but lower and further forward
+  // than a T-pose so it doesn't read as a bind-pose glitch.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.72, -0.05, 0.35));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.80, 0.10, 0.45));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.72, -0.05, 0.35));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.80, 0.10, 0.45));
 }

@@ -243,7 +243,7 @@ export async function resetPassword(token, password) {
 
 export async function generateTTS(text, voiceId) {
   const { data } = await api.post('/tts/generate', { text, voiceId });
-  return data; // { audioBase64, alignment }
+  return data; // { audioBase64, visemeTimeline, sentenceTimeline }
 }
 
 /**

@@ -37,6 +37,30 @@ function sanitizeTranslations(raw) {
   return out;
 }
 
+// One entry per sentence in a scene's narration — generous, but bounded, so a
+// crafted payload can't write an unbounded array into the document (the
+// schema types each field, but does not cap the array length).
+const MAX_SENTENCE_TIMELINE_ENTRIES = 500;
+
+/**
+ * Real per-sentence audio timing from Azure's synthesis (see
+ * ttsController.buildSentenceTimeline). Schema-typed, unlike translations,
+ * but still worth bounding here rather than trusting mongoose's cast to
+ * either succeed perfectly or fail the whole save.
+ */
+function sanitizeSentenceTimeline(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const entry of raw.slice(0, MAX_SENTENCE_TIMELINE_ENTRIES)) {
+    if (!entry || typeof entry !== 'object') continue;
+    const start = Number(entry.start);
+    const end = Number(entry.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    out.push({ start, end, text: String(entry.text || '').slice(0, MAX_NARRATION_CHARS) });
+  }
+  return out;
+}
+
 function sanitizeNarrative(content) {
   const narrative =
     content.narrative && typeof content.narrative === 'object' && !Array.isArray(content.narrative)
@@ -50,6 +74,7 @@ function sanitizeNarrative(content) {
       ...narrative,
       language: NARRATION_LANGUAGES.includes(language) ? language : '',
       translations: sanitizeTranslations(narrative.translations),
+      sentenceTimeline: sanitizeSentenceTimeline(narrative.sentenceTimeline),
     },
   };
 }

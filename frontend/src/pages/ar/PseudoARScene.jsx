@@ -22,6 +22,9 @@ import {
 
 const PLACEMENT_DISTANCE = 1.8;
 const CAMERA_HEIGHT = 1.6;
+// A stable reference for "no sentence timeline" — a fresh `[]` literal on
+// every render would retrigger the narration-timeline effect for no reason.
+const EMPTY_SENTENCE_TIMELINE = [];
 
 // "Pseudo-AR" / Magic Window: overlays the avatar scene on the live camera
 // feed and drives the virtual camera's rotation from the device gyroscope, so
@@ -42,6 +45,8 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const poseRigRef = useRef(null);
   const clockRef = useRef(new THREE.Clock());
   const effectivePoseRef = useRef('idle');
+  const narrationTextRef = useRef('');
+  const sentenceTimelineRef = useRef([]);
   // Lip sync
   const lipSyncRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -69,6 +74,14 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const narrationText = storyId
     ? (story.hasStarted ? (story.currentScene?.content?.narrative?.text || '') : '')
     : (narrativeText || '');
+  narrationTextRef.current = narrationText;
+  // Real per-sentence timing, story mode only — a standalone shared scene
+  // (no storyId) has no timeline plumbed to this component at all, so it
+  // falls back to the text estimate automatically (see setNarrationTimeline).
+  const sentenceTimeline = storyId && story.hasStarted
+    ? (story.currentScene?.content?.narrative?.sentenceTimeline || EMPTY_SENTENCE_TIMELINE)
+    : EMPTY_SENTENCE_TIMELINE;
+  sentenceTimelineRef.current = sentenceTimeline;
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
   const initWebAudio = () => {
@@ -239,6 +252,9 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
     loaderRef.current = createAvatarGLTFLoader();
 
     renderer.setAnimationLoop(() => {
+      // Real audio position, if this scene has real sentence timing — see
+      // AnimationController.setNarrationTimeline. Harmless no-op otherwise.
+      poseRigRef.current?.setNarrationTime(story.audioRef.current?.currentTime ?? 0);
       // Drive pose animations (idle/walk/dance/…) + blink/breathing each frame.
       poseRigRef.current?.update(clockRef.current.getDelta());
 
@@ -337,6 +353,8 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
         const rig = new ARPoseRig(gltf, model);
         poseRigRef.current = rig;
         rig.apply(effectivePoseRef.current);
+        rig.setNarrationText(narrationTextRef.current);
+        rig.setNarrationTimeline(sentenceTimelineRef.current);
         loadAnimationManifest(loaderRef.current)
           .then((clips) => { if (poseRigRef.current === rig) rig.setExternalClips(clips); })
           .catch(() => {});
@@ -357,6 +375,16 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   useEffect(() => {
     poseRigRef.current?.apply(effectivePosePreset);
   }, [effectivePosePreset]);
+
+  // ── Narration text (drives the speaker gesture layer's sentence-by-sentence
+  // accents — see AnimationController.setNarrationText) ───────────────────
+  useEffect(() => {
+    poseRigRef.current?.setNarrationText(narrationText);
+  }, [narrationText]);
+
+  useEffect(() => {
+    poseRigRef.current?.setNarrationTimeline(sentenceTimeline);
+  }, [sentenceTimeline]);
 
   return (
     <div className="ar-dark relative h-dvh w-screen overflow-hidden bg-black text-white">

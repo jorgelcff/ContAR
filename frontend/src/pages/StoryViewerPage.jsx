@@ -634,6 +634,7 @@ export default function StoryViewerPage() {
                         transform={transform}
                         posePreset={sceneData?.content?.avatar?.posePreset || 'idle'}
                         speechText={narration.text}
+                        sentenceTimeline={narration.sentenceTimeline}
                         textDisplayMode={sceneData?.content?.narrative?.displayMode || 'bubble'}
                         vrmaUrl={sceneData?.content?.avatar?.vrmaUrl || ''}
                         animSpeed={sceneData?.content?.avatar?.animSpeed ?? 1}

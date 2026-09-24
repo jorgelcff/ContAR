@@ -24,15 +24,22 @@ function usable(entry) {
 }
 
 /**
- * @returns {{text: string, audioUrl: string, language: string, isFallback: boolean}}
+ * @returns {{text: string, audioUrl: string, language: string, sentenceTimeline: Array, isFallback: boolean}}
  *   isFallback is true when the visitor's language was not available and the
  *   original was used — the viewer says so rather than pretending.
+ *   sentenceTimeline is the original narration's real per-sentence audio
+ *   timing (see backend ttsController.buildSentenceTimeline) — only ever
+ *   non-empty for the original language, since a translation's audio is a
+ *   separate recording this scene has no Azure timing for. Consumers (see
+ *   AnimationController.setNarrationTimeline) already fall back to a
+ *   word-count estimate when this is empty.
  */
 export function pickNarration(narrative, language) {
   const base = {
     text: String(narrative?.text || ''),
     audioUrl: String(narrative?.audioUrl || ''),
     language: baseLanguage(narrative?.language) || '',
+    sentenceTimeline: Array.isArray(narrative?.sentenceTimeline) ? narrative.sentenceTimeline : [],
     isFallback: false,
   };
 
@@ -49,6 +56,7 @@ export function pickNarration(narrative, language) {
     // Deliberately not `|| narrative.audioUrl`: see the note above.
     audioUrl: String(entry.audioUrl || ''),
     language: wanted,
+    sentenceTimeline: [],
     isFallback: false,
   };
 }

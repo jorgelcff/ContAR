@@ -59,6 +59,12 @@ export default function useAudio({ onAudioBlob } = {}) {
   const [audioProcessing, setAudioProcessing] = useState(DEFAULT_AUDIO_PROCESSING);
   const [lipSyncConfig, setLipSyncConfig] = useState(DEFAULT_LIP_SYNC_CONFIG);
   const [visemeTimeline, setVisemeTimeline] = useState([]);
+  // Real per-sentence audio timing from the last Azure generation (or a saved
+  // scene's own), used to sync narrator gestures to the actual speech —
+  // see AnimationController.setNarrationTimeline. Empty for Web Speech API
+  // narration or scenes recorded before this existed; callers fall back to a
+  // word-count estimate in that case.
+  const [sentenceTimeline, setSentenceTimeline] = useState([]);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isTTSLoading, setIsTTSLoading] = useState(false);
@@ -253,6 +259,13 @@ export default function useAudio({ onAudioBlob } = {}) {
     setVisemeTimeline([]);
   }
 
+  // Restores a previously-generated sentence timeline (e.g. a saved scene's
+  // own, or the one just returned by generateWithAzure) — a plain setter
+  // with the same shape guard the effects below already rely on.
+  function applySentenceTimeline(timeline) {
+    setSentenceTimeline(Array.isArray(timeline) ? timeline : []);
+  }
+
   // Apply a precise viseme timeline supplied by the TTS provider (Azure)
   // as { start, end, value }[]. Set raw — the audioDuration effect re-normalizes
   // it once the freshly loaded clip's duration is known. Returns false if empty
@@ -271,8 +284,9 @@ export default function useAudio({ onAudioBlob } = {}) {
     setIsTTSLoading(true);
     setError('');
     try {
-      // Backend returns { audioBase64, visemeTimeline } from Azure
-      const { audioBase64, visemeTimeline: ttsTimeline } = await generateTTS(src, voiceId);
+      // Backend returns { audioBase64, visemeTimeline, sentenceTimeline } from Azure
+      const { audioBase64, visemeTimeline: ttsTimeline, sentenceTimeline: ttsSentenceTimeline } =
+        await generateTTS(src, voiceId);
 
       // Base64 → Blob → object URL
       const bytes = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
@@ -283,12 +297,20 @@ export default function useAudio({ onAudioBlob } = {}) {
       setAudioCurrentTime(0);
       setAudioDuration(0);
       setUrl(URL.createObjectURL(blob));
-      onAudioBlob?.(blob);
 
       if (Array.isArray(ttsTimeline) && ttsTimeline.length) {
         setVisemeTimeline(ttsTimeline);
         setLipSyncConfig((prev) => ({ ...prev, visemeMode: 'timeline' }));
       }
+      // A freshly generated narration replaces whatever timing the previous
+      // one had — never keep an old scene's sentence timeline paired with a
+      // brand new (differently-timed) recording of possibly different text.
+      const sentenceTimeline = Array.isArray(ttsSentenceTimeline) ? ttsSentenceTimeline : [];
+      setSentenceTimeline(sentenceTimeline);
+      // Passed alongside the blob (rather than left for the caller to read
+      // back from this hook's own state) so a persistence callback can save it
+      // synchronously, without waiting on a React state update it can't see yet.
+      onAudioBlob?.(blob, { sentenceTimeline });
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || 'Falha ao gerar fala.');
     } finally {
@@ -489,6 +511,7 @@ export default function useAudio({ onAudioBlob } = {}) {
     setAudioCurrentTime(0);
     setAudioDuration(0);
     setVisemeTimeline([]);
+    setSentenceTimeline([]);
     setError('');
   }
 
@@ -565,6 +588,7 @@ export default function useAudio({ onAudioBlob } = {}) {
     audioProcessing,
     lipSyncConfig,
     visemeTimeline,
+    sentenceTimeline,
     audioCurrentTime,
     audioDuration,
     loadFile,
@@ -572,6 +596,7 @@ export default function useAudio({ onAudioBlob } = {}) {
     loadVisemeTimeline,
     clearVisemeTimeline,
     applyVisemeTimeline,
+    applySentenceTimeline,
     generateVisemeTimelineFromText,
     generateWithAzure,
     speakWithWebSpeech,

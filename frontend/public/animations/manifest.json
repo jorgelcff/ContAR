@@ -1,6 +1,6 @@
 {
   "_comment": "Drop Mixamo GLB files (Without Skin, 30fps, No Reduction) in this folder and list them here.",
-  "_presets": "idle | walk | walk_circle | slow_run | run | dance | speaker — tags must include at least one of these keywords",
+  "_presets": "idle | walk | walk_circle | slow_run | run | dance | dance_samba | speaker | agree | disagree | sad | sneak — tags must include at least one of these keywords",
   "animations": [
     {
       "name": "idle",
@@ -45,10 +45,40 @@
       "tags": ["dance"]
     },
     {
+      "name": "dance_samba",
+      "file": "dance_samba.glb",
+      "preset": "dance_samba",
+      "tags": ["dance_samba", "samba"]
+    },
+    {
       "name": "speaker",
       "file": "talking.glb",
       "preset": "speaker",
       "tags": ["speaker", "talk", "talking"]
+    },
+    {
+      "name": "agree",
+      "file": "agree.glb",
+      "preset": "agree",
+      "tags": ["agree", "nod", "yes"]
+    },
+    {
+      "name": "disagree",
+      "file": "head_shake.glb",
+      "preset": "disagree",
+      "tags": ["disagree", "headshake", "no"]
+    },
+    {
+      "name": "sad",
+      "file": "sad_pose.glb",
+      "preset": "sad",
+      "tags": ["sad"]
+    },
+    {
+      "name": "sneak",
+      "file": "sneak_pose.glb",
+      "preset": "sneak",
+      "tags": ["sneak", "tiptoe"]
     }
   ]
 }

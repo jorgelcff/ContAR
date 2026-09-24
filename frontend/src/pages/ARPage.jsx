@@ -33,6 +33,9 @@ import {
 } from './ar/arShared';
 
 const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
+// A stable reference for "no sentence timeline" — a fresh `[]` literal on
+// every render would retrigger the narration-timeline effect for no reason.
+const EMPTY_SENTENCE_TIMELINE = [];
 
 function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
@@ -51,6 +54,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const poseRigRef = useRef(null);
   const clockRef = useRef(new THREE.Clock());
   const effectivePoseRef = useRef('idle');
+  const narrationTextRef = useRef('');
+  const sentenceTimelineRef = useRef([]);
   const hitTestSourceRef = useRef(null);
   const referenceSpaceRef = useRef(null);
   const xrSessionRef = useRef(null);
@@ -86,6 +91,14 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const narrationText = storyId
     ? (story.hasStarted ? pickNarration(story.currentScene?.content?.narrative, i18n.language).text : '')
     : (narrativeText || '');
+  narrationTextRef.current = narrationText;
+  // Real per-sentence timing, story mode only — a standalone shared scene
+  // (no storyId) has no timeline plumbed to this component at all, so it
+  // falls back to the text estimate automatically (see setNarrationTimeline).
+  const sentenceTimeline = storyId && story.hasStarted
+    ? (story.currentScene?.content?.narrative?.sentenceTimeline || EMPTY_SENTENCE_TIMELINE)
+    : EMPTY_SENTENCE_TIMELINE;
+  sentenceTimelineRef.current = sentenceTimeline;
   const pseudoHref = useMemo(
     () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined }),
     [modelUrl, initialScale, storyId]
@@ -394,6 +407,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         placedRef.current = true;
       }
 
+      // Real audio position, if this scene has real sentence timing — see
+      // AnimationController.setNarrationTimeline. Harmless no-op otherwise.
+      poseRigRef.current?.setNarrationTime(story.audioRef.current?.currentTime ?? 0);
       // Drive pose animations (idle/walk/dance/…) + blink/breathing each frame.
       poseRigRef.current?.update(clockRef.current.getDelta());
 
@@ -456,7 +472,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
       loaderRef.current = null;
       reticleRef.current = null;
     };
-  }, [t, supported]);
+  }, [t, supported]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!loaderRef.current || !modelRootRef.current) return;
@@ -504,6 +520,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         const rig = new ARPoseRig(gltf, model);
         poseRigRef.current = rig;
         rig.apply(effectivePoseRef.current);
+        rig.setNarrationText(narrationTextRef.current);
+        rig.setNarrationTimeline(sentenceTimelineRef.current);
         loadAnimationManifest(loaderRef.current)
           .then((clips) => { if (poseRigRef.current === rig) rig.setExternalClips(clips); })
           .catch(() => {});
@@ -524,6 +542,16 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   useEffect(() => {
     poseRigRef.current?.apply(effectivePosePreset);
   }, [effectivePosePreset]);
+
+  // ── Narration text (drives the speaker gesture layer's sentence-by-sentence
+  // accents — see AnimationController.setNarrationText) ───────────────────
+  useEffect(() => {
+    poseRigRef.current?.setNarrationText(narrationText);
+  }, [narrationText]);
+
+  useEffect(() => {
+    poseRigRef.current?.setNarrationTimeline(sentenceTimeline);
+  }, [sentenceTimeline]);
 
   if (supported === null) {
     return (
@@ -1179,6 +1207,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
     if (audioUrl) {
       audio.loadUrl(audioUrl);
       if (text) audio.generateVisemeTimelineFromText(text);
+      audio.applySentenceTimeline(currentScene?.content?.narrative?.sentenceTimeline);
     } else {
       audio.stop();
       audio.clearVisemeTimeline();
@@ -1284,6 +1313,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
               transform={transform}
               posePreset={posePreset}
               speechText={speechText}
+              sentenceTimeline={audio.sentenceTimeline}
               textDisplayMode={currentScene?.content?.narrative?.displayMode || 'bubble'}
               visemeTimeline={audio.visemeTimeline}
               audioCurrentTime={audio.audioCurrentTime}

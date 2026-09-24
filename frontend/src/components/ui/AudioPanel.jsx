@@ -1,3 +1,4 @@
+import { timelineIsVisible } from '../../utils/lipsyncCapability';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
@@ -25,6 +26,7 @@ const WEB_LANGS = [
 
 export default function AudioPanel({
   speechText,
+  lipsyncCapability: capability,
   audioUrl,
   isPlaying,
   isRecording,
@@ -69,6 +71,10 @@ export default function AudioPanel({
   const isGenerating  = isTTSLoading || isSpeaking;
   const hasAudio      = !!audioUrl;
   const hasVisemes    = !!visemeTimeline?.length;
+  // A generated timeline only reaches a face that has mouth shapes to put it
+  // on. Saying "synced" to an author whose avatar can only hinge a jaw sends
+  // them off hunting a bug in their recording.
+  const visemesShow   = timelineIsVisible(capability);
 
   return (
     <section className="flex flex-col gap-3">
@@ -179,8 +185,11 @@ export default function AudioPanel({
 
         {/* Status feedback */}
         {!!visemeTimeline?.length && !isGenerating && provider === 'azure' && (
-          <p className="text-xs text-emerald-400 flex items-center gap-1.5">
-            <Icon name="check" className="w-3.5 h-3.5" /> {t('apVisemesSynced', { count: visemeTimeline.length })}
+          <p className={`text-xs flex items-center gap-1.5 ${visemesShow ? 'text-emerald-400' : 'text-amber-400'}`}>
+            <Icon name={visemesShow ? 'check' : 'warning'} className="w-3.5 h-3.5 shrink-0" />
+            {visemesShow
+              ? t('apVisemesSynced', { count: visemeTimeline.length })
+              : t('apVisemesNotShown')}
           </p>
         )}
         {provider === 'webspeech' && !isSpeaking && (
@@ -271,8 +280,11 @@ export default function AudioPanel({
               )}
             </div>
             {hasVisemes && (
-              <p className="text-xs text-emerald-400 flex items-center gap-1.5">
-                <Icon name="check" className="w-3.5 h-3.5" /> {t('apVisemesSynced', { count: visemeTimeline.length })}
+              <p className={`text-xs flex items-center gap-1.5 ${visemesShow ? 'text-emerald-400' : 'text-amber-400'}`}>
+                <Icon name={visemesShow ? 'check' : 'warning'} className="w-3.5 h-3.5 shrink-0" />
+                {visemesShow
+                  ? t('apVisemesSynced', { count: visemeTimeline.length })
+                  : t('apVisemesNotShown')}
               </p>
             )}
           </div>

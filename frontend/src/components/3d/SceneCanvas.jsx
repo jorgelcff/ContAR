@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { pickMouthSource } from '../../utils/lipsyncSources';
+import { lipsyncCapability } from '../../utils/lipsyncCapability';
 import { useTranslation } from 'react-i18next';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -207,6 +208,7 @@ export default function SceneCanvas({
   showRigTools = false,
   onAvatarClips,
   onJawApi,
+  onLipsyncCapability,
 }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
@@ -266,6 +268,10 @@ export default function SceneCanvas({
   const [jawRadius, setJawRadius] = useState(0.05);
   const [jawBaseWorldPos, setJawBaseWorldPos] = useState(null);
   const jawJitterPhaseRef = useRef(0);
+  const onLipsyncCapabilityRef = useRef(onLipsyncCapability);
+  useEffect(() => {
+    onLipsyncCapabilityRef.current = onLipsyncCapability;
+  }, [onLipsyncCapability]);
   const onJawApiRef = useRef(onJawApi);
   useEffect(() => {
     onJawApiRef.current = onJawApi;
@@ -1168,6 +1174,14 @@ export default function SceneCanvas({
         }
 
         const jawBones = resolveJawBones(model, manualJawBoneName, boneMapper);
+
+        // Tell the editor what this face can do with a viseme timeline, so the
+        // speech panel stops promising precision the model cannot show.
+        onLipsyncCapabilityRef.current?.(lipsyncCapability({
+          hasArkitVisemes,
+          mouthMorphCount: lipSyncController._mouthTargetCount,
+          hasJaw: jawBones.length > 0 || Boolean(syntheticJawRef.current),
+        }));
 
         const boneNames = [];
         const meshNames = [];

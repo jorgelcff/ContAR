@@ -74,6 +74,7 @@ export default function LeftPanel({
     posePreset, setPosePreset,
     speechText, setSpeechText,
     narrationLanguage, editingLanguage, setEditingLanguage, filledNarrationLanguages,
+    lipsyncCapability,
     sceneTitle, setSceneTitle,
     storyTitle, setStoryTitle,
     storyDescription, setStoryDescription,
@@ -868,6 +869,7 @@ export default function LeftPanel({
 
             {audio && (
               <AudioPanel
+                lipsyncCapability={lipsyncCapability}
                 speechText={speechText}
                 audioUrl={audio.audioUrl}
                 isPlaying={audio.isPlaying}

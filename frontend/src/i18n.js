@@ -7,6 +7,14 @@ import { initReactI18next } from 'react-i18next';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const en = {
+  apVisemesNotShown:
+    "Lip sync was generated, but this character has no mouth shapes to show it — only the jaw moves, following the loudness. A character with facial blendshapes will show the full lip sync.",
+  epSceneLoadUnreachable:
+    "Could not reach the server to open this scene. Nothing was lost — what was on screen is still here. Try again in a moment.",
+  epDraftRestored:
+    "Recovered changes that had not been saved. They are being saved now.",
+  epAddSceneSaveFailed:
+    "This scene could not be saved, so it was not added to the story — and the editor was left as it is, so nothing is lost. Check your connection and try again.",
   // ── App / global ───────────────────────────────────────────────────────────
   appTitle: "ContAR",
   cancel: "Cancel",
@@ -881,6 +889,14 @@ const en = {
 // PORTUGUESE (pt) — primary language
 // ─────────────────────────────────────────────────────────────────────────────
 const pt = {
+  apVisemesNotShown:
+    "O lip sync foi gerado, mas este personagem não tem formas de boca para mostrá-lo — só a mandíbula se mexe, acompanhando o volume. Um personagem com blendshapes faciais mostra o lip sync completo.",
+  epSceneLoadUnreachable:
+    "Não consegui falar com o servidor para abrir esta cena. Nada foi perdido — o que estava na tela continua aqui. Tente de novo em instantes.",
+  epDraftRestored:
+    "Recuperei alterações que não tinham sido salvas. Elas estão sendo salvas agora.",
+  epAddSceneSaveFailed:
+    "Não consegui salvar esta cena, então ela não foi adicionada à história — e o editor ficou como está, então nada foi perdido. Verifique sua conexão e tente de novo.",
   appTitle: "ContAR",
   cancel: "Cancelar",
   save: "Salvar",
@@ -1744,6 +1760,14 @@ const pt = {
 // SPANISH (es)
 // ─────────────────────────────────────────────────────────────────────────────
 const es = {
+  apVisemesNotShown:
+    "Se generó el lip sync, pero este personaje no tiene formas de boca para mostrarlo — solo se mueve la mandíbula, siguiendo el volumen. Un personaje con blendshapes faciales muestra el lip sync completo.",
+  epSceneLoadUnreachable:
+    "No pude contactar al servidor para abrir esta escena. No se perdió nada — lo que estaba en pantalla sigue aquí. Inténtalo de nuevo en un momento.",
+  epDraftRestored:
+    "Recuperé cambios que no se habían guardado. Se están guardando ahora.",
+  epAddSceneSaveFailed:
+    "No pude guardar esta escena, así que no se agregó a la historia — y el editor quedó como está, así que no se perdió nada. Verifica tu conexión e inténtalo de nuevo.",
   appTitle: 'ContAR',
   cancel: 'Cancelar',
   save: 'Guardar',
@@ -2460,6 +2484,14 @@ const es = {
 // FRENCH (fr)
 // ─────────────────────────────────────────────────────────────────────────────
 const fr = {
+  apVisemesNotShown:
+    "La synchro labiale a été générée, mais ce personnage n'a pas de formes de bouche pour la montrer — seule la mâchoire bouge, en suivant le volume. Un personnage avec des blendshapes faciaux montre la synchro complète.",
+  epSceneLoadUnreachable:
+    "Impossible de joindre le serveur pour ouvrir cette scène. Rien n'est perdu — ce qui était à l'écran est toujours là. Réessayez dans un instant.",
+  epDraftRestored:
+    "J'ai récupéré des modifications non enregistrées. Elles sont en cours d'enregistrement.",
+  epAddSceneSaveFailed:
+    "Impossible d'enregistrer cette scène, elle n'a donc pas été ajoutée à l'histoire — et l'éditeur est resté tel quel, rien n'est perdu. Vérifiez votre connexion et réessayez.",
   appTitle: 'ContAR',
   cancel: 'Annuler',
   save: 'Enregistrer',

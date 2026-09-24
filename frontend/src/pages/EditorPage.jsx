@@ -2,6 +2,8 @@ import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { normalizeAdvanceOn } from '../utils/sceneAdvance';
 import { pickPreviewSource } from '../utils/scenePreview';
+import { classifyViewerError, NOT_FOUND } from '../utils/viewerError';
+import { rememberDraft, readDraft, forgetDraft, shouldRestoreDraft } from '../utils/sceneDraft';
 import { useGuest, useGuestGuard } from '../auth/useGuest';
 import GuestInvitation from '../components/ui/GuestInvitation';
 import { Link } from 'react-router-dom';
@@ -116,6 +118,10 @@ export default function EditorPage() {
   // surfaced by SceneCanvas so the panel can offer them for direct selection.
   const [avatarClips, setAvatarClips] = useState([]);
   const [jawApi, setJawApi] = useState(null);
+  // What the loaded avatar's face can do with a viseme timeline — 'visemes',
+  // 'jawOnly' or 'none'. Drives whether the speech panel claims lip sync is
+  // synced or admits the model cannot show it.
+  const [lipsyncCapability, setLipsyncCapability] = useState(null);
 
   // A guest arrives with an empty studio otherwise, which demonstrates
   // nothing. Seed the bundled character and a line to hear it say, once.
@@ -194,6 +200,9 @@ export default function EditorPage() {
       try {
         const result = await saveScene({ ...payload, baseUpdatedAt: baseUpdatedAtRef.current });
         pendingPayloadRef.current = null;
+        // It is on the server now; any draft kept from an earlier failure is
+        // stale and must not come back over this.
+        forgetDraft();
         if (result?.sceneId && !currentSceneId) {
           useSceneStore.getState().setCurrentSceneId(result.sceneId);
         }
@@ -218,8 +227,13 @@ export default function EditorPage() {
           setIsDirty(true);
           addToast(t('epSaveConflict'), 'warning', 12000);
         } else if (status === 401 || status === 403) {
+          // Signing back in reloads the editor, so without this the work is
+          // gone by the time the author can act on the message.
+          rememberDraft(payload);
           addToast(t('epAutosaveFailedAuth'), 'error', 7000);
         } else {
+          // "Check your connection" should not also mean "type it again".
+          rememberDraft(payload);
           addToast(t('epAutosaveFailed'), 'warning', 5000);
         }
       }
@@ -265,6 +279,30 @@ export default function EditorPage() {
     // after switching to a different scene for editing.
     audio.reset();
 
+    // What is on screen before the clear below. That clear is what makes a
+    // failed fetch destructive: the store is persisted, so once it is emptied
+    // the empty version is what survives a reload — the author loses the scene
+    // by doing nothing worse than opening it while the server was asleep.
+    // Only useful if it is this same scene; putting another scene's content
+    // back under this id would send it to the wrong record on the next save.
+    const beforeClear = useSceneStore.getState();
+    const recoverable = beforeClear.currentSceneId === sceneId
+      ? {
+        currentSceneId: beforeClear.currentSceneId,
+        avatarUrl: beforeClear.avatarUrl,
+        speechText: beforeClear.speechText,
+        sceneTitle: beforeClear.sceneTitle,
+        posePreset: beforeClear.posePreset,
+        narrativeAudioUrl: beforeClear.narrativeAudioUrl,
+        narrations: beforeClear.narrations,
+        textDisplayMode: beforeClear.textDisplayMode,
+        animSpeed: beforeClear.animSpeed,
+        animLoopOnce: beforeClear.animLoopOnce,
+        vrmExpression: beforeClear.vrmExpression,
+        vrmaUrl: beforeClear.vrmaUrl,
+      }
+      : null;
+
     // Clear the store before fetching so autosave doesn't fire stale data from
     // the previous session while waiting for the network response.
     useSceneStore.setState({
@@ -288,14 +326,22 @@ export default function EditorPage() {
     getScene(sceneId)
       .then((data) => {
         if (!data) return;
-        const avatar = data.content?.avatar || {};
-        const narrative = data.content?.narrative || {};
+        // Work a previous save could not deliver outranks the server copy,
+        // but only while the server has nothing newer — see sceneDraft.js.
+        const draft = readDraft();
+        const restoring = shouldRestoreDraft({
+          draft, sceneId, serverUpdatedAt: data.updatedAt,
+        });
+        if (draft?.payload?.sceneId === sceneId) forgetDraft();
+        const source = restoring ? draft.payload : data;
+        const avatar = source.content?.avatar || {};
+        const narrative = source.content?.narrative || {};
         const pos = avatar.transform?.position || [0, 0, 0];
         const rot = avatar.transform?.rotation || [0, 0, 0];
         const scale = avatar.transform?.scale || [1, 1, 1];
         useSceneStore.setState({
           currentSceneId: data.sceneId,
-          sceneTitle: data.metadata?.title || '',
+          sceneTitle: source.metadata?.title || '',
           avatarUrl: avatar.modelUrl || '',
           posePreset: avatar.posePreset || 'idle',
           transform: {
@@ -334,15 +380,27 @@ export default function EditorPage() {
           vrmaUrl: avatar.vrmaUrl || '',
         });
 
+        // Always the server's version, restored draft or not: it is what the
+        // next save has to be based on for conflict detection to mean anything.
         baseUpdatedAtRef.current = data.updatedAt || null;
 
-        // The freshly loaded scene matches what's persisted — mark it clean so
-        // the autosave effect doesn't flag it as unsaved right after opening.
-        lastSavedSigRef.current = JSON.stringify(
-          useSceneStore.getState().buildScenePayload(data.sceneId),
-        );
-        setIsDirty(false);
-        setAutosaveStatus(null);
+        if (restoring) {
+          // Deliberately NOT marked clean: this is the state the server does
+          // not have. Leaving the signature unset is what makes autosave fire
+          // and actually deliver the recovered work.
+          lastSavedSigRef.current = null;
+          setIsDirty(true);
+          setAutosaveStatus(null);
+          addToast(t('epDraftRestored'), 'info', 9000);
+        } else {
+          // The freshly loaded scene matches what's persisted — mark it clean so
+          // the autosave effect doesn't flag it as unsaved right after opening.
+          lastSavedSigRef.current = JSON.stringify(
+            useSceneStore.getState().buildScenePayload(data.sceneId),
+          );
+          setIsDirty(false);
+          setAutosaveStatus(null);
+        }
 
         // Load this scene's previously generated narration audio (if any) so
         // playback and lip sync reflect THIS scene, not whatever was loaded
@@ -355,7 +413,20 @@ export default function EditorPage() {
           }
         }
       })
-      .catch(() => addToast(t('epSceneNotFound'), 'error'))
+      .catch((err) => {
+        // Undo the pre-emptive clear, so a server that was merely asleep does
+        // not cost the author the scene.
+        if (recoverable) useSceneStore.setState(recoverable);
+        // A scene that could not be fetched is usually still there; saying
+        // "not found or no permission" for a dropped connection is both wrong
+        // and frightening.
+        const kind = classifyViewerError(err);
+        addToast(
+          kind === NOT_FOUND ? t('epSceneNotFound') : t('epSceneLoadUnreachable'),
+          kind === NOT_FOUND ? 'error' : 'warning',
+          9000,
+        );
+      })
       .finally(() => setSceneLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -517,7 +588,14 @@ export default function EditorPage() {
             store.setSceneTitlesById({ [savedId]: store.sceneTitle?.trim() || '' });
           }
         } catch {
-          // Best-effort — don't block new scene creation on a save failure.
+          // Do NOT fall through to the reset below. The reset is what makes a
+          // failed save destructive: the scene never reached the server, and
+          // clearing the editor is what takes it off the screen as well. Stop
+          // here with the work still visible, and keep a draft in case the tab
+          // goes away before the author can retry.
+          rememberDraft(buildScenePayload(existingId || undefined));
+          addToast(t('epAddSceneSaveFailed'), 'error', 9000);
+          return;
         }
       }
 
@@ -732,6 +810,7 @@ export default function EditorPage() {
           onMobilePanelClose={() => setMobilePanelTab(null)}
           avatarClips={avatarClips}
           jawApi={jawApi}
+          lipsyncCapability={lipsyncCapability}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="hidden md:flex shrink-0 items-center gap-3 px-4 py-2 border-b border-gray-800 bg-gray-950">
@@ -794,6 +873,7 @@ export default function EditorPage() {
                   showRigTools
                   onAvatarClips={setAvatarClips}
                   onJawApi={setJawApi}
+                  onLipsyncCapability={setLipsyncCapability}
                 />
               </ErrorBoundary>
             </Suspense>

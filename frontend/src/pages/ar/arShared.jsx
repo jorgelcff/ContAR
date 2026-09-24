@@ -215,6 +215,13 @@ export class ARPoseRig {
     );
   }
 
+  // Feeds the scene's narration text to the speaker gesture layer, so it can
+  // accent sentences (see AnimationController.setNarrationText). Safe to call
+  // on every render — it no-ops when the text hasn't changed.
+  setNarrationText(text) {
+    this.controller?.setNarrationText(text);
+  }
+
   // Merge manifest clips so animated presets (walk/dance/…) resolve, then
   // re-apply the current pose in case it depended on a now-available clip.
   setExternalClips(external) {

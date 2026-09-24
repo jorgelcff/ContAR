@@ -1287,6 +1287,7 @@ export default function SceneCanvas({
           boneMapper,
           externalClipsRef.current,
         );
+        animController.setNarrationText(speechText);
 
         // Apply any .vrma animation that was set before this avatar finished loading
         if (vrmRef.current && vrmaUrlRef.current && vrmaLoaderRef.current) {
@@ -1394,6 +1395,12 @@ export default function SceneCanvas({
   useEffect(() => {
     animControllerRef.current?.setTimeScale(animSpeed ?? 1);
   }, [animSpeed]);
+
+  // ── Narration text (drives the speaker gesture layer's sentence-by-sentence
+  // accents — see AnimationController.setNarrationText) ───────────────────
+  useEffect(() => {
+    animControllerRef.current?.setNarrationText(speechText);
+  }, [speechText]);
 
   // ── Animation loop mode ──────────────────────────────────────
   useEffect(() => {

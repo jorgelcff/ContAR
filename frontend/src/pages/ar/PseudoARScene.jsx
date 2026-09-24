@@ -42,6 +42,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const poseRigRef = useRef(null);
   const clockRef = useRef(new THREE.Clock());
   const effectivePoseRef = useRef('idle');
+  const narrationTextRef = useRef('');
   // Lip sync
   const lipSyncRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -69,6 +70,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const narrationText = storyId
     ? (story.hasStarted ? (story.currentScene?.content?.narrative?.text || '') : '')
     : (narrativeText || '');
+  narrationTextRef.current = narrationText;
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
   const initWebAudio = () => {
@@ -337,6 +339,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
         const rig = new ARPoseRig(gltf, model);
         poseRigRef.current = rig;
         rig.apply(effectivePoseRef.current);
+        rig.setNarrationText(narrationTextRef.current);
         loadAnimationManifest(loaderRef.current)
           .then((clips) => { if (poseRigRef.current === rig) rig.setExternalClips(clips); })
           .catch(() => {});
@@ -357,6 +360,12 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   useEffect(() => {
     poseRigRef.current?.apply(effectivePosePreset);
   }, [effectivePosePreset]);
+
+  // ── Narration text (drives the speaker gesture layer's sentence-by-sentence
+  // accents — see AnimationController.setNarrationText) ───────────────────
+  useEffect(() => {
+    poseRigRef.current?.setNarrationText(narrationText);
+  }, [narrationText]);
 
   return (
     <div className="ar-dark relative h-dvh w-screen overflow-hidden bg-black text-white">

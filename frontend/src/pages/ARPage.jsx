@@ -51,6 +51,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const poseRigRef = useRef(null);
   const clockRef = useRef(new THREE.Clock());
   const effectivePoseRef = useRef('idle');
+  const narrationTextRef = useRef('');
   const hitTestSourceRef = useRef(null);
   const referenceSpaceRef = useRef(null);
   const xrSessionRef = useRef(null);
@@ -86,6 +87,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   const narrationText = storyId
     ? (story.hasStarted ? pickNarration(story.currentScene?.content?.narrative, i18n.language).text : '')
     : (narrativeText || '');
+  narrationTextRef.current = narrationText;
   const pseudoHref = useMemo(
     () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined }),
     [modelUrl, initialScale, storyId]
@@ -504,6 +506,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
         const rig = new ARPoseRig(gltf, model);
         poseRigRef.current = rig;
         rig.apply(effectivePoseRef.current);
+        rig.setNarrationText(narrationTextRef.current);
         loadAnimationManifest(loaderRef.current)
           .then((clips) => { if (poseRigRef.current === rig) rig.setExternalClips(clips); })
           .catch(() => {});
@@ -524,6 +527,12 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl
   useEffect(() => {
     poseRigRef.current?.apply(effectivePosePreset);
   }, [effectivePosePreset]);
+
+  // ── Narration text (drives the speaker gesture layer's sentence-by-sentence
+  // accents — see AnimationController.setNarrationText) ───────────────────
+  useEffect(() => {
+    poseRigRef.current?.setNarrationText(narrationText);
+  }, [narrationText]);
 
   if (supported === null) {
     return (

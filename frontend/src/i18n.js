@@ -7,6 +7,7 @@ import { initReactI18next } from 'react-i18next';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const en = {
+  durationSecondsFallback: "Seconds — used when this scene has no narration to wait for",
   apVoiceFemale: "Female voices",
   apVoiceMale: "Male voices",
   apRecording: "Recording…",
@@ -894,6 +895,7 @@ const en = {
 // PORTUGUESE (pt) — primary language
 // ─────────────────────────────────────────────────────────────────────────────
 const pt = {
+  durationSecondsFallback: "Segundos — usado quando esta cena não tem narração para esperar",
   apVoiceFemale: "Vozes femininas",
   apVoiceMale: "Vozes masculinas",
   apRecording: "Gravando…",
@@ -1770,6 +1772,7 @@ const pt = {
 // SPANISH (es)
 // ─────────────────────────────────────────────────────────────────────────────
 const es = {
+  durationSecondsFallback: "Segundos — se usa cuando esta escena no tiene narración que esperar",
   apVoiceFemale: "Voces femeninas",
   apVoiceMale: "Voces masculinas",
   apRecording: "Grabando…",
@@ -2499,6 +2502,7 @@ const es = {
 // FRENCH (fr)
 // ─────────────────────────────────────────────────────────────────────────────
 const fr = {
+  durationSecondsFallback: "Secondes — utilisé quand cette scène n'a pas de narration à attendre",
   apVoiceFemale: "Voix féminines",
   apVoiceMale: "Voix masculines",
   apRecording: "Enregistrement…",

@@ -149,23 +149,25 @@ export default function StoryBuilderPanel({ onAddScene, onDuplicateScene, isAddi
                     </label>
 
                     <div className="flex gap-2 items-center">
-                      {/* Hidden rather than disabled when the narration decides:
-                          a greyed-out box still reads as something to fill in. */}
-                      {normalizeAdvanceOn(item.advanceOn) === ADVANCE_ON_NARRATION ? (
-                        <span className="truncate text-[11px] text-gray-500">
-                          {t('advanceOnNarrationShort')}
-                        </span>
-                      ) : (
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.durationSeconds}
-                          onChange={(e) => updateStoryScene(index, 'durationSeconds', e.target.value)}
-                          placeholder={t('durationSeconds')}
-                          title={t('durationSeconds')}
-                          className="w-20 shrink-0 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
-                        />
-                      )}
+                      {/* Shown in both modes, because it governs the scene in
+                          both. "Lasts as long as the narration" was hidden
+                          next to a hidden seconds box, and a scene with no
+                          narration has no narration to last as long as — it
+                          held for these seconds, which the author could
+                          neither see nor change without switching the mode.
+                          The dropdown beside it already names the mode, so
+                          only the hint has to change. */}
+                      <input
+                        type="number"
+                        min={0}
+                        value={item.durationSeconds}
+                        onChange={(e) => updateStoryScene(index, 'durationSeconds', e.target.value)}
+                        placeholder={t('durationSeconds')}
+                        title={normalizeAdvanceOn(item.advanceOn) === ADVANCE_ON_NARRATION
+                          ? t('durationSecondsFallback')
+                          : t('durationSeconds')}
+                        className="w-20 shrink-0 rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
+                      />
                       {/* Eleven scenes that differ only in their line used to
                           mean rebuilding the avatar, pose and pacing eleven
                           times. The copy lands right after its original. */}

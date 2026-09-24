@@ -84,8 +84,17 @@ async function synthesizeWithAzure(text, voiceName) {
   });
 }
 
+// Azure voice names look like 'pt-BR-FranciscaNeural'. The id arrives from the
+// client and went straight into speechSynthesisVoiceName, so anything at all
+// could be sent to a paid API and cost a 22s timeout to find out it was junk.
+// This only checks the shape — Azure still rejects a well-formed unknown name.
+const VOICE_ID_RE = /^[a-z]{2,3}(-[A-Za-z]{2,8})+-[A-Za-z0-9]+Neural$/;
+
 exports.generateTTS = async (req, res) => {
   const { text, voiceId } = req.body;
+  if (voiceId !== undefined && !VOICE_ID_RE.test(String(voiceId))) {
+    return res.status(400).json({ error: 'voiceId is not a valid Azure voice name' });
+  }
   if (!text || !String(text).trim()) {
     return res.status(400).json({ error: 'text is required' });
   }

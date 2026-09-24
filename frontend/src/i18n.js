@@ -7,6 +7,11 @@ import { initReactI18next } from 'react-i18next';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const en = {
+  apVoiceFemale: "Female voices",
+  apVoiceMale: "Male voices",
+  apRecording: "Recording…",
+  apAudioLoaded: "This language has audio",
+  apNoAudioYet: "No audio in this language yet",
   apVisemesNotShown:
     "Lip sync was generated, but this character has no mouth shapes to show it — only the jaw moves, following the loudness. A character with facial blendshapes will show the full lip sync.",
   epSceneLoadUnreachable:
@@ -889,6 +894,11 @@ const en = {
 // PORTUGUESE (pt) — primary language
 // ─────────────────────────────────────────────────────────────────────────────
 const pt = {
+  apVoiceFemale: "Vozes femininas",
+  apVoiceMale: "Vozes masculinas",
+  apRecording: "Gravando…",
+  apAudioLoaded: "Este idioma tem áudio",
+  apNoAudioYet: "Este idioma ainda não tem áudio",
   apVisemesNotShown:
     "O lip sync foi gerado, mas este personagem não tem formas de boca para mostrá-lo — só a mandíbula se mexe, acompanhando o volume. Um personagem com blendshapes faciais mostra o lip sync completo.",
   epSceneLoadUnreachable:
@@ -1760,6 +1770,11 @@ const pt = {
 // SPANISH (es)
 // ─────────────────────────────────────────────────────────────────────────────
 const es = {
+  apVoiceFemale: "Voces femeninas",
+  apVoiceMale: "Voces masculinas",
+  apRecording: "Grabando…",
+  apAudioLoaded: "Este idioma tiene audio",
+  apNoAudioYet: "Este idioma aún no tiene audio",
   apVisemesNotShown:
     "Se generó el lip sync, pero este personaje no tiene formas de boca para mostrarlo — solo se mueve la mandíbula, siguiendo el volumen. Un personaje con blendshapes faciales muestra el lip sync completo.",
   epSceneLoadUnreachable:
@@ -2484,6 +2499,11 @@ const es = {
 // FRENCH (fr)
 // ─────────────────────────────────────────────────────────────────────────────
 const fr = {
+  apVoiceFemale: "Voix féminines",
+  apVoiceMale: "Voix masculines",
+  apRecording: "Enregistrement…",
+  apAudioLoaded: "Cette langue a un audio",
+  apNoAudioYet: "Cette langue n'a pas encore d'audio",
   apVisemesNotShown:
     "La synchro labiale a été générée, mais ce personnage n'a pas de formes de bouche pour la montrer — seule la mâchoire bouge, en suivant le volume. Un personnage avec des blendshapes faciaux montre la synchro complète.",
   epSceneLoadUnreachable:

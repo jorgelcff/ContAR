@@ -870,6 +870,8 @@ export default function LeftPanel({
             {audio && (
               <AudioPanel
                 lipsyncCapability={lipsyncCapability}
+                narrationLanguage={editingLanguage}
+                audioDuration={audio.audioDuration}
                 speechText={speechText}
                 audioUrl={audio.audioUrl}
                 isPlaying={audio.isPlaying}

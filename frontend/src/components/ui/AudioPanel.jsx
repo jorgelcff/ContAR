@@ -1,5 +1,6 @@
 import { timelineIsVisible } from '../../utils/lipsyncCapability';
-import React, { useRef, useState } from 'react';
+import { voicesForLanguage, defaultVoiceFor } from '../../utils/ttsVoices';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from './Icon';
 import { TooltipIcon } from './Tooltip';
@@ -7,14 +8,6 @@ import { TooltipIcon } from './Tooltip';
 const PROVIDERS = [
   { id: 'azure',      labelKey: 'apProviderAzureLabel',     descKey: 'apProviderAzureDesc',     icon: 'sparkles' },
   { id: 'webspeech',  labelKey: 'apProviderWebspeechLabel', descKey: 'apProviderWebspeechDesc', icon: 'volume' },
-];
-
-const AZURE_VOICES = [
-  { id: 'pt-BR-FranciscaNeural', label: 'Francisca — PT-BR feminina' },
-  { id: 'pt-BR-AntonioNeural',   label: 'Antonio — PT-BR masculino' },
-  { id: 'pt-BR-BrendaNeural',    label: 'Brenda — PT-BR feminina' },
-  { id: 'pt-BR-DonatoNeural',    label: 'Donato — PT-BR masculino' },
-  { id: 'en-US-JennyNeural',     label: 'Jenny — EN feminina' },
 ];
 
 const WEB_LANGS = [
@@ -27,6 +20,8 @@ const WEB_LANGS = [
 export default function AudioPanel({
   speechText,
   lipsyncCapability: capability,
+  narrationLanguage,
+  audioDuration,
   audioUrl,
   isPlaying,
   isRecording,
@@ -54,7 +49,20 @@ export default function AudioPanel({
   const fileInputRef   = useRef(null);
   const visemeInputRef = useRef(null);
   const [provider, setProvider]       = useState('azure');
-  const [selectedVoice, setSelectedVoice] = useState(AZURE_VOICES[0].id);
+  // The picker offers only voices that can speak the language this narration
+  // is in — a Brazilian voice reading English text is not a choice anyone
+  // wants, and burying it among 110 entries is how it gets picked by accident.
+  const voices = voicesForLanguage(narrationLanguage);
+  const [selectedVoice, setSelectedVoice] = useState(() => defaultVoiceFor(narrationLanguage));
+  // Switching the scene's language strands the previous language's voice in
+  // the select, so move to that language's default instead.
+  const [voiceLanguage, setVoiceLanguage] = useState(narrationLanguage);
+  if (voiceLanguage !== narrationLanguage) {
+    setVoiceLanguage(narrationLanguage);
+    if (!voices.some((v) => v.id === selectedVoice)) {
+      setSelectedVoice(defaultVoiceFor(narrationLanguage));
+    }
+  }
   const [selectedLang, setSelectedLang]   = useState('pt-BR');
   const [showAdvanced, setShowAdvanced]   = useState(false);
   const [visemeTextInput, setVisemeTextInput] = useState(speechText || '');
@@ -71,6 +79,19 @@ export default function AudioPanel({
   const isGenerating  = isTTSLoading || isSpeaking;
   const hasAudio      = !!audioUrl;
   const hasVisemes    = !!visemeTimeline?.length;
+  // How long the current clip is, and how long the one being recorded has run.
+  // The box used to show only two buttons, so after recording there was
+  // nothing on screen saying anything had been captured, how long it was, or
+  // whether it belonged to the language now selected.
+  const [recElapsed, setRecElapsed] = useState(0);
+  const recStartRef = useRef(0);
+  useEffect(() => {
+    if (!isRecording) return undefined;
+    recStartRef.current = Date.now();
+    const id = setInterval(() => setRecElapsed((Date.now() - recStartRef.current) / 1000), 200);
+    return () => { clearInterval(id); setRecElapsed(0); };
+  }, [isRecording]);
+  const recSeconds = isRecording ? recElapsed : 0;
   // A generated timeline only reaches a face that has mouth shapes to put it
   // on. Saying "synced" to an author whose avatar can only hinge a jaw sends
   // them off hunting a bug in their recording.
@@ -128,9 +149,17 @@ export default function AudioPanel({
             onChange={(e) => setSelectedVoice(e.target.value)}
             className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-400"
           >
-            {AZURE_VOICES.map((v) => (
-              <option key={v.id} value={v.id}>{v.label}</option>
-            ))}
+            {['f', 'm'].map((gender) => {
+              const group = voices.filter((v) => v.gender === gender);
+              if (!group.length) return null;
+              return (
+                <optgroup key={gender} label={gender === 'f' ? t('apVoiceFemale') : t('apVoiceMale')}>
+                  {group.map((v) => (
+                    <option key={v.id} value={v.id}>{v.name} — {v.locale}</option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
         )}
 
@@ -250,6 +279,26 @@ export default function AudioPanel({
         </div>
         <input ref={fileInputRef} type="file" accept="audio/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) onLoadFile(f); e.target.value = ''; }} className="hidden" />
 
+        {/* What is actually loaded for the language currently selected. */}
+        {isRecording ? (
+          <p className="text-xs text-red-300 flex items-center gap-1.5" role="status">
+            <span aria-hidden className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+            {t('apRecording')} {formatClock(recSeconds)}
+          </p>
+        ) : hasAudio ? (
+          <p className="text-xs text-gray-300 flex items-center gap-1.5" role="status">
+            <Icon name="volume" className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+            {t('apAudioLoaded')}
+            {Number.isFinite(audioDuration) && audioDuration > 0 && (
+              <span className="text-gray-400">· {formatClock(Math.round(audioDuration))}</span>
+            )}
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500 flex items-center gap-1.5" role="status">
+            <Icon name="info" className="w-3.5 h-3.5 shrink-0" /> {t('apNoAudioYet')}
+          </p>
+        )}
+
         {/* Lip sync for uploaded/recorded audio: estimate visemes from text */}
         {hasAudio && (
           <div className="rounded-lg border border-gray-700/40 bg-gray-800/40 p-2.5 flex flex-col gap-1.5">
@@ -347,4 +396,10 @@ export default function AudioPanel({
       </p>
     </section>
   );
+}
+
+/** Seconds as m:ss — the only time format this panel needs. */
+function formatClock(totalSeconds) {
+  const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }

@@ -59,6 +59,7 @@ export default function EditorPage() {
     currentStoryId, setCurrentStoryId,
     isStoryPublic, setIsStoryPublic,
     narrativeAudioUrl,
+    editingLanguage,
     buildScenePayload,
     timelineBlocks,
     animSpeed,
@@ -84,6 +85,35 @@ export default function EditorPage() {
   };
 
   const audio = useAudio({ onAudioBlob: persistGeneratedAudio });
+
+  // ── Switching narration language moves the audio with it ──────
+  // The speech panel draws everything from the audio hook: the playback
+  // controls, the "sync lips to this audio" box, the viseme count. The hook
+  // was only ever pointed at a clip on scene load and by the Run button, so
+  // picking a different language left it holding the previous one. Switching
+  // to a language with no recording still offered Play — and pressing it
+  // played the previous language's voice underneath the new language's text.
+  // The viseme timeline was stale for the same reason, so lip sync animated
+  // words the audio was not saying.
+  const shownLanguageRef = useRef(null);
+  useEffect(() => {
+    const previous = shownLanguageRef.current;
+    shownLanguageRef.current = editingLanguage;
+    // First render, and the scene-load path, already point the hook at the
+    // right clip; re-doing it here would regenerate visemes for no reason.
+    if (previous === null || previous === editingLanguage) return;
+
+    const entry = useSceneStore.getState().narrations?.[editingLanguage] || {};
+    // Clears the clip, the playback clock and the previous language's visemes.
+    audio.reset();
+    if (entry.audioUrl) {
+      audio.loadUrl(entry.audioUrl);
+      // The precise provider timeline isn't persisted, so fall back to the
+      // text-derived one — same as opening the scene does.
+      if (entry.text) audio.generateVisemeTimelineFromText(entry.text);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingLanguage]);
 
   // ── Run the scene, in place ───────────────────────────────────
   // Everything needed to play a scene is already on screen; what was missing

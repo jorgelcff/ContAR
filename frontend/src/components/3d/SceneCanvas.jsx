@@ -209,6 +209,7 @@ export default function SceneCanvas({
   onAvatarClips,
   onJawApi,
   onLipsyncCapability,
+  onAvatarStatus,
 }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
@@ -328,6 +329,22 @@ export default function SceneCanvas({
   // hung — a number is the difference between waiting and giving up.
   const [avatarProgress, setAvatarProgress] = useState(null);
   const [avatarLoadError, setAvatarLoadError] = useState("");
+
+  // Whether the character is actually on screen yet. The story viewer starts
+  // its scene timer on the Play gesture, so a multi-megabyte model used to be
+  // downloading into a scene that was already running: the narration had
+  // begun and the progress bar had moved before anyone appeared.
+  const onAvatarStatusRef = useRef(onAvatarStatus);
+  useEffect(() => {
+    onAvatarStatusRef.current = onAvatarStatus;
+  }, [onAvatarStatus]);
+  useEffect(() => {
+    if (!avatarUrl) { onAvatarStatusRef.current?.('none'); return; }
+    // Reported as ready on failure too: a model that will never arrive must
+    // not hold the story open forever.
+    if (avatarLoadError) { onAvatarStatusRef.current?.('error'); return; }
+    onAvatarStatusRef.current?.(avatarLoading ? 'loading' : 'ready');
+  }, [avatarUrl, avatarLoading, avatarLoadError]);
   const [debugSnapshot, setDebugSnapshot] = useState({
     mouthOpen: 0,
     rms: 0,

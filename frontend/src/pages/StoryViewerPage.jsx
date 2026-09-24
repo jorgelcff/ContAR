@@ -30,6 +30,9 @@ export default function StoryViewerPage() {
   // Set when a scene set to wait for its narration has waited too long for the
   // audio to load — see the loader below.
   const [narrationUnavailable, setNarrationUnavailable] = useState(false);
+  // 'loading' until the scene's character is actually on screen. Reset per
+  // scene, so the previous one's readiness never vouches for this one.
+  const [avatarStatus, setAvatarStatus] = useState('loading');
   // Which scene the loaded sceneData belongs to. Without it the advance rule
   // ran before the scene arrived, read "no narration" off a null, and fell
   // straight back to counting seconds — the very thing it replaces.
@@ -137,10 +140,17 @@ export default function StoryViewerPage() {
     if (loading || error || !storyScenes.length || !isPlaying) return undefined;
     // Nothing is known about this scene yet; deciding now would decide wrong.
     if (loadedSceneId !== storyScenes[index]?.sceneId) return undefined;
+    // Neither is the character. The timer used to start on the Play gesture,
+    // so a model still downloading meant the scene ran without anyone in it
+    // and the visitor met a character halfway through its own line. 'error'
+    // and 'none' both count as settled — a scene with no avatar, or one whose
+    // model will never arrive, still has to play.
+    if (avatarStatus === 'loading') return undefined;
 
     const durationMs = sceneAdvanceMs({
       advanceOn: storyScenes[index]?.advanceOn,
       durationSeconds: storyScenes[index]?.durationSeconds,
+      text: narration.text,
       hasNarrationAudio: Boolean(narration.audioUrl),
       audioDuration: audio.audioDuration,
       audioUnavailable: narrationUnavailable,
@@ -149,12 +159,12 @@ export default function StoryViewerPage() {
     // this effect re-runs when it does.
     if (durationMs === null) return undefined;
 
-    if (index >= storyScenes.length - 1) {
-      setIsPlaying(false);
-      setSceneProgress(100);
-      setHasFinished(true);
-      return undefined;
-    }
+    // The closing scene is a scene: it gets its time on screen like the rest.
+    // This used to fire the moment the last scene was *reached*, before the
+    // timer below ever started, so the final line was on screen for a single
+    // frame — the loudest version of "a scene ended by itself", and worst on
+    // a silent scene, where there is no voice still playing to contradict it.
+    const isLastScene = index >= storyScenes.length - 1;
 
     playbackStartMsRef.current = window.performance.now();
 
@@ -173,6 +183,11 @@ export default function StoryViewerPage() {
       playbackBaseMsRef.current = 0;
       playbackStartMsRef.current = 0;
       setSceneProgress(100);
+      if (isLastScene) {
+        setIsPlaying(false);
+        setHasFinished(true);
+        return;
+      }
       setIndex((prev) => Math.min(prev + 1, storyScenes.length - 1));
     };
 
@@ -185,13 +200,14 @@ export default function StoryViewerPage() {
       }
       window.cancelAnimationFrame(progressFrameRef.current);
     };
-  }, [error, index, isPlaying, loading, storyScenes, sceneData, loadedSceneId, audio.audioDuration, narrationUnavailable, narration.audioUrl]);
+  }, [error, index, isPlaying, loading, storyScenes, sceneData, loadedSceneId, audio.audioDuration, narrationUnavailable, narration.audioUrl, narration.text, avatarStatus]);
 
   useEffect(() => {
     if (!storyScenes.length) return;
     // Stepping back with the controls means the visitor is watching again.
     if (index < storyScenes.length - 1) setHasFinished(false);
     setSceneProgress(0);
+    setAvatarStatus('loading');
     playbackBaseMsRef.current = 0;
     playbackStartMsRef.current = 0;
     window.cancelAnimationFrame(progressFrameRef.current);
@@ -628,6 +644,7 @@ export default function StoryViewerPage() {
                         visemeTimeline={audio.visemeTimeline}
                         audioCurrentTime={audio.audioCurrentTime}
                         isSpeaking={audio.isSpeaking || audio.isPlaying}
+                        onAvatarStatus={setAvatarStatus}
                       />
                     </ErrorBoundary>
                   </Suspense>

@@ -6,6 +6,8 @@ import {
   ADVANCE_ON_NARRATION,
   NARRATION_TAIL_SECONDS,
   DEFAULT_ADVANCE_ON,
+  readingSeconds,
+  MIN_READING_SECONDS,
 } from './sceneAdvance';
 
 describe('how long a scene stays on screen', () => {
@@ -86,5 +88,62 @@ describe('how long a scene stays on screen', () => {
     for (const v of ['', null, undefined, 'whatever', 42]) {
       expect(normalizeAdvanceOn(v)).toBe(DEFAULT_ADVANCE_ON);
     }
+  });
+});
+
+describe('readingSeconds', () => {
+  it('is zero when there is nothing to read', () => {
+    expect(readingSeconds('')).toBe(0);
+    expect(readingSeconds('   ')).toBe(0);
+    expect(readingSeconds(undefined)).toBe(0);
+  });
+
+  it('never drops below the floor, however short the line', () => {
+    // A line that flashes by reads as a glitch, not as pacing.
+    expect(readingSeconds('Oi.')).toBe(MIN_READING_SECONDS);
+  });
+
+  it('grows with the number of words', () => {
+    const short = readingSeconds('uma frase curta aqui');
+    const long = readingSeconds(new Array(80).fill('palavra').join(' '));
+    expect(long).toBeGreaterThan(short);
+    // 80 words at 160 wpm is half a minute.
+    expect(long).toBeCloseTo(30, 0);
+  });
+});
+
+describe('a scene with no narration audio', () => {
+  const longLine = new Array(60).fill('palavra').join(' ');
+
+  it('lasts long enough to read, even past its configured seconds', () => {
+    // The complaint: silent scenes went by too fast to finish reading, and
+    // the author cannot re-tune the seconds every time they edit the line.
+    const ms = sceneAdvanceMs({ hasNarrationAudio: false, durationSeconds: 8, text: longLine });
+    expect(ms).toBeGreaterThan(8000);
+    expect(ms / 1000).toBeCloseTo(22.5, 0);
+  });
+
+  it("keeps the author's seconds when they are longer than the reading time", () => {
+    const ms = sceneAdvanceMs({ hasNarrationAudio: false, durationSeconds: 30, text: 'Oi.' });
+    expect(ms).toBe(30000);
+  });
+
+  it('still advances rather than holding forever', () => {
+    expect(sceneAdvanceMs({ hasNarrationAudio: false, text: longLine })).not.toBeNull();
+  });
+
+  it('applies to the timed mode too', () => {
+    const ms = sceneAdvanceMs({ advanceOn: 'time', durationSeconds: 2, text: longLine });
+    expect(ms).toBeGreaterThan(2000);
+  });
+});
+
+describe('a scene whose narration is audible', () => {
+  it('follows the audio, not the text length', () => {
+    // The voice decides the pace here; a long line read quickly is still the
+    // length of the recording.
+    const longLine = new Array(60).fill('palavra').join(' ');
+    const ms = sceneAdvanceMs({ hasNarrationAudio: true, audioDuration: 4, text: longLine });
+    expect(ms / 1000).toBeCloseTo(5.2, 5);
   });
 });

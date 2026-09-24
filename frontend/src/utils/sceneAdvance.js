@@ -28,6 +28,26 @@ export const NARRATION_TAIL_SECONDS = 1.2;
 /** Used when a scene carries no duration of its own. */
 export const DEFAULT_SCENE_SECONDS = 8;
 
+/**
+ * A silent scene is read, not heard, and eight seconds is eight seconds
+ * whether the line is three words or sixty. Subtitle guidelines put
+ * comfortable reading at roughly 160–180 words per minute; the slower end is
+ * the right one here, because the reader is also looking at a character and
+ * may not have the scene's language as their first.
+ */
+export const READING_WORDS_PER_MINUTE = 160;
+
+/** Nobody reads anything in under this, and a flash of text reads as a glitch. */
+export const MIN_READING_SECONDS = 3.5;
+
+/** How long this text needs to be read, in seconds. */
+export function readingSeconds(text, wordsPerMinute = READING_WORDS_PER_MINUTE) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+  if (!words) return 0;
+  const wpm = Number(wordsPerMinute) > 0 ? Number(wordsPerMinute) : READING_WORDS_PER_MINUTE;
+  return Math.max(MIN_READING_SECONDS, (words / wpm) * 60);
+}
+
 export function normalizeAdvanceOn(value) {
   const mode = String(value || '').toLowerCase();
   if (mode === ADVANCE_ON_TIME) return ADVANCE_ON_TIME;
@@ -35,9 +55,13 @@ export function normalizeAdvanceOn(value) {
   return DEFAULT_ADVANCE_ON;
 }
 
-function timedMs(durationSeconds) {
+function timedMs(durationSeconds, text = '') {
   const seconds = Number(durationSeconds) > 0 ? Number(durationSeconds) : DEFAULT_SCENE_SECONDS;
-  return Math.max(1, seconds) * 1000;
+  // Never shorter than the text takes to read. The configured seconds are a
+  // floor the author sets, not a ceiling on whether the words can be finished:
+  // a scene cut short is a scene whose point was missed, and the author cannot
+  // re-tune this every time they edit the line.
+  return Math.max(Math.max(1, seconds), readingSeconds(text)) * 1000;
 }
 
 /**
@@ -49,17 +73,18 @@ function timedMs(durationSeconds) {
 export function sceneAdvanceMs({
   advanceOn,
   durationSeconds,
+  text = '',
   hasNarrationAudio = false,
   audioDuration = 0,
   audioUnavailable = false,
   tailSeconds = NARRATION_TAIL_SECONDS,
 } = {}) {
-  if (normalizeAdvanceOn(advanceOn) === ADVANCE_ON_TIME) return timedMs(durationSeconds);
+  if (normalizeAdvanceOn(advanceOn) === ADVANCE_ON_TIME) return timedMs(durationSeconds, text);
 
   // Nothing to wait for, or waiting already failed — the configured seconds are
   // the only answer left, and a story that stalls forever is worse than one
   // that runs a little short.
-  if (!hasNarrationAudio || audioUnavailable) return timedMs(durationSeconds);
+  if (!hasNarrationAudio || audioUnavailable) return timedMs(durationSeconds, text);
 
   if (!(Number(audioDuration) > 0)) return null;
 

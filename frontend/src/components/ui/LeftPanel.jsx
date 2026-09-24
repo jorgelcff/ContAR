@@ -567,12 +567,17 @@ export default function LeftPanel({
                   <option value="slow_run">{t('poseSlowRun')}</option>
                   <option value="run">{t('poseRun')}</option>
                   <option value="dance">{t('poseDance')}</option>
+                  <option value="dance_samba">{t('poseDanceSamba')}</option>
                   <option value="speaker">{t('poseSpeaker')}</option>
                   <option value="speaker_wide">{t('poseSpeakerWide')}</option>
                   <option value="speaker_left">{t('poseSpeakerLeft')}</option>
                   <option value="speaker_right">{t('poseSpeakerRight')}</option>
                   <option value="speaker_excited">{t('poseSpeakerExcited')}</option>
                   <option value="speaker_calm">{t('poseSpeakerCalm')}</option>
+                  <option value="agree">{t('poseAgree')}</option>
+                  <option value="disagree">{t('poseDisagree')}</option>
+                  <option value="sad">{t('poseSad')}</option>
+                  <option value="sneak">{t('poseSneak')}</option>
                 </optgroup>
                 <optgroup label="Estáticas">
                   <option value="neutral">{t('poseNeutral')}</option>
@@ -625,7 +630,7 @@ export default function LeftPanel({
             )}
 
             {/* Animation speed + loop */}
-            {(['idle','walk','walk_circle','slow_run','run','dance','speaker'].includes(posePreset) || String(posePreset).startsWith('clip:')) && (
+            {(['idle','walk','walk_circle','slow_run','run','dance','dance_samba','speaker','agree','disagree','sad','sneak'].includes(posePreset) || String(posePreset).startsWith('clip:')) && (
               <div className="flex flex-col gap-2">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('lpAnimation')}</p>
                 <div className="flex items-center gap-3">

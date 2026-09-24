@@ -590,7 +590,12 @@ export default function SceneCanvas({
           "slow_run",
           "run",
           "dance",
+          "dance_samba",
           "speaker",
+          "agree",
+          "disagree",
+          "sad",
+          "sneak",
         ];
         manifest.animations.forEach((anim) => {
           if (!anim.file) return;

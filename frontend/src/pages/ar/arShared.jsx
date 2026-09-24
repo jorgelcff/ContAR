@@ -141,7 +141,10 @@ export function ARNarration({ mode, text }) {
 let _arManifestPromise = null;
 export function loadAnimationManifest(gltfLoader) {
   if (_arManifestPromise) return _arManifestPromise;
-  const PRESETS = ['idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'speaker'];
+  const PRESETS = [
+    'idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'dance_samba',
+    'speaker', 'agree', 'disagree', 'sad', 'sneak',
+  ];
   _arManifestPromise = fetch(
     `${import.meta.env.BASE_URL}animations/manifest.json`,
   )

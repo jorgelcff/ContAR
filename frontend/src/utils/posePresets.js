@@ -74,7 +74,10 @@ export function applyPosePreset(
   // pose, which is a T-pose: the arms were pinned wide open for as long as the
   // preset was selected, wobbling slightly. Hence "it looks like it is about to
   // take off".
-  const animatedPresets = ["idle", "walk", "walk_circle", "slow_run", "run", "dance"];
+  const animatedPresets = [
+    "idle", "walk", "walk_circle", "slow_run", "run", "dance",
+    "dance_samba", "agree", "disagree", "sad", "sneak",
+  ];
   if (animatedPresets.includes(normalized)) {
     if (animationController) {
       const clip = pickAnimationClip(normalized, idleClip, avatarClips, externalClips);
@@ -131,7 +134,12 @@ const KEYWORDS_BY_PRESET = {
   slow_run:    [/slow.?run/, /slow.?jog/],
   run:         [/^run$/],
   dance:       [/dance/],
+  dance_samba: [/samba/],
   speaker:     [/speak/, /talk/, /narrat/, /present/, /explain/, /lecture/],
+  agree:       [/agree/, /\bnod\b/],
+  disagree:    [/disagree/, /head.?shake/, /shake.?head/],
+  sad:         [/sad/],
+  sneak:       [/sneak/, /tiptoe/],
 };
 
 // A preset with no dedicated clip degrades to the next closest gait rather

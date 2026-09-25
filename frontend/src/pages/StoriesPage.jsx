@@ -145,8 +145,9 @@ function StoryCard({ story, onDelete, deleting }) {
           to={`/story/${encodeURIComponent(story.storyId)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 text-center py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs transition-colors"
         >
+          <Icon name="play" className="w-3.5 h-3.5" />
           {t('storiesCardView')}
         </Link>
         <button

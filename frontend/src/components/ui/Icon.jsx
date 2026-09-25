@@ -306,6 +306,18 @@ const ICONS = {
       <path d="M4 22v-7" />
     </>
   ),
+  'skip-back': (
+    <>
+      <path d="M19 4 9 12l10 8z" />
+      <path d="M5 4v16" />
+    </>
+  ),
+  'skip-forward': (
+    <>
+      <path d="M5 4l10 8-10 8z" />
+      <path d="M19 4v16" />
+    </>
+  ),
 };
 
 export default function Icon({ name, className = 'w-5 h-5', strokeWidth = 1.8, title }) {

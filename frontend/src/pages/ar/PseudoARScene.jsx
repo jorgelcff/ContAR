@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import Header from '../../components/ui/Header';
+import Icon from '../../components/ui/Icon';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { useDeviceOrientation } from '../../hooks/useDeviceOrientation';
 import {
@@ -461,8 +462,9 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
               {!storyId && narrativeAudioUrl && (
                 <button
                   onClick={toggleSpeech}
-                  className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                  {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
+                  className="col-span-2 min-h-12 flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                  <Icon name={speechPlaying ? 'pause' : 'play'} className="w-4 h-4" />
+                  {t(speechPlaying ? 'pauseNarration' : 'playNarration')}
                 </button>
               )}
               {!storyId && narrativeAudioUrl && narrativeIsFallback && (

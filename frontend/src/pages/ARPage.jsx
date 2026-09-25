@@ -654,8 +654,9 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
                 {!storyId && narrativeAudioUrl && (
                   <button
                     onClick={toggleSpeech}
-                    className="col-span-2 min-h-12 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
-                    {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
+                    className="col-span-2 min-h-12 flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                    <Icon name={speechPlaying ? 'pause' : 'play'} className="w-4 h-4" />
+                    {t(speechPlaying ? 'pauseNarration' : 'playNarration')}
                   </button>
                 )}
                 {!storyId && narrativeAudioUrl && narrativeIsFallback && (
@@ -777,8 +778,9 @@ function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId, 
         <div className="shrink-0 border-t border-gray-800 bg-gray-900/95 px-4 py-3">
           <button
             onClick={toggleSpeech}
-            className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold text-white transition-colors">
-            {speechPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
+            className="w-full py-2.5 flex items-center justify-center gap-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold text-white transition-colors">
+            <Icon name={speechPlaying ? 'pause' : 'play'} className="w-4 h-4" />
+            {t(speechPlaying ? 'pauseNarration' : 'playNarration')}
           </button>
           {narrativeIsFallback && (
             <p className="mt-1.5 text-center text-[11px] text-amber-300">{t('viewerNarrationFallback')}</p>
@@ -1132,7 +1134,8 @@ export default function ARPage() {
               </div>
               <div className="mt-auto flex flex-col gap-2">
                 <Link to={hiroHref}
-                  className="inline-flex items-center justify-center rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-colors">
+                  <Icon name="play" className="w-4 h-4" />
                   {t('arMarkerDemoBtn')}
                 </Link>
                 {markerUrl ? (
@@ -1376,8 +1379,9 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
             <h2 className="text-xl font-bold text-white mb-1">{storyMeta?.metadata?.title}</h2>
             <p className="text-sm text-gray-400 mb-5">{t('arScenesCount', { count: scenes.length })}</p>
             <button onClick={handleStart}
-              className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white font-semibold">
-              ▶ {t('arStartStory')}
+              className="w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white font-semibold">
+              <Icon name="play" className="w-4 h-4" />
+              {t('arStartStory')}
             </button>
           </div>
         </div>
@@ -1425,13 +1429,17 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
           </div>
           <div className="flex gap-2">
             <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0}
-              className="flex-1 py-2 rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">◀</button>
+              className="flex-1 py-2 flex items-center justify-center rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">
+              <Icon name="skip-back" className="w-4 h-4" />
+            </button>
             <button onClick={() => setIsPlaying((p) => !p)}
-              className="flex-1 py-2 rounded-lg bg-cyan-700 text-xs text-white font-semibold">
-              {isPlaying ? '‖' : '▶'}
+              className="flex-1 py-2 flex items-center justify-center rounded-lg bg-cyan-700 text-xs text-white font-semibold">
+              <Icon name={isPlaying ? 'pause' : 'play'} className="w-4 h-4" />
             </button>
             <button onClick={() => setIndex((i) => Math.min(scenes.length - 1, i + 1))} disabled={index >= scenes.length - 1}
-              className="flex-1 py-2 rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">▶▶</button>
+              className="flex-1 py-2 flex items-center justify-center rounded-lg bg-gray-700 text-xs text-white disabled:opacity-40">
+              <Icon name="skip-forward" className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
@@ -1441,8 +1449,9 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
         <div className="shrink-0 border-t border-gray-800 bg-gray-900/95 px-4 py-3">
           <button
             onClick={toggleNarration}
-            className="w-full py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold text-white transition-colors">
-            {audio.isPlaying ? `⏸ ${t('pauseNarration')}` : `▶ ${t('playNarration')}`}
+            className="w-full py-2.5 flex items-center justify-center gap-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold text-white transition-colors">
+            <Icon name={audio.isPlaying ? 'pause' : 'play'} className="w-4 h-4" />
+            {t(audio.isPlaying ? 'pauseNarration' : 'playNarration')}
           </button>
           {narrativeIsFallback && (
             <p className="mt-1.5 text-center text-[11px] text-amber-300">{t('viewerNarrationFallback')}</p>

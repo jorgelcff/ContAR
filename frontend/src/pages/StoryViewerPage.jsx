@@ -574,6 +574,7 @@ export default function StoryViewerPage() {
                 {!hasStarted ? (
                   <button onClick={handleStart}
                     className="flex-1 px-4 py-2 min-h-12 rounded bg-cyan-700 hover:bg-cyan-600 text-sm font-bold flex items-center justify-center gap-2">
+                    <Icon name="play" className="w-4 h-4" />
                     {t('viewerStart')}
                   </button>
                 ) : (

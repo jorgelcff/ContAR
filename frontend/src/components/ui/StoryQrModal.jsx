@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeCanvas } from 'qrcode.react';
+import Icon from './Icon';
 
 // Modal that shows a printable/downloadable QR code for a published story.
 // Scanning the QR opens the story's public /story/:id page in a phone browser,
@@ -112,15 +113,17 @@ export default function StoryQrModal({ url, title, onClose }) {
         <div className="grid w-full grid-cols-2 gap-2">
           <button
             onClick={handlePrint}
-            className="col-span-2 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors"
+            className="col-span-2 py-2.5 flex items-center justify-center gap-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors"
           >
-            🖨 {t('qrPrint')}
+            <Icon name="print" className="w-4 h-4" />
+            {t('qrPrint')}
           </button>
           <button
             onClick={handleDownload}
-            className="py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors"
+            className="py-2 flex items-center justify-center gap-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors"
           >
-            ⬇ {t('qrDownload')}
+            <Icon name="download" className="w-4 h-4" />
+            {t('qrDownload')}
           </button>
           <button
             onClick={onClose}

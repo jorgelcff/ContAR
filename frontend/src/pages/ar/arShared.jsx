@@ -4,6 +4,7 @@ import { sceneAdvanceMs, normalizeAdvanceOn, ADVANCE_ON_TIME } from '../../utils
 import { pickNarration } from '../../utils/narration';
 import i18n from '../../i18n';
 import { useTranslation } from 'react-i18next';
+import Icon from '../../components/ui/Icon';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -433,9 +434,10 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
           <p className="text-sm text-gray-400 mb-5">{t('arScenesCount', { count: story.scenes.length })}</p>
           <button
             onClick={onStart}
-            className="w-full py-3 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:scale-[0.98] text-white font-semibold transition-all"
+            className="w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:scale-[0.98] text-white font-semibold transition-all"
           >
-            ▶ {t('arStartStory')}
+            <Icon name="play" className="w-4 h-4" />
+            {t('arStartStory')}
           </button>
         </div>
       </div>
@@ -460,13 +462,17 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
       </div>
       <div className="flex gap-2">
         <button onClick={story.prev} disabled={story.index === 0}
-          className="flex-1 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-white disabled:opacity-40">◀</button>
+          className="flex-1 py-1.5 flex items-center justify-center rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-white disabled:opacity-40">
+          <Icon name="skip-back" className="w-4 h-4" />
+        </button>
         <button onClick={story.togglePlay}
-          className="flex-1 py-1.5 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-xs text-white font-semibold">
-          {story.isPlaying ? '‖' : '▶'}
+          className="flex-1 py-1.5 flex items-center justify-center rounded-lg bg-cyan-700 hover:bg-cyan-600 text-xs text-white font-semibold">
+          <Icon name={story.isPlaying ? 'pause' : 'play'} className="w-4 h-4" />
         </button>
         <button onClick={story.next} disabled={story.index >= story.scenes.length - 1}
-          className="flex-1 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-white disabled:opacity-40">▶▶</button>
+          className="flex-1 py-1.5 flex items-center justify-center rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-white disabled:opacity-40">
+          <Icon name="skip-forward" className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

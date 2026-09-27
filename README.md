@@ -2,9 +2,32 @@
 
 **No-code** web platform for creating, publishing, and sharing interactive 3D virtual narrators with speech, lip sync, and augmented reality.
 
+> **Scanned this from a poster?** The narrator you just watched is a ContAR avatar — made with this very tool — standing in because its author is presenting another ContAR paper at the Main Track at the same time. This repository is that avatar's source code.
+
+## What ContAR does
+
+ContAR turns anyone into the director of a 3D virtual narrator — no coding and no 3D modeling required. You type what the narrator should say, and it speaks with an AI-generated voice, lips synced to the audio automatically. String a few of these together into a story, publish it, and it's watchable from a link in any browser or projected into the real world with AR — nothing to install, nothing to log in to just watch.
+
+It's built for teachers explaining a concept, students presenting a project, content creators, and researchers exploring interactive/AR narrative.
+
+## How it works
+
+1. **Create your avatar** — use the built-in creator, import a GLB/VRM file, or paste a link. The character appears instantly.
+2. **Write and generate speech** — type what the narrator will say, generate the voice, and the avatar speaks with its lips synced to the audio.
+3. **Publish and share** — save the scene, arrange scenes into a story, and copy the link. Anyone can watch it — in a browser or in AR — without logging in.
+
+**Example:** a teacher creates 3 scenes to explain the water cycle — one avatar, a pose per scene, a short narration each. They generate the audio, check the lip sync, save, and publish the story: one reusable link for the class, for homework, or for a quick review — viewable straight in the browser or projected into the room with AR.
+
 ## Research context
 
-ContAR originated from academic research at the Centro de Informática (CIn), Universidade Federal de Pernambuco (UFPE), and is presented as a paper at **SVR (Symposium on Virtual and Augmented Reality)**.
+ContAR originated from academic research at the Centro de Informática (CIn), Universidade Federal de Pernambuco (UFPE), and is presented at **SVR (Symposium on Virtual and Augmented Reality)**:
+
+- **Main Track** — the ContAR platform paper (this tool).
+- **Poster** — *"Evaluating ContAR: An Expert Walkthrough of a No-Code WebAR Platform for Anti-Racist Education,"* an expert walkthrough of the platform by three specialists in HCI, anti-racist education, and AR authoring. Average usability score: 77.5 (good range), alongside 19 usability issues and real limits on avatar diversity found along the way.
+
+## Author
+
+**Jorge Freitas** — [LinkedIn](https://www.linkedin.com/in/jorgelcff)
 
 ## References
 
@@ -27,7 +50,11 @@ Important current limitations:
 - parts of the mobile experience and onboarding are still being refined;
 - some AR flows depend on browser/device compatibility.
 
-## Quick start for developers
+---
+
+## For developers
+
+Everything below is about running and modifying the code itself — skip it if you just want to use ContAR.
 
 ### Prerequisites
 

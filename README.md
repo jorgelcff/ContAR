@@ -22,8 +22,9 @@ It's built for teachers explaining a concept, students presenting a project, con
 
 ContAR originated from academic research at the Centro de Informática (CIn), Universidade Federal de Pernambuco (UFPE), and is presented at **SVR (Symposium on Virtual and Augmented Reality)**:
 
-- **Main Track** — the ContAR platform paper (this tool).
-- **Poster** — *"Evaluating ContAR: An Expert Walkthrough of a No-Code WebAR Platform for Anti-Racist Education,"* an expert walkthrough of the platform by three specialists in HCI, anti-racist education, and AR authoring. Average usability score: 77.5 (good range), alongside 19 usability issues and real limits on avatar diversity found along the way.
+- **SVR: Main Track** — the ContAR platform paper (this tool).
+- **SIBIGRAPI: Workshop of Undergradute Work** — *"Evaluating ContAR: An Expert Walkthrough of a No-Code WebAR Platform for Anti-Racist Education,"*
+- **SIBIGRAPI: Workshop on Virtual Humans** — *"Representational Limits in No-Code Authoring: Findings from an Anti-Racist Educational WebAR Platform"*
 
 ## Author
 

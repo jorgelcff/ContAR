@@ -104,3 +104,29 @@ describe('baseLanguage', () => {
     expect(baseLanguage(null)).toBe('');
   });
 });
+
+describe('a translation recorded but not typed out', () => {
+  // The author recorded the English narration in their own voice and never
+  // typed the English text. It was saved, and then never offered or played.
+  const recorded = {
+    language: 'pt',
+    text: 'Olá, bem-vindo',
+    audioUrl: 'https://cdn/pt.mp3',
+    translations: { en: { text: '', audioUrl: 'https://cdn/my-voice-en.mp3' } },
+  };
+
+  it('plays the recording for a visitor who wants that language', () => {
+    const en = pickNarration(recorded, 'en-US');
+    expect(en.audioUrl).toBe('https://cdn/my-voice-en.mp3');
+    expect(en.language).toBe('en');
+    expect(en.isFallback).toBe(false);
+  });
+
+  it('shows no subtitle rather than the original text over it', () => {
+    expect(pickNarration(recorded, 'en').text).toBe('');
+  });
+
+  it('is offered in the language switcher', () => {
+    expect(narrationLanguages(recorded)).toEqual(['pt', 'en']);
+  });
+});

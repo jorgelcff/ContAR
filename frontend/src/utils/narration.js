@@ -19,8 +19,19 @@ export function baseLanguage(tag) {
   return String(tag || '').split('-')[0].toLowerCase();
 }
 
+/**
+ * A language counts once it has something of its own to offer — its own text
+ * or its own recording. It used to require text, so an author who recorded
+ * the English narration in their own voice, without also typing it out, saved
+ * a recording no visitor could ever reach: it was stored, and never offered or
+ * played. A recording alone plays without subtitles; it never borrows the
+ * original's text, for the same reason audio is never borrowed.
+ */
 function usable(entry) {
-  return Boolean(entry && typeof entry === 'object' && String(entry.text || '').trim());
+  return Boolean(
+    entry && typeof entry === 'object'
+    && (String(entry.text || '').trim() || String(entry.audioUrl || '').trim()),
+  );
 }
 
 /**

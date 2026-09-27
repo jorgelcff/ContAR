@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { pickNarration } from '../utils/narration';
+import { MARKER_AR_ENABLED } from '../utils/features';
 import i18n from '../i18n';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -891,6 +892,18 @@ export default function ARPage() {
   const isBlobOnly =
     storedAvatarUrl?.startsWith('blob:') && !searchParams.get('modelUrl');
 
+  // Came here from a story (its "View in AR" link or its QR code): the AR
+  // views load every scene's own avatar, so nothing about this browser's
+  // stored avatar applies.
+  const fromStory = Boolean(storyId);
+  // Only say "default demo avatar" when that is actually what will load. The
+  // story viewer and the editor both link here with the scene's avatar in the
+  // URL, and that used to be announced as the demo too.
+  const isDefaultModel = modelUrl === '/default_model.glb';
+  // A phone or tablet: no fine pointer and no hover.
+  const onPhone = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(pointer: coarse) and (hover: none)').matches;
+
   const surfaceHref = useMemo(
     () => buildQueryUrl('/ar', { mode: 'surface', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
     [modelUrl, initialScale, storyId, sceneId]
@@ -1000,8 +1013,12 @@ export default function ARPage() {
             <h1 className="mt-2 text-2xl font-bold md:text-3xl">{t('arMenuHeading')}</h1>
           </div>
 
-          {/* Avatar source banner */}
-          {isUsingStoredAvatar ? (
+          {/* Avatar source banner — only for someone authoring on this device.
+              A visitor arriving from a story's QR code has nothing in this
+              browser's storage, so they used to be told they were "using the
+              default demo avatar" — false, since the story loads each scene's
+              own narrator — and offered a link into the editor. */}
+          {fromStory ? null : isUsingStoredAvatar ? (
             <div className="rounded-2xl border border-emerald-600/30 bg-emerald-950/30 px-4 py-3 flex items-center gap-3">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-emerald-400"><path d="M20 6 9 17l-5-5"/></svg>
               <div className="flex-1 min-w-0">
@@ -1025,7 +1042,7 @@ export default function ARPage() {
                 {t('arOpenEditor')}
               </Link>
             </div>
-          ) : (
+          ) : isDefaultModel ? (
             <div className="rounded-2xl border border-white/8 bg-white/3 px-4 py-3 flex items-center gap-3">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0 text-blue-400"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
               <div className="flex-1">
@@ -1038,9 +1055,11 @@ export default function ARPage() {
                 {t('arOpenEditor')}
               </Link>
             </div>
-          )}
+          ) : null}
 
-          {/* Share with smartphone */}
+          {/* Share with smartphone — pointless on the phone itself, which is
+              where anyone who scanned a QR code already is. */}
+          {!onPhone && (
           <div className="rounded-2xl border border-white/10 bg-white/3 p-5 flex flex-col sm:flex-row items-center gap-5">
             <div className="flex-1 min-w-0">
               <h2 className="text-base font-bold text-white mb-1">{t('arSmartphoneTitle')}</h2>
@@ -1068,9 +1087,10 @@ export default function ARPage() {
               />
             </div>
           </div>
+          )}
 
           {/* Mode cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className={`grid gap-4 md:grid-cols-2 ${MARKER_AR_ENABLED ? 'lg:grid-cols-3' : ''}`}>
 
             {/* Pseudo AR (markerless, camera + gyroscope) — primary recommendation */}
             <div className="rounded-2xl border border-gray-700/40 bg-gray-800/40 p-5 flex flex-col gap-4">
@@ -1118,7 +1138,8 @@ export default function ARPage() {
               )}
             </div>
 
-            {/* Marker AR */}
+            {/* Marker AR — switched off, see utils/features.js */}
+            {MARKER_AR_ENABLED && (
             <div className="rounded-2xl border border-gray-700/40 bg-gray-800/40 p-5 flex flex-col gap-4">
               <div>
                 <h2 className="text-lg font-bold text-white">{t('arMarkerTitle')}</h2>
@@ -1150,9 +1171,11 @@ export default function ARPage() {
                 )}
               </div>
             </div>
+            )}
           </div>
 
-          {/* Demo instructions */}
+          {/* Hiro marker instructions — off along with marker AR */}
+          {MARKER_AR_ENABLED && (
           <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
             <p className="text-sm font-semibold text-white mb-3">{t('arHiroHowTitle')}</p>
             <ol className="space-y-2 text-sm text-gray-300">
@@ -1168,6 +1191,7 @@ export default function ARPage() {
               <li className="flex gap-2"><span className="text-gray-400 font-bold shrink-0">4.</span> {t('arHiroStep4')}</li>
             </ol>
           </div>
+          )}
 
           {/* Scale pre-config + URL inputs */}
           <details className="rounded-2xl border border-white/5 bg-white/3">
@@ -1228,19 +1252,21 @@ export default function ARPage() {
                 </p>
               </div>
 
-              <div className="border-t border-white/5 pt-4 grid gap-4 md:grid-cols-2">
+              <div className={`border-t border-white/5 pt-4 grid gap-4 ${MARKER_AR_ENABLED ? 'md:grid-cols-2' : ''}`}>
                 <label className="flex flex-col gap-2">
                   <span className="text-xs font-medium text-gray-400">{t('modelUrl')}</span>
                   <input type="text" value={modelUrl} onChange={(e) => setModelUrl(e.target.value)}
                     placeholder="https://.../avatar.glb"
                     className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
                 </label>
-                <label className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-gray-400">{t('markerUrl')}</span>
-                  <input type="text" value={markerUrl} onChange={(e) => setMarkerUrl(e.target.value)}
-                    placeholder="https://.../pattern.patt"
-                    className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
-                </label>
+                {MARKER_AR_ENABLED && (
+                  <label className="flex flex-col gap-2">
+                    <span className="text-xs font-medium text-gray-400">{t('markerUrl')}</span>
+                    <input type="text" value={markerUrl} onChange={(e) => setMarkerUrl(e.target.value)}
+                      placeholder="https://.../pattern.patt"
+                      className="rounded-lg border border-white/10 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                  </label>
+                )}
               </div>
             </div>
           </details>
@@ -1360,7 +1386,7 @@ function ThreeJsFallbackScene({ modelUrl, storyId, narrativeAudioUrl, narrativeT
             <h2 className="font-semibold text-amber-300">{t('arNotAvailableTitle')}</h2>
           </div>
           <p className="text-xs text-gray-400 mt-0.5">{t('arNotAvailableDesc')}</p>
-          {!storyId && (
+          {!storyId && MARKER_AR_ENABLED && (
             <p className="text-xs text-gray-500 mt-1">
               {t('arTryHiroPre')} <a href={hiroHref} className="text-cyan-400 hover:underline">{t('arHiroDemoName')}</a> {t('arTryHiroPost')}
             </p>

@@ -376,7 +376,7 @@ const en = {
     "Arrange scenes in order, add transitions and publish a complete story with a unique public link.",
   landingFeature4Title: "Web AR preview",
   landingFeature4Desc:
-    "Test your narrator in AR directly from the phone browser with marker or surface mode.",
+    "Test your narrator in AR straight from the phone browser: over the camera image, or anchored to a surface.",
   landingCaseLabel: "Real use case",
   landingCaseTitle: "Example: short educational story",
   landingCaseDescription:
@@ -1255,7 +1255,7 @@ const pt = {
     "Monte cenas em sequência, adicione transições e publique uma história completa com link único.",
   landingFeature4Title: "Prévia em AR no navegador",
   landingFeature4Desc:
-    "Teste o narrador em AR no celular com modo marcador ou superfície, direto no navegador.",
+    "Teste o narrador em AR direto no navegador do celular: sobre a imagem da câmera ou ancorado em uma superfície.",
   landingCaseLabel: "Caso real de uso",
   landingCaseTitle: "Exemplo: história curta para sala de aula",
   landingCaseDescription:

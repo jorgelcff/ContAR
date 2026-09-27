@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { normalizeAdvanceOn, ADVANCE_ON_NARRATION } from '../../utils/sceneAdvance';
+import { MARKER_AR_ENABLED } from '../../utils/features';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Icon from './Icon';
@@ -122,13 +123,16 @@ export default function StoryBuilderPanel({ onAddScene, onDuplicateScene, isAddi
                       placeholder={t('transitionText')}
                       className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
                     />
-                    <input
-                      type="text"
-                      value={item.markerUrl || ''}
-                      onChange={(e) => updateStoryScene(index, 'markerUrl', e.target.value)}
-                      placeholder={t('markerUrlPlaceholder')}
-                      className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
-                    />
+                    {/* Marker AR is switched off — see utils/features.js. */}
+                    {MARKER_AR_ENABLED && (
+                      <input
+                        type="text"
+                        value={item.markerUrl || ''}
+                        onChange={(e) => updateStoryScene(index, 'markerUrl', e.target.value)}
+                        placeholder={t('markerUrlPlaceholder')}
+                        className="w-full rounded bg-gray-700 border border-gray-600 text-white text-xs px-2 py-1 placeholder-gray-400 focus:outline-none focus:border-cyan-500"
+                      />
+                    )}
                     {/* What ends the scene, on its own line. Four controls
                         shared one row when this was added and the card is a
                         fixed width in a horizontal strip — the row did not

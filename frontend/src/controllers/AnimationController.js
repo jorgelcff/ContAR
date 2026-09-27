@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { isSpeakerPreset, resolveSpeakerStyle, SPEAKER_STYLES } from '../utils/speakerStyles';
-import { retargetRotationTracks } from '../utils/retarget';
+import { retargetRotationTracks, bodyFrame } from '../utils/retarget';
 import {
   buildNarrationPlan, buildNarrationPlanFromTimeline, variationAt, NEUTRAL_VARIATION,
 } from '../utils/narrationGestures';
@@ -41,6 +41,55 @@ export function attachSourceRestPose(clip, sourceRoot) {
   });
   clip.userData = clip.userData || {};
   clip.userData.sourceRestPose = rest;
+
+  // Which way the clip's own character stands, so retargeting can rotate its
+  // motion into the avatar's orientation (see bodyFrame in utils/retarget).
+  // Measured in the loaded scene's space, which is the space the rest
+  // rotations above accumulate into: the top-level wrappers are recorded with
+  // no parent, and gltf.scene itself carries no transform.
+  sourceRoot.updateMatrixWorld(true);
+  const joint = (re) => {
+    let found = null;
+    sourceRoot.traverse((node) => { if (!found && re.test(node.name || '')) found = node; });
+    return found ? new THREE.Vector3().setFromMatrixPosition(found.matrixWorld) : null;
+  };
+  clip.userData.sourceFrame = bodyFrame({
+    hips: joint(/Hips$/),
+    head: joint(/Head$/),
+    leftUpLeg: joint(/LeftUpLeg$/),
+    rightUpLeg: joint(/RightUpLeg$/),
+  });
+  return clip;
+}
+
+/** Shorter than this, a "clip" is really a pose exported as an animation. */
+export const POSE_CLIP_MAX_SECONDS = 0.2;
+
+/**
+ * Turns a pose that was exported as a two-frame animation into a held pose.
+ *
+ * sad_pose.glb and sneak_pose.glb are 0.07 seconds long, and their two frames
+ * sit 40° and 54° apart at the arm. The mixer loops every clip, so the
+ * character snapped between the two about fourteen times a second — which read
+ * as "moving much too fast" rather than as a pose. Holding the last frame is
+ * what the file was for.
+ *
+ * Mutates and returns the clip. Real animations are left alone.
+ */
+export function holdPoseClip(clip) {
+  if (!clip || !(clip.duration > 0) || clip.duration >= POSE_CLIP_MAX_SECONDS) return clip;
+  clip.tracks = clip.tracks.map((track) => {
+    const size = track.getValueSize();
+    const last = track.values.slice(track.values.length - size);
+    const values = new track.values.constructor(size * 2);
+    values.set(last, 0);
+    values.set(last, size);
+    // Two identical keys a second apart: a still pose that loops harmlessly,
+    // where a single key would leave the clip with no duration to loop over.
+    return new track.constructor(track.name, [0, 1], values, track.getInterpolation());
+  });
+  clip.resetDuration();
+  clip.userData = { ...(clip.userData || {}), heldPose: true };
   return clip;
 }
 
@@ -154,6 +203,7 @@ export class AnimationController {
         parent: parent ? parent.name : null,
       });
     });
+    this._targetFrame = this._computeTargetFrame();
 
     this.addClips(clips);
   }
@@ -424,6 +474,33 @@ export class AnimationController {
    * need it. Returns true when it ran, so the caller can skip the legacy hips
    * workarounds it supersedes.
    */
+  /**
+   * The avatar's body orientation in the space its rest rotations accumulate
+   * into. _restPose records bones only, so the hips' non-bone parent (the
+   * Armature, and whatever transform the author gave the model in the scene)
+   * is outside it — joint positions are brought into that parent's frame for
+   * the two sides to be compared like for like.
+   */
+  _computeTargetFrame() {
+    const bm = this._boneMapper;
+    const hips = bm?.get('hips');
+    if (!hips) return null;
+    this._model.updateMatrixWorld(true);
+    let base = hips.parent;
+    while (base && base.isBone) base = base.parent;
+    const toBase = base ? new THREE.Matrix4().copy(base.matrixWorld).invert() : new THREE.Matrix4();
+    const at = (name) => {
+      const bone = bm.get(name);
+      return bone ? new THREE.Vector3().setFromMatrixPosition(bone.matrixWorld).applyMatrix4(toBase) : null;
+    };
+    return bodyFrame({
+      hips: at('hips'),
+      head: at('head'),
+      leftUpLeg: at('leftUpperLeg'),
+      rightUpLeg: at('rightUpperLeg'),
+    });
+  }
+
   _applyFullRetarget(clip, retargetedClip, sourceBoneByTrack, _dbg) {
     const sourceRest = clip.userData?.sourceRestPose;
     if (!sourceRest?.size || !this._restPose?.size) return false;
@@ -461,6 +538,8 @@ export class AnimationController {
       sourceOf,
       sourceRest,
       targetRest: this._restPose,
+      sourceFrame: clip.userData?.sourceFrame || null,
+      targetFrame: this._targetFrame || null,
     });
     if (!retargeted) return false;
 
@@ -939,17 +1018,12 @@ export class AnimationController {
     this._speakerTime += delta * tempo;
     const t = this._speakerTime;
 
-    // Addressing one side: the head and torso turn that way, the near arm
-    // opens out and the far one tucks across the body. An arm moving on its
-    // own does not read as gesturing in a direction — the turn is what sells
-    // it, so both happen together or neither does.
+    // Addressing one side: the head and torso turn that way and the near arm
+    // opens out. An arm moving on its own does not read as gesturing in a
+    // direction — the turn is what sells it, so both happen together.
     const turn = 0.20 * lateral;
-    // Addressing a side turns the body and shifts the gesture; it does not
-    // change how far the arms rest from the ribs. Scaling the resting offsets
-    // by 0.55 did exactly that, opening the near arm halfway to a T-pose
-    // before a single gesture had been added.
-    const nearArm = 1 + 0.22 * lateral;   // character's left
-    const farArm = 1 - 0.22 * lateral;    // character's right
+    const openLeft = 0.18 * Math.max(0, lateral);   // character's left
+    const openRight = 0.18 * Math.max(0, -lateral);
 
     // Helper: layered organic sine using golden ratio (φ) and silver ratio (δ)
     // φ = 1.618…  δ = 2.414…   These are incommensurable with each other and with 1.
@@ -960,10 +1034,14 @@ export class AnimationController {
       a1 * Math.sin(t * base + phase) +
       a2 * Math.sin(t * base * φ + phase * 1.3) +
       a3 * Math.sin(t * base * δ + phase * 0.7);
+    // The same, folded into [0, a1+a2+a3]: for motion that must only go one
+    // way — an arm opening out, never swinging in through the body.
+    const outward = (base, a1, a2, a3, phase) =>
+      0.5 * ((a1 + a2 + a3) + organic(base, a1, a2, a3, phase));
 
     const applyOffset = (entry, x = 0, y = 0, z = 0) => {
       if (!entry?.bone) return;
-      
+
       const qMixamo = new THREE.Quaternion().setFromEuler(
         new THREE.Euler(x, y, z, "XYZ"),
       );
@@ -980,61 +1058,110 @@ export class AnimationController {
       entry.bone.quaternion.copy(entry.baseQuat).multiply(qLocal);
     };
 
+    // Amplitudes are what make the styles legible. They used to be 2–3° per
+    // component, so the arms barely moved and "calm" and "excited" — which only
+    // scale these — looked the same. Measured on the default avatar the hand
+    // travelled 4, 10 and 17 cm over four seconds for calm, speaker and
+    // excited. The beat now lives mostly in the forearms, where talking hands
+    // actually move, and energy also lifts the hands: an excited speaker
+    // gestures higher, a calm one lets them settle.
     // Head: nod + turn, asymmetric
     applyOffset(bones.head,
-      organic(1.1, 0.020 * g, 0.012 * g, 0.008 * g, 0.0),        // nod
+      organic(1.1, 0.030 * g, 0.018 * g, 0.010 * g, 0.0),        // nod
       turn + organic(0.7, 0.030 * g, 0.020 * g, 0.010 * g, 0.5), // turn
-      organic(0.5, 0.010 * g, 0.005 * g, 0.005 * g, 1.2)         // tilt
+      organic(0.5, 0.012 * g, 0.006 * g, 0.006 * g, 1.2)         // tilt
     );
 
     // Neck: follows head slightly, offset phase
     applyOffset(bones.neck,
-      organic(0.9, 0.010 * g, 0.006 * g, 0.004 * g, 0.3),
-      turn * 0.35 + organic(0.6, 0.018 * g, 0.010 * g, 0.006 * g, 0.8),
+      organic(0.9, 0.012 * g, 0.007 * g, 0.004 * g, 0.3),
+      turn * 0.35 + organic(0.6, 0.020 * g, 0.012 * g, 0.006 * g, 0.8),
       0
     );
 
     // Spine / torso sway — gives sense of weight and breath
     applyOffset(bones.spine,
-      organic(0.4, 0.012 * g, 0.007 * g, 0.004 * g, 1.5),
-      turn * 0.55 + organic(0.3, 0.008 * g, 0.005 * g, 0.002 * g, 2.0),
+      organic(0.4, 0.014 * g, 0.008 * g, 0.004 * g, 1.5),
+      turn * 0.55 + organic(0.3, 0.010 * g, 0.006 * g, 0.003 * g, 2.0),
       organic(0.35, 0.006 * g, 0.003 * g, 0.002 * g, 0.4)
     );
 
-    // Left arm — gestures slightly ahead of right
-    applyOffset(bones.leftUpperArm,
-      -0.14 * nearArm + organic(1.1, 0.040 * g, 0.025 * g, 0.015 * g, 0.0),
-      0,
-      0.24 * nearArm + organic(0.85, 0.060 * g, 0.035 * g, 0.015 * g, 0.3)
-    );
-    applyOffset(bones.leftForeArm,
-      -0.30 * nearArm + organic(1.4, 0.050 * g, 0.030 * g, 0.010 * g, 0.6),
-      organic(0.7, 0.015 * g, 0.010 * g, 0.005 * g, 0.2),
-      -0.06
-    );
+    // ── Arms ────────────────────────────────────────────────────────────────
+    // applyOffset rotates about the *rest* frame's world axes, and these rigs
+    // rest in a T-pose, where the arm lies along X. So its "x" never bent the
+    // elbow: it twisted the forearm about its own length, and the hand barely
+    // moved — on the default avatar the elbow read a constant 70° and the hand
+    // covered a few centimetres however large the number. The arms are instead
+    // rotated about axes taken from the bones as they stand now: forward swing
+    // about (bone × forward), opening about (bone × outward), and the elbow
+    // about its own hinge (upper arm × forearm). None of that depends on how
+    // the rig was bound.
+    //
+    // Rhythm: talking gestures land about once a second, so the arms beat far
+    // faster than the head's slow drift above.
+    const modelQuat = this._model.getWorldQuaternion(new THREE.Quaternion());
+    const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(modelQuat);
+    const leftDir = new THREE.Vector3(1, 0, 0).applyQuaternion(modelQuat);
+    const worldDir = (bone, child) => {
+      const a = bone.getWorldPosition(new THREE.Vector3());
+      const b = child.getWorldPosition(new THREE.Vector3());
+      const d = b.sub(a);
+      return d.lengthSq() > 1e-12 ? d.normalize() : null;
+    };
+    // Rotates `entry` in world space by `rotation`, applied on top of its base
+    // pose, and writes the result back as a local rotation.
+    const rotateWorld = (entry, rotation) => {
+      const parentWorld = entry.bone.parent.getWorldQuaternion(new THREE.Quaternion());
+      const baseWorld = parentWorld.clone().multiply(entry.baseQuat);
+      entry.bone.quaternion.copy(parentWorld.invert().multiply(rotation.multiply(baseWorld)));
+    };
+    const about = (axis, angle) => {
+      if (!axis || axis.lengthSq() < 1e-10 || !angle) return new THREE.Quaternion();
+      return new THREE.Quaternion().setFromAxisAngle(axis.normalize(), angle);
+    };
 
-    // Right arm — slightly different rhythm (offset phase)
-    applyOffset(bones.rightUpperArm,
-      -0.12 * farArm + organic(1.1, 0.040 * g, 0.025 * g, 0.015 * g, 1.4),
-      0,
-      -0.24 * farArm + organic(0.85, 0.060 * g, 0.035 * g, 0.015 * g, 1.7)
-    );
-    applyOffset(bones.rightForeArm,
-      -0.28 * farArm + organic(1.4, 0.050 * g, 0.030 * g, 0.010 * g, 2.0),
-      organic(0.7, 0.015 * g, 0.010 * g, 0.005 * g, 1.8),
-      0.06
-    );
+    const gestureArm = (upper, fore, hand, side, phase, open) => {
+      if (!upper?.bone?.parent || !fore?.bone || !hand?.bone) return;
+      // Base pose first, so the axes come from where the arm rests, not from
+      // wherever last frame's gesture left it.
+      upper.bone.quaternion.copy(upper.baseQuat);
+      fore.bone.quaternion.copy(fore.baseQuat);
 
-    // Wrist micro-rotation (expressiveness detail)
+      const upperDir = worldDir(upper.bone, fore.bone);
+      if (!upperDir) return;
+      const outwardDir = leftDir.clone().multiplyScalar(side);
+      const swing = organic(3.2, 0.080 * g, 0.045 * g, 0.020 * g, phase);
+      const spread = open + outward(2.6, 0.060 * g, 0.035 * g, 0.015 * g, phase + 0.3);
+      rotateWorld(upper,
+        about(new THREE.Vector3().crossVectors(upperDir, outwardDir), spread)
+          .multiply(about(new THREE.Vector3().crossVectors(upperDir, forwardDir), swing)));
+
+      // Elbow: flex about the hinge the two segments define. Positive bends
+      // further, raising the hand.
+      const u = worldDir(upper.bone, fore.bone);
+      const d = worldDir(fore.bone, hand.bone);
+      if (!u || !d) return;
+      const hinge = new THREE.Vector3().crossVectors(u, d);
+      const flex = lift + organic(5.0, 0.180 * g, 0.090 * g, 0.040 * g, phase + 0.6);
+      rotateWorld(fore, about(hinge, flex));
+    };
+
+    // Energy also lifts the hands: an excited speaker gestures higher, a calm
+    // one lets them settle.
+    const lift = 0.10 * (g - 1);
+    gestureArm(bones.leftUpperArm, bones.leftForeArm, bones.leftHand, 1, 0.0, openLeft);
+    gestureArm(bones.rightUpperArm, bones.rightForeArm, bones.rightHand, -1, 1.4, openRight);
+
+    // Wrists: the open-palm turn that goes with each beat
     applyOffset(bones.leftHand,
       0,
-      organic(1.8, 0.020 * g, 0.012 * g, 0.006 * g, 0.0),
-      organic(2.1, 0.015 * g, 0.010 * g, 0.005 * g, 0.5)
+      organic(5.5, 0.060 * g, 0.030 * g, 0.015 * g, 0.0),
+      organic(6.3, 0.040 * g, 0.020 * g, 0.010 * g, 0.5)
     );
     applyOffset(bones.rightHand,
       0,
-      organic(1.8, 0.020 * g, 0.012 * g, 0.006 * g, 2.3),
-      organic(2.1, 0.015 * g, 0.010 * g, 0.005 * g, 1.9)
+      organic(5.5, 0.060 * g, 0.030 * g, 0.015 * g, 2.3),
+      organic(6.3, 0.040 * g, 0.020 * g, 0.010 * g, 1.9)
     );
   }
 

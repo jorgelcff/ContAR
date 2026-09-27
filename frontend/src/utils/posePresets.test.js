@@ -282,3 +282,25 @@ describe('animation clip fallback', () => {
     expect(pickAnimationClip('run', idle, [], { run, slow_run: slowRun })).toBe(run);
   });
 });
+
+describe('pickAnimationClip — a preset gets its own clip, whatever loaded first', () => {
+  const clip = (name) => new THREE.AnimationClip(name, 1, []);
+
+  it('does not let disagree answer for agree', () => {
+    // "disagree" contains "agree"; with disagree loaded first, the keyword
+    // match used to return it for both presets.
+    const clips = [clip('disagree'), clip('agree')];
+    expect(pickAnimationClip('agree', null, clips).name).toBe('agree');
+    expect(pickAnimationClip('disagree', null, clips).name).toBe('disagree');
+  });
+
+  it('does not let dance_samba answer for dance', () => {
+    const clips = [clip('dance_samba'), clip('dance')];
+    expect(pickAnimationClip('dance', null, clips).name).toBe('dance');
+  });
+
+  it('still finds a clip by keyword when nothing is named for the preset', () => {
+    // An avatar's own embedded clip, e.g. from Mixamo.
+    expect(pickAnimationClip('agree', null, [clip('Head Nod Yes')]).name).toBe('Head Nod Yes');
+  });
+});

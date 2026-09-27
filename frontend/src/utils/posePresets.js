@@ -136,7 +136,9 @@ const KEYWORDS_BY_PRESET = {
   dance:       [/dance/],
   dance_samba: [/samba/],
   speaker:     [/speak/, /talk/, /narrat/, /present/, /explain/, /lecture/],
-  agree:       [/agree/, /\bnod\b/],
+  // Not /agree/: that also matches "disagree", so whichever of the two clips
+  // happened to load first answered for both presets.
+  agree:       [/(^|[^a-z])agree/, /\bnod\b/],
   disagree:    [/disagree/, /head.?shake/, /shake.?head/],
   sad:         [/sad/],
   sneak:       [/sneak/, /tiptoe/],
@@ -153,6 +155,16 @@ const ANIMATION_FALLBACK_CHAIN = {
 
 function findClipForPreset(preset, avatarClips, externalClips) {
   const patterns = KEYWORDS_BY_PRESET[preset] || [];
+
+  // 0. A clip named exactly for this preset beats any keyword match. The
+  // manifest's clips are renamed to their preset and appended to avatarClips,
+  // so without this the loose patterns below ran first over *every* loaded
+  // clip — "dance" could answer with dance_samba, and "agree" with disagree —
+  // and which one won depended on which file finished downloading first.
+  const exact =
+    avatarClips.find((clip) => String(clip?.name || "").toLowerCase() === preset) ||
+    externalClips[preset];
+  if (exact) return exact;
 
   // 1. Avatar's own embedded clips (highest priority — rig-matched)
   const fromAvatar = avatarClips.find((clip) => {
@@ -505,13 +517,16 @@ function applySpeakerPose(model, boneMapper = null) {
   rotateBoneDeg(neck, 2, 0, 0);
 
   const arms = getArmChain(model, boneMapper);
-  // Open, ready-to-gesture stance: arms down but held a little away from the
-  // body, forearms angled forward. The animation controller layers its speaker
-  // gestures on top of this.
-  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.30, -0.94, 0.16));
-  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.34, -0.50, 0.80));
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.30, -0.94, 0.16));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.34, -0.50, 0.80));
+  // A presenter's ready stance: upper arms close to the ribs, elbows bent to
+  // about seventy degrees so the hands sit in front of the waist, where talking
+  // gestures happen. The stance used to hold the upper arms ~17° out and the
+  // gesture layer added another ~14° on top, so the arms stood 31° off the body
+  // whatever the style — measured on the default avatar — which read as arms
+  // locked open rather than as someone about to gesture.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.14, -0.97, 0.18));
+  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(0.08, -0.15, 0.98));
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.14, -0.97, 0.18));
+  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(-0.08, -0.15, 0.98));
 }
 
 function applyHandsOnHipsPose(model, boneMapper = null) {
@@ -564,11 +579,56 @@ function applyThinkPose(model, boneMapper = null) {
 
   rotateBoneDeg(neck, 0, 8, 6);
   const arms = getArmChain(model, boneMapper);
-  // Right hand to the chin; left arm tucked across the waist under the elbow.
-  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.34, -0.90, 0.28));
-  aimBone(model, arms.rightForeArm, arms.rightHand, new THREE.Vector3(0.26, 0.84, 0.48));
-  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.24, -0.95, 0.20));
-  aimBone(model, arms.leftForeArm, arms.leftHand, new THREE.Vector3(-0.88, 0.22, 0.42));
+  const head = getBone(model, boneMapper, 'head', [/\bhead\b/, /mixamorighead/]);
+  const hips = getBone(model, boneMapper, 'hips', [/hips?/, /pelvis/, /mixamorigHips/i]);
+
+  // Aimed at points on the body rather than along fixed directions. The fixed
+  // version sent the left forearm almost straight sideways from an elbow held
+  // at the ribs, so it crossed *through* the belly — on the default avatar
+  // only the hand showed, in front of the chest, and from the side the forearm
+  // vanished. The right hand stopped beside the face rather than at the chin.
+  // Points on the skeleton adapt to the avatar's proportions; directions don't.
+  //
+  // Right: elbow forward and down, knuckles to the chin.
+  aimBone(model, arms.rightUpperArm, arms.rightForeArm, new THREE.Vector3(-0.08, -0.48, 0.87));
+  const chin = pointOnBody(model, head, hips, { up: -0.03, forward: 0.18 });
+  if (chin) aimBone(model, arms.rightForeArm, arms.rightHand, directionTo(arms.rightForeArm, chin, model));
+  // Left: elbow brought forward too, so the forearm crosses in *front* of the
+  // body, ending under the right elbow to hold it up.
+  aimBone(model, arms.leftUpperArm, arms.leftForeArm, new THREE.Vector3(0.06, -0.50, 0.86));
+  const underElbow = arms.rightForeArm ? pointNear(model, arms.rightForeArm, hips, head, { up: -0.06, forward: 0.10 }) : null;
+  if (underElbow) aimBone(model, arms.leftForeArm, arms.leftHand, directionTo(arms.leftForeArm, underElbow, model));
+  applyFingerPose(model, 'right', 'fist');
+}
+
+/**
+ * A point on the body, placed relative to `anchor` in units of the torso's
+ * height (hips to head), along the character's own up and forward.
+ */
+function pointOnBody(model, anchor, hips, { up = 0, forward = 0 } = {}) {
+  return anchor && hips ? pointNear(model, anchor, hips, anchor, { up, forward }) : null;
+}
+
+function pointNear(model, bone, hips, head, { up = 0, forward = 0 } = {}) {
+  if (!bone || !hips || !head) return null;
+  model.updateMatrixWorld(true);
+  const at = new THREE.Vector3().setFromMatrixPosition(bone.matrixWorld);
+  const hipsAt = new THREE.Vector3().setFromMatrixPosition(hips.matrixWorld);
+  const headAt = new THREE.Vector3().setFromMatrixPosition(head.matrixWorld);
+  const torso = headAt.distanceTo(hipsAt);
+  const q = model.getWorldQuaternion(new THREE.Quaternion());
+  const upDir = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+  const fwdDir = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+  return at.addScaledVector(upDir, up * torso).addScaledVector(fwdDir, forward * torso);
+}
+
+/** Model-space direction from `bone` to a world point — what aimBone takes. */
+function directionTo(bone, worldPoint, model) {
+  bone.updateWorldMatrix(true, false);
+  const from = new THREE.Vector3().setFromMatrixPosition(bone.matrixWorld);
+  const dir = worldPoint.clone().sub(from);
+  const inv = model.getWorldQuaternion(new THREE.Quaternion()).invert();
+  return dir.applyQuaternion(inv);
 }
 
 function applyPointPose(model, boneMapper = null) {
@@ -591,10 +651,30 @@ function applyBowPose(model, boneMapper = null) {
   const chest = getBone(model, boneMapper, 'chest',  [/chest/, /spine_?2/, /mixamorigspine1/]);
   const neck  = getBone(model, boneMapper, 'neck',   [/neck/, /mixamorigneck/]);
 
+  // A bow hinges at the hip joints: the pelvis tips forward and the thighs
+  // stay where they were. Rotating the hips alone took the legs with it — they
+  // are the hips' children — so the whole body tilted like a plank and the
+  // feet swung back off the floor. Record where each thigh points, tip the
+  // pelvis, then aim the thighs back; knees and feet follow unchanged.
+  const thighs = [
+    [getBone(model, boneMapper, 'leftUpperLeg', [/leftupleg/, /l_upperleg/, /upperleg_l/, /thigh_l/]),
+      getBone(model, boneMapper, 'leftLowerLeg', [/leftleg$/, /l_lowerleg/, /lowerleg_l/, /calf_l/])],
+    [getBone(model, boneMapper, 'rightUpperLeg', [/rightupleg/, /r_upperleg/, /upperleg_r/, /thigh_r/]),
+      getBone(model, boneMapper, 'rightLowerLeg', [/rightleg$/, /r_lowerleg/, /lowerleg_r/, /calf_r/])],
+  ].filter(([upper, lower]) => upper && lower);
+  model.updateMatrixWorld(true);
+  const standing = thighs.map(([upper, lower]) => directionTo(
+    upper, new THREE.Vector3().setFromMatrixPosition(lower.matrixWorld), model,
+  ));
+
   rotateBoneDeg(hips, 25, 0, 0);
   rotateBoneDeg(spine, 20, 0, 0);
   rotateBoneDeg(chest, 15, 0, 0);
-  rotateBoneDeg(neck, -15, 0, 0);
+  // The head goes down with the bow. -15 here held the face level, looking
+  // out at the audience from a folded body, which reads as peering, not bowing.
+  rotateBoneDeg(neck, 5, 0, 0);
+
+  thighs.forEach(([upper, lower], i) => aimBone(model, upper, lower, standing[i]));
 
   // Without this the arms stay out sideways through the whole bow.
   relaxArms(model, getArmChain(model, boneMapper));

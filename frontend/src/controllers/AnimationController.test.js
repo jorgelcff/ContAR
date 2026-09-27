@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { AnimationController, attachSourceRestPose } from './AnimationController';
+import { AnimationController, attachSourceRestPose, holdPoseClip } from './AnimationController';
 import { BoneMapper } from '../utils/BoneMapper';
 
 /** A Mixamo-named skeleton; `rotate` lets it bind on a different convention. */
@@ -136,5 +136,37 @@ describe('AnimationController retargeting on degenerate rigs', () => {
     const out = controller._retargetClip(clip);
     expect(out.tracks.length).toBeGreaterThan(0);
     for (const v of out.tracks[0].values) expect(Number.isFinite(v)).toBe(true);
+  });
+});
+
+describe('holdPoseClip', () => {
+  const quatTrack = (name, times, quats) => new THREE.QuaternionKeyframeTrack(
+    name, times, quats.flatMap((q) => q.toArray()),
+  );
+  const tilt = (deg) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(deg));
+
+  it('turns a two-frame pose export into a still pose on its last frame', () => {
+    // sad_pose.glb: 0.07s, frames 40° apart — looped, it flapped ~14×/s.
+    const clip = new THREE.AnimationClip('sad', -1, [quatTrack('arm.quaternion', [0, 0.07], [tilt(0), tilt(40)])]);
+    holdPoseClip(clip);
+    const [track] = clip.tracks;
+    const first = new THREE.Quaternion().fromArray(track.values, 0);
+    const second = new THREE.Quaternion().fromArray(track.values, 4);
+    expect(first.angleTo(tilt(40))).toBeLessThan(1e-3); // Float32 storage + acos, see retarget.test.js
+    expect(second.angleTo(tilt(40))).toBeLessThan(1e-3);
+    expect(clip.duration).toBe(1);
+    expect(clip.userData.heldPose).toBe(true);
+  });
+
+  it('leaves a real animation alone', () => {
+    const clip = new THREE.AnimationClip('walk', -1, [quatTrack('arm.quaternion', [0, 0.5, 0.97], [tilt(0), tilt(20), tilt(0)])]);
+    const before = Array.from(clip.tracks[0].values);
+    holdPoseClip(clip);
+    expect(Array.from(clip.tracks[0].values)).toEqual(before);
+    expect(clip.duration).toBeCloseTo(0.97, 5);
+  });
+
+  it('does not choke on nothing', () => {
+    expect(holdPoseClip(null)).toBeNull();
   });
 });

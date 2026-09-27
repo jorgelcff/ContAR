@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { retargetRotationTracks } from './retarget';
+import { retargetRotationTracks, bodyFrame } from './retarget';
 
 // Keyframes are stored in Float32Array, and angleTo()'s acos() amplifies that
 // rounding near dot≈1 by a square root: a ~6e-8 component error surfaces as
@@ -170,5 +170,73 @@ describe('retargetRotationTracks', () => {
     expect(retargetRotationTracks({
       tracks: [], sourceOf: identityMap, sourceRest: chain(euler(0, 0, 0), euler(0, 0, 0), euler(0, 0, 0)), targetRest: chain(euler(0, 0, 0), euler(0, 0, 0), euler(0, 0, 0)),
     })).toBeNull();
+  });
+});
+
+describe('bodyFrame', () => {
+  const v = (x, y, z) => new THREE.Vector3(x, y, z);
+  // A character standing up +Y facing +Z has its right hip at −X.
+  const facingPlusZ = {
+    hips: v(0, 1, 0), head: v(0, 1.7, 0), leftUpLeg: v(0.1, 0.95, 0), rightUpLeg: v(-0.1, 0.95, 0),
+  };
+
+  it('is the identity for a character standing up and facing +Z', () => {
+    expect(bodyFrame(facingPlusZ).angleTo(new THREE.Quaternion())).toBeLessThan(TOLERANCE);
+  });
+
+  it('is a half turn about up for a character facing −Z', () => {
+    // run.glb's case: the same body, turned round.
+    const turned = bodyFrame({
+      hips: v(0, 1, 0), head: v(0, 1.7, 0), leftUpLeg: v(-0.1, 0.95, 0), rightUpLeg: v(0.1, 0.95, 0),
+    });
+    const halfTurn = new THREE.Quaternion().setFromAxisAngle(v(0, 1, 0), Math.PI);
+    expect(turned.angleTo(halfTurn)).toBeLessThan(TOLERANCE);
+  });
+
+  it('refuses joints that do not define an orientation', () => {
+    expect(bodyFrame({})).toBeNull();
+    expect(bodyFrame({ ...facingPlusZ, head: v(0, 1, 0) })).toBeNull();
+  });
+});
+
+describe('retargeting between characters that face different ways', () => {
+  // Pitching a leg forward is a rotation about the character's own lateral
+  // axis. For a +Z-facing body that axis is world X; for a −Z-facing one it is
+  // world −X — so the same world rotation swings the two legs in opposite
+  // directions relative to each body.
+  const rest = () => new Map([['leg', { quaternion: new THREE.Quaternion(), parent: null }]]);
+  const legForward = (facing) => euler(-30 * facing, 0, 0);
+  const plusZ = new THREE.Quaternion();
+  const minusZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+  const run = (frames) => retargetRotationTracks({
+    tracks: [track('leg', [0], [legForward(-1)])],   // source faces −Z: forward pitch is +X
+    sourceOf: new Map([['leg', 'leg']]),
+    sourceRest: rest(),
+    targetRest: rest(),
+    ...frames,
+  });
+  const got = (result) => new THREE.Quaternion().fromArray(result[0].values, 0);
+
+  it('without frames, copies the world rotation — and swings the leg backwards', () => {
+    // The bug, pinned: this is what run.glb did to the avatar.
+    expect(got(run({})).angleTo(legForward(-1))).toBeLessThan(TOLERANCE);
+    expect(got(run({})).angleTo(legForward(1))).toBeGreaterThan(0.5);
+  });
+
+  it('with frames, swings the leg forward for the target too', () => {
+    const result = run({ sourceFrame: minusZ, targetFrame: plusZ });
+    expect(got(result).angleTo(legForward(1))).toBeLessThan(TOLERANCE);
+  });
+
+  it('changes nothing when both characters already face the same way', () => {
+    const same = retargetRotationTracks({
+      tracks: [track('leg', [0], [legForward(1)])],
+      sourceOf: new Map([['leg', 'leg']]),
+      sourceRest: rest(),
+      targetRest: rest(),
+      sourceFrame: plusZ,
+      targetFrame: plusZ,
+    });
+    expect(got(same).angleTo(legForward(1))).toBeLessThan(TOLERANCE);
   });
 });

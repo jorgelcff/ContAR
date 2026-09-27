@@ -11,7 +11,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import SpeechBubble from './SpeechBubble';
-import { AnimationController, attachSourceRestPose } from '../../controllers/AnimationController';
+import { AnimationController, attachSourceRestPose, holdPoseClip } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
 import { applyPosePreset, captureRestPoseSnapshot } from '../../utils/posePresets';
@@ -609,6 +609,7 @@ export default function SceneCanvas({
               const clip = gltf.animations?.[0];
               if (!clip) return;
               attachSourceRestPose(clip, gltf.scene);
+              holdPoseClip(clip);
               const preset = anim.preset || anim.name || "";
               clip.name = preset || clip.name || anim.file;
 
@@ -626,7 +627,9 @@ export default function SceneCanvas({
               for (const p of PRESETS) {
                 if (
                   !externalClipsRef.current[p] &&
-                  tags.some((t) => String(t).toLowerCase().includes(p))
+                  // Exact, not includes(): "disagree" contains "agree",
+                  // "slow_run" contains "run", "walk_circle" contains "walk".
+                  tags.some((t) => String(t).toLowerCase() === p)
                 ) {
                   externalClipsRef.current[p] = clip;
                   if (p === posePresetRef.current) filledCurrentPoseSlot = true;

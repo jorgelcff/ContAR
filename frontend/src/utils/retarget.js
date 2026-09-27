@@ -24,6 +24,46 @@ import * as THREE from 'three';
  * the source's bone lengths) and scale tracks fight the bind pose.
  */
 
+/**
+ * The orientation of a character's body — which way is up and which way it
+ * faces — as a rotation from a canonical frame (+Y up, +Z forward).
+ *
+ * World-space transfer (below) assumes the two skeletons stand the same way
+ * round. Most Mixamo exports do, but not all: the bundled run.glb was
+ * re-exported through another tool and its character faces −Z while every
+ * other clip and the avatar face +Z. A world delta that swings the source's
+ * leg toward *its* front then swings the avatar's leg toward *its* back — the
+ * run played with the thighs reaching backwards and the torso leaning back,
+ * which reads as hands and feet on the wrong sides.
+ *
+ * Built from joint positions rather than bone rotations, because rotations are
+ * exactly what differ between conventions; the body's shape does not.
+ *
+ * @param {object} p  world-space joint positions (THREE.Vector3)
+ * @param {THREE.Vector3} p.hips
+ * @param {THREE.Vector3} p.head
+ * @param {THREE.Vector3} p.leftUpLeg
+ * @param {THREE.Vector3} p.rightUpLeg
+ * @returns {THREE.Quaternion|null}  null when the joints do not define a frame
+ */
+export function bodyFrame({ hips, head, leftUpLeg, rightUpLeg } = {}) {
+  if (!hips || !head || !leftUpLeg || !rightUpLeg) return null;
+  const up = new THREE.Vector3().subVectors(head, hips);
+  if (up.lengthSq() < 1e-10) return null;
+  up.normalize();
+  // Toward the character's own right, flattened against up.
+  const right = new THREE.Vector3().subVectors(rightUpLeg, leftUpLeg);
+  right.addScaledVector(up, -right.dot(up));
+  if (right.lengthSq() < 1e-10) return null;
+  right.normalize();
+  const forward = new THREE.Vector3().crossVectors(up, right).normalize();
+  // Columns are where the canonical axes land: +X is the character's left
+  // (so that X, Y, Z stay right-handed), +Y up, +Z forward.
+  const left = right.clone().negate();
+  const basis = new THREE.Matrix4().makeBasis(left, up, forward);
+  return new THREE.Quaternion().setFromRotationMatrix(basis);
+}
+
 /** Orders node names so every parent precedes its children. */
 function topoOrder(nodes) {
   const order = [];
@@ -89,10 +129,18 @@ function sampleQuaternion(times, values, t, out) {
  * @param {Map<string, string>} args.sourceOf  target bone name → source bone name.
  * @param {Map<string, {quaternion: THREE.Quaternion, parent: string|null}>} args.sourceRest
  * @param {Map<string, {quaternion: THREE.Quaternion, parent: string|null}>} args.targetRest
+ * @param {THREE.Quaternion|null} [args.sourceFrame]  bodyFrame() of the source,
+ *   in the same space its rest rotations accumulate into.
+ * @param {THREE.Quaternion|null} [args.targetFrame]  likewise for the target.
+ *   With both given, each world delta is re-expressed from the source's body
+ *   orientation into the target's; without them the two are assumed to match,
+ *   which is the previous behaviour exactly.
  * @returns {Array<{name: string, times: Float32Array, values: Float32Array}>|null}
  *   Retargeted tracks, or null when the inputs don't describe a usable pair.
  */
-export function retargetRotationTracks({ tracks, sourceOf, sourceRest, targetRest }) {
+export function retargetRotationTracks({
+  tracks, sourceOf, sourceRest, targetRest, sourceFrame = null, targetFrame = null,
+}) {
   if (!tracks?.length || !sourceOf?.size || !sourceRest?.size || !targetRest?.size) return null;
 
   // Union of every track's sample times — tracks may disagree on keyframe times.
@@ -133,6 +181,13 @@ export function retargetRotationTracks({ tracks, sourceOf, sourceRest, targetRes
   const delta = new THREE.Quaternion();
   const inverse = new THREE.Quaternion();
 
+  // A = targetFrame · sourceFrame⁻¹ carries a direction from the source's body
+  // orientation into the target's; a world delta D is carried as A·D·A⁻¹.
+  const align = sourceFrame && targetFrame
+    ? new THREE.Quaternion().copy(targetFrame).multiply(sourceFrame.clone().invert())
+    : null;
+  const alignInverse = align ? align.clone().invert() : null;
+
   for (let f = 0; f < times.length; f++) {
     const t = times[f];
 
@@ -155,6 +210,7 @@ export function retargetRotationTracks({ tracks, sourceOf, sourceRest, targetRes
 
       if (source && sourceWorld.has(source)) {
         delta.copy(sourceWorld.get(source)).multiply(inverse.copy(sourceWorldRest.get(source)).invert());
+        if (align) delta.premultiply(align).multiply(alignInverse);
         const world = delta.multiply(targetWorldRest.get(name));
         if (parentWorld) local.copy(inverse.copy(parentWorld).invert()).multiply(world);
         else local.copy(world);

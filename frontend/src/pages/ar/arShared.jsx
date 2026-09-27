@@ -12,7 +12,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { getPublicStory, getScene } from '../../api/sceneApi';
 import { BoneMapper } from '../../utils/BoneMapper';
-import { AnimationController, attachSourceRestPose } from '../../controllers/AnimationController';
+import { AnimationController, attachSourceRestPose, holdPoseClip } from '../../controllers/AnimationController';
 import { applyPosePreset } from '../../utils/posePresets';
 
 export const AR_SCALE_KEY = 'contar:ar-scale';
@@ -165,6 +165,7 @@ export function loadAnimationManifest(gltfLoader) {
                   const clip = g.animations?.[0];
                   if (!clip) return resolve();
                   attachSourceRestPose(clip, g.scene);
+                  holdPoseClip(clip);
                   const preset = anim.preset || anim.name || "";
                   clip.name = preset || clip.name || anim.file;
                   const tags = Array.isArray(anim.tags) ? anim.tags : [];
@@ -172,7 +173,8 @@ export function loadAnimationManifest(gltfLoader) {
                   for (const p of PRESETS) {
                     if (
                       !external[p] &&
-                      tags.some((tag) => String(tag).toLowerCase().includes(p))
+                      // Exact, as in SceneCanvas: "disagree" contains "agree".
+                      tags.some((tag) => String(tag).toLowerCase() === p)
                     ) {
                       external[p] = clip;
                     }

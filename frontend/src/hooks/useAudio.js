@@ -421,6 +421,26 @@ export default function useAudio({ onAudioBlob } = {}) {
 
   // ── Public API ───────────────────────────────────────────────────
 
+  /**
+   * Unlocks audio from inside a user gesture without making a sound.
+   *
+   * The story viewer used to call play() for this, which unlocks audio by
+   * *playing* it — so tapping Start with the character still downloading began
+   * the narration over an empty stage. This resumes the context and runs one
+   * silent sample through it (what iOS needs), and leaves the clip itself to
+   * start once the character is there.
+   */
+  function prime() {
+    try {
+      const ctx = getOrCreateContext();
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const silence = ctx.createBufferSource();
+      silence.buffer = ctx.createBuffer(1, 1, ctx.sampleRate || 44100);
+      silence.connect(ctx.destination);
+      silence.start(0);
+    } catch { /* no Web Audio here — play() reports its own error later */ }
+  }
+
   function loadFile(file) {
     if (!file) return;
     teardownSource();
@@ -593,6 +613,7 @@ export default function useAudio({ onAudioBlob } = {}) {
     audioDuration,
     loadFile,
     loadUrl,
+    prime,
     loadVisemeTimeline,
     clearVisemeTimeline,
     applyVisemeTimeline,

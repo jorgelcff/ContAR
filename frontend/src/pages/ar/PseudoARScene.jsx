@@ -65,7 +65,9 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const [controlsMin, setControlsMin] = useState(false);
   const scaleLabel = `${Math.round(scale * 100)}%`;
   const [speechPlaying, setSpeechPlaying] = useState(false);
-  const story = useARStory(storyId);
+  // The avatar is in front of the camera once the camera is running and the
+  // model has finished loading (or failed — a story must not stall on it).
+  const story = useARStory(storyId, { ready: arActive && !loadingModel });
 
   const cameraSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);

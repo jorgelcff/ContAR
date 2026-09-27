@@ -84,7 +84,13 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
   const [controlsMin, setControlsMin] = useState(false);
   const scaleLabel = `${Math.round(scale * 100)}%`;
   const [speechPlaying, setSpeechPlaying] = useState(false);
-  const story = useARStory(storyId);
+  // placedRef drives the XR frame loop, which must not wait for a render;
+  // this mirrors it so the story can wait for the avatar to be placed before
+  // it starts speaking. A model that failed to load counts as settled.
+  const [avatarPlaced, setAvatarPlaced] = useState(false);
+  const story = useARStory(storyId, {
+    ready: arActive && !loadingModel && (avatarPlaced || Boolean(error)),
+  });
   const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
   const effectivePosePreset = resolveScenePosePreset(story, storyId, posePreset);
   effectivePoseRef.current = effectivePosePreset;
@@ -330,7 +336,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
       // No-hit-test mode: each tap re-anchors the avatar in front of the camera.
       if (noHitTestRef.current) {
         placeInFrontOfCamera();
-        placedRef.current = true;
+        placedRef.current = true; setAvatarPlaced(true);
         setStatus(t('arPlacedInFront'));
         return;
       }
@@ -346,7 +352,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
       target.position.setFromMatrixPosition(reticleMesh.matrix);
       target.quaternion.setFromRotationMatrix(reticleMesh.matrix);
       target.scale.setScalar(scaleRef.current);
-      placedRef.current = true;
+      placedRef.current = true; setAvatarPlaced(true);
       setStatus(t('arPlacedSurface'));
     });
     scene.add(controller);
@@ -359,7 +365,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
       if (!session || hitTestSourceRequested) return;
       hitTestSourceRequested = true;
       xrSessionRef.current = session;
-      placedRef.current = false;
+      placedRef.current = false; setAvatarPlaced(false);
       setArActive(true);
       setStatus(noHitTestRef.current ? t('arTapToPlaceFront') : t('arMoveToDetect'));
 
@@ -405,7 +411,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
       // after the model has loaded, so the user sees the avatar without tapping.
       if (noHitTestRef.current && !placedRef.current && modelRootRef.current?.children.length) {
         placeInFrontOfCamera();
-        placedRef.current = true;
+        placedRef.current = true; setAvatarPlaced(true);
       }
 
       // Real audio position, if this scene has real sentence timing — see
@@ -487,7 +493,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
 
     setLoadingModel(true);
     setError('');
-    placedRef.current = false;
+    placedRef.current = false; setAvatarPlaced(false);
     modelRootRef.current.visible = false;
 
     while (modelRootRef.current.children.length) {
@@ -641,7 +647,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
                 </button>
                 <button
                   onClick={() => {
-                    placedRef.current = false;
+                    placedRef.current = false; setAvatarPlaced(false);
                     setStatus(t('arMoveToDetect'));
                     if (modelRootRef.current) modelRootRef.current.visible = false;
                   }}

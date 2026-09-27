@@ -287,7 +287,12 @@ export function createAvatarGLTFLoader() {
 // ── Story player hook ─────────────────────────────────────────────────────────
 // Manages story state and an <audio> element (rendered by the host component).
 // Host must render: <audio ref={story.audioRef} crossOrigin="anonymous" />
-export function useARStory(storyId) {
+//
+// `ready` is the host's word that the avatar is actually in place — loaded,
+// and in surface AR placed on a surface by the visitor's tap. Narration and the
+// scene's clock both wait for it; until then a scene's clip is loaded but
+// silent. Hosts with nothing to wait for leave it at its default.
+export function useARStory(storyId, { ready = true } = {}) {
   const audioRef = useRef(null);
   const [story, setStory] = useState(null);
   const [scenes, setScenes] = useState([]);
@@ -355,34 +360,52 @@ export function useARStory(storyId) {
   // way whichever way it is watched.
   const advanceOn = normalizeAdvanceOn(scenes[index]?.advanceOn);
 
+  const sceneNarration = pickNarration(currentScene?.content?.narrative, i18n.language);
+
+  // Load the scene's clip as soon as the scene is known — but don't play it.
+  // Playing here started the narration the moment a scene arrived: in surface
+  // AR before the visitor had even tapped to place the avatar, and in quick AR
+  // while the model was still downloading. The voice arrived first and the
+  // character after it, halfway through its own line.
   useEffect(() => {
     const el = audioRef.current;
-    if (!el || !hasStarted) return undefined;
-    const audioUrl = pickNarration(currentScene?.content?.narrative, i18n.language).audioUrl;
-    if (audioUrl) {
-      el.src = audioUrl;
+    if (!el || !hasStarted) return;
+    if (sceneNarration.audioUrl) {
+      el.src = sceneNarration.audioUrl;
       el.load();
-      el.play().catch(() => {});
     } else {
       el.pause();
       el.src = '';
     }
+  }, [currentScene, hasStarted]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Play, and start the scene's clock, only once the avatar is in place.
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !hasStarted) return undefined;
+    if (!ready) {
+      el.pause();
+      return undefined;
+    }
+    if (sceneNarration.audioUrl && isPlaying) el.play().catch(() => {});
 
     // A scene counting seconds needs a timer even when it has narration; one
     // waiting for the narration only needs it when there is nothing to wait
     // for. sceneAdvanceMs answers both, and returns null while an audio
-    // length is still unknown — nothing to schedule until it arrives.
+    // length is still unknown — nothing to schedule until it arrives. The
+    // text lets a silent scene hold long enough to be read, as in the browser.
     const durationMs = sceneAdvanceMs({
       advanceOn,
       durationSeconds: scenes[index]?.durationSeconds,
-      hasNarrationAudio: Boolean(audioUrl),
+      text: sceneNarration.text,
+      hasNarrationAudio: Boolean(sceneNarration.audioUrl),
       audioDuration: 0,
     });
     if (durationMs === null) return undefined;
 
     const tid = setTimeout(() => setIndex((i) => Math.min(i + 1, scenes.length - 1)), durationMs);
     return () => clearTimeout(tid);
-  }, [currentScene, hasStarted, advanceOn]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentScene, hasStarted, advanceOn, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-advance when audio ends — only for a scene that is waiting on it. A
   // scene holding for a fixed number of seconds must not be cut short because

@@ -333,6 +333,8 @@ export default function SceneCanvas({
   // hung — a number is the difference between waiting and giving up.
   const [avatarProgress, setAvatarProgress] = useState(null);
   const [avatarLoadError, setAvatarLoadError] = useState("");
+  // The avatar URL whose load last finished, successfully or not.
+  const [settledAvatarUrl, setSettledAvatarUrl] = useState("");
 
   // Whether the character is actually on screen yet. The story viewer starts
   // its scene timer on the Play gesture, so a multi-megabyte model used to be
@@ -342,13 +344,20 @@ export default function SceneCanvas({
   useEffect(() => {
     onAvatarStatusRef.current = onAvatarStatus;
   }, [onAvatarStatus]);
+  // Reported with the URL it is about. A bare "ready" was ambiguous: when the
+  // avatar URL changes, this effect runs in the same commit as the loader,
+  // before avatarLoading has flipped, and announced the *old* model as the new
+  // one being ready. The viewer, for its part, had to reset to "loading" on
+  // every scene change — and a next scene with the same avatar reloads
+  // nothing, so nothing ever cleared it and the story stopped there.
+  // settledAvatarUrl is only written by the loader's own completion.
   useEffect(() => {
-    if (!avatarUrl) { onAvatarStatusRef.current?.('none'); return; }
-    // Reported as ready on failure too: a model that will never arrive must
+    if (!avatarUrl) { onAvatarStatusRef.current?.('none', ''); return; }
+    if (settledAvatarUrl !== avatarUrl) { onAvatarStatusRef.current?.('loading', avatarUrl); return; }
+    // Reported as settled on failure too: a model that will never arrive must
     // not hold the story open forever.
-    if (avatarLoadError) { onAvatarStatusRef.current?.('error'); return; }
-    onAvatarStatusRef.current?.(avatarLoading ? 'loading' : 'ready');
-  }, [avatarUrl, avatarLoading, avatarLoadError]);
+    onAvatarStatusRef.current?.(avatarLoadError ? 'error' : 'ready', avatarUrl);
+  }, [avatarUrl, settledAvatarUrl, avatarLoadError]);
   const [debugSnapshot, setDebugSnapshot] = useState({
     mouthOpen: 0,
     rms: 0,
@@ -1127,6 +1136,7 @@ export default function SceneCanvas({
     if (!avatarLoader) {
       setAvatarLoadError("Avatar loader is not ready yet.");
       setAvatarLoading(false);
+      setSettledAvatarUrl(avatarUrl);
       return;
     }
 
@@ -1141,6 +1151,7 @@ export default function SceneCanvas({
         const model = gltf.scene;
         setAvatarLoadError("");
         setAvatarLoading(false);
+        setSettledAvatarUrl(avatarUrl);
 
         const maxAniso = rendererRef.current?.capabilities.getMaxAnisotropy() || 1;
         model.traverse((node) => {
@@ -1368,6 +1379,7 @@ export default function SceneCanvas({
           err?.message || err?.target?.statusText || "Unknown load error";
         setAvatarLoadError(`Failed to load avatar model from URL: ${details}`);
         setAvatarLoading(false);
+        setSettledAvatarUrl(avatarUrl);
       },
     );
 

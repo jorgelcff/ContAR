@@ -7,6 +7,8 @@ import { initReactI18next } from 'react-i18next';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const en = {
+  viewerNotInYourLanguage: "This story isn't available in your language. You can listen in:",
+  viewerListenIn: "Listen in {{language}}",
   durationSecondsFallback: "Seconds — used when this scene has no narration to wait for",
   apVoiceFemale: "Female voices",
   apVoiceMale: "Male voices",
@@ -904,6 +906,8 @@ const en = {
 // PORTUGUESE (pt) — primary language
 // ─────────────────────────────────────────────────────────────────────────────
 const pt = {
+  viewerNotInYourLanguage: "Esta história não está disponível no seu idioma. Você pode ouvir em:",
+  viewerListenIn: "Ouvir em {{language}}",
   durationSecondsFallback: "Segundos — usado quando esta cena não tem narração para esperar",
   apVoiceFemale: "Vozes femininas",
   apVoiceMale: "Vozes masculinas",
@@ -1790,6 +1794,8 @@ const pt = {
 // SPANISH (es)
 // ─────────────────────────────────────────────────────────────────────────────
 const es = {
+  viewerNotInYourLanguage: "Esta historia no está disponible en tu idioma. Puedes escucharla en:",
+  viewerListenIn: "Escuchar en {{language}}",
   durationSecondsFallback: "Segundos — se usa cuando esta escena no tiene narración que esperar",
   apVoiceFemale: "Voces femeninas",
   apVoiceMale: "Voces masculinas",
@@ -2529,6 +2535,8 @@ const es = {
 // FRENCH (fr)
 // ─────────────────────────────────────────────────────────────────────────────
 const fr = {
+  viewerNotInYourLanguage: "Cette histoire n'est pas disponible dans votre langue. Vous pouvez l'écouter en :",
+  viewerListenIn: "Écouter en {{language}}",
   durationSecondsFallback: "Secondes — utilisé quand cette scène n'a pas de narration à attendre",
   apVoiceFemale: "Voix féminines",
   apVoiceMale: "Voix masculines",

@@ -7,7 +7,7 @@ import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
 import { getPublicStory, getScene, markStoryFinished } from '../api/sceneApi';
 import { sceneAdvanceMs } from '../utils/sceneAdvance';
-import { pickNarration, narrationLanguages } from '../utils/narration';
+import { pickNarration, narrationLanguages, baseLanguage } from '../utils/narration';
 import i18n from '../i18n';
 import ViewerError from '../components/ui/ViewerError';
 import { classifyViewerError } from '../utils/viewerError';
@@ -30,9 +30,11 @@ export default function StoryViewerPage() {
   // Set when a scene set to wait for its narration has waited too long for the
   // audio to load — see the loader below.
   const [narrationUnavailable, setNarrationUnavailable] = useState(false);
-  // 'loading' until the scene's character is actually on screen. Reset per
-  // scene, so the previous one's readiness never vouches for this one.
-  const [avatarStatus, setAvatarStatus] = useState('loading');
+  // The canvas's last word on its avatar: which model, and whether it has
+  // finished loading. Kept with the URL so readiness belongs to one model —
+  // the next scene with the same narrator is ready at once, a different one
+  // waits for its own load, and nothing has to be reset on a scene change.
+  const [avatarReport, setAvatarReport] = useState({ status: 'loading', url: '' });
   // Which scene the loaded sceneData belongs to. Without it the advance rule
   // ran before the scene arrived, read "no narration" off a null, and fell
   // straight back to counting seconds — the very thing it replaces.
@@ -123,10 +125,12 @@ export default function StoryViewerPage() {
   const handleStart = () => {
     setHasStarted(true);
     setIsPlaying(true);
-    // Call play() directly in the gesture handler to unlock the audio element
-    // before any useEffect fires. If no src yet, the browser still marks
-    // the element as "user-activated" so later play() calls succeed.
-    audio.play().catch(() => {});
+    // Audio has to be unlocked inside this gesture. With the character already
+    // there, playing is the unlock. With it still loading, playing would start
+    // the narration over an empty stage — so unlock silently and let the
+    // effect below start the clip once the character appears.
+    if (avatarSettled) audio.play().catch(() => {});
+    else audio.prime();
   };
 
   // Which narration this visitor gets, resolved once and used by everything
@@ -135,6 +139,39 @@ export default function StoryViewerPage() {
   const narration = pickNarration(sceneData?.content?.narrative, narrationLang);
   const offeredLanguages = narrationLanguages(sceneData?.content?.narrative);
 
+  // Is this scene's character on screen — or is there none to wait for? A
+  // scene without an avatar never mounts the canvas, so it would otherwise
+  // wait for a report that never comes.
+  // A visitor whose language the story does not have is asked which of the
+  // available ones to hear, rather than being handed the original with a small
+  // note — at a poster there is nobody to explain why the voice is in Spanish.
+  const needsLanguageChoice = offeredLanguages.length > 0
+    && !offeredLanguages.includes(baseLanguage(narrationLang));
+  const languageName = (lang) => {
+    try {
+      const name = new Intl.DisplayNames([i18n.language], { type: 'language' }).of(lang);
+      return name ? name.charAt(0).toLocaleUpperCase(i18n.language) + name.slice(1) : lang.toUpperCase();
+    } catch {
+      return lang.toUpperCase();
+    }
+  };
+  const startIn = (lang) => {
+    setNarrationLang(lang);
+    setHasStarted(true);
+    setIsPlaying(true);
+    // Silent unlock only: the clip loaded right now is the *original*
+    // language's, and playing it to unlock audio would say a word or two in
+    // the language the visitor just said they could not follow.
+    audio.prime();
+  };
+
+  const sceneIsLoaded = loadedSceneId === storyScenes[index]?.sceneId;
+  const sceneModelUrl = sceneData?.content?.avatar?.modelUrl || '';
+  const avatarSettled = sceneIsLoaded && (
+    !sceneModelUrl
+    || (avatarReport.url === sceneModelUrl && avatarReport.status !== 'loading')
+  );
+
   // ── Scene progress / auto-advance ─────────────────────────────
   useEffect(() => {
     if (loading || error || !storyScenes.length || !isPlaying) return undefined;
@@ -142,10 +179,9 @@ export default function StoryViewerPage() {
     if (loadedSceneId !== storyScenes[index]?.sceneId) return undefined;
     // Neither is the character. The timer used to start on the Play gesture,
     // so a model still downloading meant the scene ran without anyone in it
-    // and the visitor met a character halfway through its own line. 'error'
-    // and 'none' both count as settled — a scene with no avatar, or one whose
-    // model will never arrive, still has to play.
-    if (avatarStatus === 'loading') return undefined;
+    // and the visitor met a character halfway through its own line. A model
+    // that failed, or a scene with none, still counts as settled.
+    if (!avatarSettled) return undefined;
 
     const durationMs = sceneAdvanceMs({
       advanceOn: storyScenes[index]?.advanceOn,
@@ -200,14 +236,13 @@ export default function StoryViewerPage() {
       }
       window.cancelAnimationFrame(progressFrameRef.current);
     };
-  }, [error, index, isPlaying, loading, storyScenes, sceneData, loadedSceneId, audio.audioDuration, narrationUnavailable, narration.audioUrl, narration.text, avatarStatus]);
+  }, [error, index, isPlaying, loading, storyScenes, sceneData, loadedSceneId, audio.audioDuration, narrationUnavailable, narration.audioUrl, narration.text, avatarSettled]);
 
   useEffect(() => {
     if (!storyScenes.length) return;
     // Stepping back with the controls means the visitor is watching again.
     if (index < storyScenes.length - 1) setHasFinished(false);
     setSceneProgress(0);
-    setAvatarStatus('loading');
     playbackBaseMsRef.current = 0;
     playbackStartMsRef.current = 0;
     window.cancelAnimationFrame(progressFrameRef.current);
@@ -238,7 +273,11 @@ export default function StoryViewerPage() {
 
     if (narrativeAudioUrl) {
       audio.loadUrl(narrativeAudioUrl);
+      // A recording with no text of its own has nothing to derive visemes
+      // from — and must not keep the previous language's, which would shape
+      // the mouth around words the voice is not saying.
       if (text) audio.generateVisemeTimelineFromText(text);
+      else audio.clearVisemeTimeline();
       // A scene waiting on a narration that never loads would wait forever.
       // After this, it falls back to its configured seconds and the story
       // keeps moving — a story that runs short beats one that stalls.
@@ -256,13 +295,14 @@ export default function StoryViewerPage() {
   // Only called after hasStarted — audio element already unlocked by handleStart()
   useEffect(() => {
     if (!hasStarted || !audio.audioUrl) return;
-    if (isPlaying) {
+    // The narration waits for the character, like the scene's clock does.
+    if (isPlaying && avatarSettled) {
       audio.play().catch(() => {});
     } else {
       audio.pause();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasStarted, isPlaying, audio.audioUrl]);
+  }, [hasStarted, isPlaying, audio.audioUrl, avatarSettled]);
 
   // Stop audio when leaving the page
   useEffect(() => () => { audio.stop(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -412,7 +452,9 @@ export default function StoryViewerPage() {
               {/* Said plainly rather than silently substituted: someone who
                   scanned a code expecting their own language should know why
                   they are hearing another. */}
-              {narration.isFallback && (
+              {/* Not before starting: the splash is asking which language to
+                  play, and nothing is playing yet. */}
+              {hasStarted && narration.isFallback && (
                 <p className="text-[11px] text-amber-300">{t('viewerNarrationFallback')}</p>
               )}
             </div>
@@ -520,6 +562,22 @@ export default function StoryViewerPage() {
                     )}
                   </div>
 
+                  {needsLanguageChoice ? (
+                    <div className="flex w-full flex-col items-center gap-3">
+                      <p className="text-sm text-gray-300">{t('viewerNotInYourLanguage')}</p>
+                      {offeredLanguages.map((lang) => (
+                        <button
+                          key={lang}
+                          lang={lang}
+                          onClick={() => startIn(lang)}
+                          className="w-full min-h-12 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:scale-[0.98] px-4 py-3 text-base font-semibold text-white flex items-center justify-center gap-2 transition-all duration-150"
+                        >
+                          <Icon name="play" className="w-4 h-4" />
+                          {t('viewerListenIn', { language: languageName(lang) })}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
                   <button
                     onClick={handleStart}
                     className="w-24 h-24 rounded-full bg-cyan-700 hover:bg-cyan-600 active:scale-95 flex items-center justify-center transition-all duration-150 shadow-2xl shadow-cyan-900/60 hover:shadow-cyan-600/40 hover:scale-105"
@@ -529,6 +587,7 @@ export default function StoryViewerPage() {
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </button>
+                  )}
 
                   <p className="text-xs text-gray-400">
                     {t('viewerSceneCount', { count: storyScenes.length })}
@@ -646,7 +705,7 @@ export default function StoryViewerPage() {
                         visemeTimeline={audio.visemeTimeline}
                         audioCurrentTime={audio.audioCurrentTime}
                         isSpeaking={audio.isSpeaking || audio.isPlaying}
-                        onAvatarStatus={setAvatarStatus}
+                        onAvatarStatus={(status, url) => setAvatarReport({ status, url })}
                       />
                     </ErrorBoundary>
                   </Suspense>

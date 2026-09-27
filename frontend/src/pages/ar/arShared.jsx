@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from 'react';
 import { sceneAdvanceMs, normalizeAdvanceOn, ADVANCE_ON_TIME } from '../../utils/sceneAdvance';
-import { pickNarration } from '../../utils/narration';
+import { pickNarration, narrationLanguages, baseLanguage } from '../../utils/narration';
 import i18n from '../../i18n';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../components/ui/Icon';
@@ -12,8 +12,9 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { getPublicStory, getScene } from '../../api/sceneApi';
 import { BoneMapper } from '../../utils/BoneMapper';
-import { AnimationController, attachSourceRestPose, holdPoseClip } from '../../controllers/AnimationController';
-import { applyPosePreset } from '../../utils/posePresets';
+import { AnimationController } from '../../controllers/AnimationController';
+import { applyPosePreset, pickAnimationClip } from '../../utils/posePresets';
+import { loadClipsForPresets, presetMapFrom, preloadPresets } from '../../utils/animationLibrary';
 
 export const AR_SCALE_KEY = 'contar:ar-scale';
 export const AR_SCALE_DEFAULT = 1.0;
@@ -136,61 +137,6 @@ export function ARNarration({ mode, text }) {
   );
 }
 
-// Loads the shared animation manifest (walk/dance/run/speaker… clips) once and
-// caches it across AR scenes. Mirrors SceneCanvas's manifest loading so AR
-// animated poses look identical to the editor. Returns { preset: AnimationClip }.
-let _arManifestPromise = null;
-export function loadAnimationManifest(gltfLoader) {
-  if (_arManifestPromise) return _arManifestPromise;
-  const PRESETS = [
-    'idle', 'walk', 'walk_circle', 'slow_run', 'run', 'dance', 'dance_samba',
-    'speaker', 'agree', 'disagree', 'sad', 'sneak',
-  ];
-  _arManifestPromise = fetch(
-    `${import.meta.env.BASE_URL}animations/manifest.json`,
-  )
-    .then((r) => (r.ok ? r.json() : null))
-    .catch(() => null)
-    .then((manifest) => {
-      if (!Array.isArray(manifest?.animations)) return {};
-      const external = {};
-      return Promise.all(
-        manifest.animations.map(
-          (anim) =>
-            new Promise((resolve) => {
-              if (!anim.file) return resolve();
-              gltfLoader.load(
-                `${import.meta.env.BASE_URL}animations/${anim.file}`,
-                (g) => {
-                  const clip = g.animations?.[0];
-                  if (!clip) return resolve();
-                  attachSourceRestPose(clip, g.scene);
-                  holdPoseClip(clip);
-                  const preset = anim.preset || anim.name || "";
-                  clip.name = preset || clip.name || anim.file;
-                  const tags = Array.isArray(anim.tags) ? anim.tags : [];
-                  if (preset && !external[preset]) external[preset] = clip;
-                  for (const p of PRESETS) {
-                    if (
-                      !external[p] &&
-                      // Exact, as in SceneCanvas: "disagree" contains "agree".
-                      tags.some((tag) => String(tag).toLowerCase() === p)
-                    ) {
-                      external[p] = clip;
-                    }
-                  }
-                  resolve();
-                },
-                undefined,
-                () => resolve(), // skip missing/broken files
-              );
-            }),
-        ),
-      ).then(() => external);
-    });
-  return _arManifestPromise;
-}
-
 // Wraps an avatar's BoneMapper + AnimationController and applies pose presets,
 // so an AR scene can animate/pose the avatar exactly like the editor 3D view.
 // Host must call update(delta) each frame and dispose() on teardown.
@@ -237,16 +183,23 @@ export class ARPoseRig {
     this.controller?.setNarrationTime(sec);
   }
 
-  // Merge manifest clips so animated presets (walk/dance/…) resolve, then
-  // re-apply the current pose in case it depended on a now-available clip.
-  setExternalClips(external) {
-    this.externalClips = external || {};
-    const clips = Object.values(this.externalClips);
-    for (const clip of clips) {
-      if (!this.avatarClips.some((c) => c.name === clip.name)) this.avatarClips.push(clip);
-    }
-    if (clips.length) this.controller.addClips(clips);
-    this.apply(this.preset);
+  // Fetches (or reuses) the clips a pose needs and adds them — never replaces
+  // what the rig already has, so a scene that returns to an earlier pose finds
+  // its clip still there. Re-applies the pose only if what it would play
+  // changed. Returns a promise, for callers that want to wait.
+  usePreset(preset) {
+    const wanted = preset || 'idle';
+    return loadClipsForPresets([wanted]).then((loaded) => {
+      if (this.disposed) return;
+      const before = pickAnimationClip(this.preset, this.idleClip, this.avatarClips, this.externalClips);
+      presetMapFrom(loaded, this.externalClips);
+      const fresh = loaded.map(({ clip }) => clip).filter((clip) => !this.avatarClips.some((c) => c.name === clip.name));
+      if (!fresh.length) return;
+      this.avatarClips.push(...fresh);
+      this.controller.addClips(fresh);
+      const after = pickAnimationClip(this.preset, this.idleClip, this.avatarClips, this.externalClips);
+      if (after !== before) this.apply(this.preset);
+    }).catch(() => {});
   }
 
   update(delta) {
@@ -254,6 +207,7 @@ export class ARPoseRig {
   }
 
   dispose() {
+    this.disposed = true;
     this.controller?.dispose?.();
     this.controller = null;
   }
@@ -292,8 +246,13 @@ export function createAvatarGLTFLoader() {
 // and in surface AR placed on a surface by the visitor's tap. Narration and the
 // scene's clock both wait for it; until then a scene's clip is loaded but
 // silent. Hosts with nothing to wait for leave it at its default.
-export function useARStory(storyId, { ready = true } = {}) {
+export function useARStory(storyId, { ready = true, language = '' } = {}) {
   const audioRef = useRef(null);
+  // Which language this visitor hears. Carried in from the story viewer as
+  // ?lang= when they chose one there; otherwise the device's own. It used to be
+  // the device's always, so picking English in the viewer and then tapping
+  // "View in AR" went back to Portuguese.
+  const [narrationLanguage, setNarrationLanguage] = useState(() => language || i18n.language);
   const [story, setStory] = useState(null);
   const [scenes, setScenes] = useState([]);
   const [index, setIndex] = useState(0);
@@ -352,6 +311,18 @@ export function useARStory(storyId, { ready = true } = {}) {
     return () => { active = false; };
   }, [sceneId]);
 
+  // Warm the next scene's animation clip while this one plays, so a scene that
+  // switches from idle to walk does not stand still waiting for walk.glb.
+  const nextSceneId = scenes[index + 1]?.sceneId;
+  useEffect(() => {
+    if (!nextSceneId || !hasStarted) return undefined;
+    let active = true;
+    getScene(nextSceneId)
+      .then((d) => { if (active) preloadPresets([d?.content?.avatar?.posePreset]); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [nextSceneId, hasStarted]);
+
   // Load + play audio when scene changes (after start)
   //
   // AR always advanced when the audio ended, and only counted seconds when a
@@ -360,7 +331,8 @@ export function useARStory(storyId, { ready = true } = {}) {
   // way whichever way it is watched.
   const advanceOn = normalizeAdvanceOn(scenes[index]?.advanceOn);
 
-  const sceneNarration = pickNarration(currentScene?.content?.narrative, i18n.language);
+  const sceneNarration = pickNarration(currentScene?.content?.narrative, narrationLanguage);
+  const offeredLanguages = narrationLanguages(currentScene?.content?.narrative);
 
   // Load the scene's clip as soon as the scene is known — but don't play it.
   // Playing here started the narration the moment a scene arrived: in surface
@@ -377,7 +349,7 @@ export function useARStory(storyId, { ready = true } = {}) {
       el.pause();
       el.src = '';
     }
-  }, [currentScene, hasStarted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentScene, hasStarted, narrationLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Play, and start the scene's clock, only once the avatar is in place.
   useEffect(() => {
@@ -405,7 +377,7 @@ export function useARStory(storyId, { ready = true } = {}) {
 
     const tid = setTimeout(() => setIndex((i) => Math.min(i + 1, scenes.length - 1)), durationMs);
     return () => clearTimeout(tid);
-  }, [currentScene, hasStarted, advanceOn, ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentScene, hasStarted, advanceOn, ready, narrationLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-advance when audio ends — only for a scene that is waiting on it. A
   // scene holding for a fixed number of seconds must not be cut short because
@@ -442,10 +414,28 @@ export function useARStory(storyId, { ready = true } = {}) {
     });
   };
 
-  return { story, scenes, currentScene, index, hasStarted, isPlaying, storyLoading, storyError, audioRef, start, next, prev, togglePlay };
+  return {
+    story, scenes, currentScene, index, hasStarted, isPlaying, storyLoading, storyError, audioRef, start, next, prev, togglePlay,
+    // What the current scene says, in the visitor's language — one source for
+    // the subtitle, the gesture layer and the splash.
+    narration: sceneNarration,
+    narrationLanguage,
+    setNarrationLanguage,
+    offeredLanguages,
+  };
 }
 
 // ── Story player overlay (shared UI across modes) ─────────────────────────────
+/** A language's name in the interface language: 'en' → "Inglês". */
+function languageName(lang) {
+  try {
+    const name = new Intl.DisplayNames([i18n.language], { type: 'language' }).of(lang);
+    return name ? name.charAt(0).toLocaleUpperCase(i18n.language) + name.slice(1) : lang.toUpperCase();
+  } catch {
+    return String(lang).toUpperCase();
+  }
+}
+
 export function StoryOverlay({ story, storyId, compact = false, onStart }) {
   const { t } = useTranslation();
   if (!storyId || !story.story) return null;
@@ -457,6 +447,27 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
           <p className="text-xs uppercase tracking-[0.2em] text-cyan-300 mb-2">{t('arStoryInAr')}</p>
           <h2 className="text-xl font-bold text-white mb-1">{story.story?.metadata?.title}</h2>
           <p className="text-sm text-gray-400 mb-5">{t('arScenesCount', { count: story.scenes.length })}</p>
+          {/* Same as the story viewer: a visitor whose language the story
+              does not have chooses one of the languages it does, and that tap
+              also starts. A QR code can point straight here, so this is the
+              only place some visitors would get to choose. */}
+          {story.offeredLanguages.length > 0
+            && !story.offeredLanguages.includes(baseLanguage(story.narrationLanguage)) ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-gray-300 mb-1">{t('viewerNotInYourLanguage')}</p>
+              {story.offeredLanguages.map((lang) => (
+                <button
+                  key={lang}
+                  lang={lang}
+                  onClick={() => { story.setNarrationLanguage(lang); onStart(); }}
+                  className="w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:scale-[0.98] text-white font-semibold transition-all"
+                >
+                  <Icon name="play" className="w-4 h-4" />
+                  {t('viewerListenIn', { language: languageName(lang) })}
+                </button>
+              ))}
+            </div>
+          ) : (
           <button
             onClick={onStart}
             className="w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-cyan-700 hover:bg-cyan-600 active:scale-[0.98] text-white font-semibold transition-all"
@@ -464,6 +475,7 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
             <Icon name="play" className="w-4 h-4" />
             {t('arStartStory')}
           </button>
+          )}
         </div>
       </div>
     );
@@ -473,8 +485,8 @@ export function StoryOverlay({ story, storyId, compact = false, onStart }) {
     <div className={`pointer-events-auto ${compact ? 'absolute top-16 left-3 right-3 z-25' : ''} rounded-xl border border-white/10 bg-gray-900/80 px-3 py-2.5 backdrop-blur-sm`}>
       <div className="flex items-center justify-between mb-1.5">
         <p className="text-xs text-cyan-300 font-medium truncate max-w-[75%]">
-          {pickNarration(story.currentScene?.content?.narrative, i18n.language).text
-            ? `"${pickNarration(story.currentScene?.content?.narrative, i18n.language).text.slice(0, 55)}…"`
+          {story.narration.text
+            ? `"${story.narration.text.slice(0, 55)}…"`
             : story.story?.metadata?.title}
         </p>
         <p className="text-xs text-gray-500 shrink-0 ml-2">{story.index + 1}/{story.scenes.length}</p>

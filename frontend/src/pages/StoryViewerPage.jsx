@@ -7,6 +7,7 @@ import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
 import { getPublicStory, getScene, markStoryFinished } from '../api/sceneApi';
 import { sceneAdvanceMs } from '../utils/sceneAdvance';
+import { preloadPresets } from '../utils/animationLibrary';
 import { pickNarration, narrationLanguages, baseLanguage } from '../utils/narration';
 import i18n from '../i18n';
 import ViewerError from '../components/ui/ViewerError';
@@ -351,6 +352,9 @@ export default function StoryViewerPage() {
     getScene(nextSceneId)
       .then((data) => {
         if (!active) return;
+        // The next scene's animation clip, if its pose has one — worth it even
+        // when the avatar stays the same, which is the common case.
+        preloadPresets([data?.content?.avatar?.posePreset]);
         const url = data?.content?.avatar?.modelUrl;
         if (!url || url === currentModelUrl) return;
         if (preloadedRef.current.has(url)) return;
@@ -390,7 +394,9 @@ export default function StoryViewerPage() {
   // Carries the current scene's markerUrl (if set) so it's pre-filled if the
   // user picks Marker AR from the menu.
   const currentMarkerUrl = storyScenes[index]?.markerUrl || '';
-  const arHref = `/ar?storyId=${id}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}${currentMarkerUrl ? `&markerUrl=${encodeURIComponent(currentMarkerUrl)}` : ''}`;
+  // Carries the language being heard, so AR does not fall back to the
+  // device's own after the visitor chose another one here.
+  const arHref = `/ar?storyId=${id}${narration.language ? `&lang=${encodeURIComponent(narration.language)}` : ''}${sceneData?.content?.avatar?.modelUrl ? `&modelUrl=${encodeURIComponent(sceneData.content.avatar.modelUrl)}` : ''}${currentMarkerUrl ? `&markerUrl=${encodeURIComponent(currentMarkerUrl)}` : ''}`;
 
   // ── Render ────────────────────────────────────────────────────
   return (

@@ -6,79 +6,107 @@
       "name": "idle",
       "file": "idle.glb",
       "preset": "idle",
-      "tags": ["idle", "stand"]
-    },
-    {
-      "name": "idle_alt",
-      "file": "standing_Idle_03.glb",
-      "preset": "idle",
-      "tags": ["idle", "stand"]
+      "tags": [
+        "idle",
+        "stand"
+      ]
     },
     {
       "name": "walk",
       "file": "walk.glb",
       "preset": "walk",
-      "tags": ["walk"]
+      "tags": [
+        "walk"
+      ]
     },
     {
       "name": "walk_circle",
       "file": "walk_circle.glb",
       "preset": "walk_circle",
-      "tags": ["walk_circle"]
+      "tags": [
+        "walk_circle"
+      ]
     },
     {
       "name": "slow_run",
       "file": "slow_run.glb",
       "preset": "slow_run",
-      "tags": ["slow_run", "jog"]
+      "tags": [
+        "slow_run",
+        "jog"
+      ]
     },
     {
       "name": "run",
       "file": "run.glb",
       "preset": "run",
-      "tags": ["run"]
+      "tags": [
+        "run"
+      ]
     },
     {
       "name": "dance",
       "file": "dance.glb",
       "preset": "dance",
-      "tags": ["dance"]
+      "tags": [
+        "dance"
+      ]
     },
     {
       "name": "dance_samba",
       "file": "dance_samba.glb",
       "preset": "dance_samba",
-      "tags": ["dance_samba", "samba"]
+      "tags": [
+        "dance_samba",
+        "samba"
+      ]
     },
     {
       "name": "speaker",
       "file": "talking.glb",
       "preset": "speaker",
-      "tags": ["speaker", "talk", "talking"]
+      "tags": [
+        "speaker",
+        "talk",
+        "talking"
+      ]
     },
     {
       "name": "agree",
       "file": "agree.glb",
       "preset": "agree",
-      "tags": ["agree", "nod", "yes"]
+      "tags": [
+        "agree",
+        "nod",
+        "yes"
+      ]
     },
     {
       "name": "disagree",
       "file": "head_shake.glb",
       "preset": "disagree",
-      "tags": ["disagree", "headshake", "no"]
+      "tags": [
+        "disagree",
+        "headshake",
+        "no"
+      ]
     },
     {
       "name": "sad",
       "file": "sad_pose.glb",
       "preset": "sad",
-      "tags": ["sad"]
+      "tags": [
+        "sad"
+      ]
     },
     {
       "name": "sneak",
       "file": "sneak_pose.glb",
       "preset": "sneak",
-      "tags": ["sneak", "tiptoe"]
+      "tags": [
+        "sneak",
+        "tiptoe"
+      ]
     }
   ]
 }

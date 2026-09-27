@@ -11,10 +11,11 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import SpeechBubble from './SpeechBubble';
-import { AnimationController, attachSourceRestPose, holdPoseClip } from '../../controllers/AnimationController';
+import { AnimationController, attachSourceRestPose } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
-import { applyPosePreset, captureRestPoseSnapshot } from '../../utils/posePresets';
+import { applyPosePreset, captureRestPoseSnapshot, pickAnimationClip, ANIMATED_PRESETS } from '../../utils/posePresets';
+import { loadClipsForPresets, presetMapFrom } from '../../utils/animationLibrary';
 import { injectSyntheticJaw, repositionSyntheticJaw, createJawDebugVisuals, SYNTHETIC_JAW_NAME } from '../../utils/syntheticJaw';
 import { mapBones as mapBonesApi } from '../../api/sceneApi';
 
@@ -585,96 +586,8 @@ export default function SceneCanvas({
       () => {},
     );
 
-    // Load animation clips from /animations/manifest.json (single fetch, dual registration).
-    // Each clip is registered in externalClipsRef (used by applyPosePreset) AND in
-    // extraClipsRef (merged into avatarClipsRef when a new avatar loads).
-    // applyPosePreset is only called when the newly loaded clip matches the CURRENT pose
-    // — calling it for every clip would stopAll()+resetToRestPose() on every file arrival,
-    // causing T-pose flashes for each of the 8 animation files in the manifest.
-    fetch(`${import.meta.env.BASE_URL}animations/manifest.json`)
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null)
-      .then((manifest) => {
-        if (!Array.isArray(manifest?.animations)) return;
-        const PRESETS = [
-          "idle",
-          "walk",
-          "walk_circle",
-          "slow_run",
-          "run",
-          "dance",
-          "dance_samba",
-          "speaker",
-          "agree",
-          "disagree",
-          "sad",
-          "sneak",
-        ];
-        manifest.animations.forEach((anim) => {
-          if (!anim.file) return;
-          gltfLoader.load(
-            `/animations/${anim.file}`,
-            (gltf) => {
-              const clip = gltf.animations?.[0];
-              if (!clip) return;
-              attachSourceRestPose(clip, gltf.scene);
-              holdPoseClip(clip);
-              const preset = anim.preset || anim.name || "";
-              clip.name = preset || clip.name || anim.file;
-
-              // ── externalClipsRef: used by applyPosePreset ──────────────────
-              // Track whether this clip was the FIRST to fill the current-pose slot.
-              // If it was, we restart the pose once. Subsequent clips for the same
-              // preset (e.g. idle_alt also tagged "idle") must not trigger another restart.
-              let filledCurrentPoseSlot = false;
-              const tags = Array.isArray(anim.tags) ? anim.tags : [];
-              if (preset && !externalClipsRef.current[preset]) {
-                externalClipsRef.current[preset] = clip;
-                if (preset === posePresetRef.current)
-                  filledCurrentPoseSlot = true;
-              }
-              for (const p of PRESETS) {
-                if (
-                  !externalClipsRef.current[p] &&
-                  // Exact, not includes(): "disagree" contains "agree",
-                  // "slow_run" contains "run", "walk_circle" contains "walk".
-                  tags.some((t) => String(t).toLowerCase() === p)
-                ) {
-                  externalClipsRef.current[p] = clip;
-                  if (p === posePresetRef.current) filledCurrentPoseSlot = true;
-                }
-              }
-
-              // ── extraClipsRef: available when the next avatar loads ────────
-              if (!extraClipsRef.current.some((c) => c.name === clip.name)) {
-                extraClipsRef.current = [...extraClipsRef.current, clip];
-              }
-
-              if (avatarRef.current && animControllerRef.current) {
-                animControllerRef.current.addClips([clip]);
-                avatarClipsRef.current = [...avatarClipsRef.current, clip];
-
-                // Only restart the pose when this clip was the first to fill the
-                // current-pose slot. Avoids stopAll()+resetToRestPose() storms when
-                // multiple manifest files share the same preset tag.
-                if (filledCurrentPoseSlot) {
-                  applyPosePreset(
-                    avatarRef.current,
-                    animControllerRef.current,
-                    idleClipRef.current,
-                    avatarClipsRef.current,
-                    posePresetRef.current,
-                    boneMapperRef.current,
-                    externalClipsRef.current,
-                  );
-                }
-              }
-            },
-            undefined,
-            () => {}, // silently skip missing files
-          );
-        });
-      });
+    // Animation clips are no longer fetched here all at once — see the
+    // pose-driven effect below and utils/animationLibrary.js.
 
     // Render loop
     const animate = () => {
@@ -1413,6 +1326,59 @@ export default function SceneCanvas({
     if (transformRef.current) {
       applyTransform(avatarRef.current, transformRef.current, !!vrmRef.current);
     }
+  }, [posePreset]);
+
+  // ── Animation clips, fetched for the pose in use ────────────────
+  // Only the clips this pose needs (plus idle, the universal fallback) come
+  // down, through a cache shared with the story viewer's preloading and the AR
+  // views. Each file is registered once. The pose is re-applied only when a
+  // newly arrived clip changes what would actually play — a clip for some other
+  // pose, or one the current pose already had, must not restart it.
+  const registeredClipFilesRef = useRef(new Set());
+  useEffect(() => {
+    let active = true;
+    loadClipsForPresets([posePreset]).then((loaded) => {
+      if (!active) return;
+      const fresh = loaded.filter(({ entry }) => !registeredClipFilesRef.current.has(entry.file));
+      if (!fresh.length) return;
+      fresh.forEach(({ entry }) => registeredClipFilesRef.current.add(entry.file));
+
+      const current = posePresetRef.current;
+      const playing = () => pickAnimationClip(
+        current, idleClipRef.current, avatarClipsRef.current, externalClipsRef.current,
+      );
+      const before = playing();
+
+      presetMapFrom(fresh, externalClipsRef.current);
+      const clips = fresh.map(({ clip }) => clip);
+      // Available to the next avatar that loads, too.
+      extraClipsRef.current = [
+        ...extraClipsRef.current,
+        ...clips.filter((c) => !extraClipsRef.current.some((e) => e.name === c.name)),
+      ];
+
+      if (!avatarRef.current || !animControllerRef.current) return;
+      animControllerRef.current.addClips(clips);
+      avatarClipsRef.current = [
+        ...avatarClipsRef.current,
+        ...clips.filter((c) => !avatarClipsRef.current.some((a) => a.name === c.name)),
+      ];
+      if (ANIMATED_PRESETS.includes(String(current).toLowerCase()) && playing() !== before) {
+        applyPosePreset(
+          avatarRef.current,
+          animControllerRef.current,
+          idleClipRef.current,
+          avatarClipsRef.current,
+          current,
+          boneMapperRef.current,
+          externalClipsRef.current,
+        );
+        if (transformRef.current) {
+          applyTransform(avatarRef.current, transformRef.current, !!vrmRef.current);
+        }
+      }
+    });
+    return () => { active = false; };
   }, [posePreset]);
 
   // ── Animation speed ─────────────────────────────────────────

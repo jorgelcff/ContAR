@@ -4,6 +4,16 @@
 import * as THREE from 'three';
 import { isSpeakerPreset } from './speakerStyles';
 
+/**
+ * Presets played from an animation clip. Everything else is posed from code
+ * (static poses) or driven procedurally (the presenter styles), and needs no
+ * clip at all — which is what lets a story download only the clips it uses.
+ */
+export const ANIMATED_PRESETS = [
+  "idle", "walk", "walk_circle", "slow_run", "run", "dance",
+  "dance_samba", "agree", "disagree", "sad", "sneak",
+];
+
 export function applyPosePreset(
   model,
   animationController,
@@ -74,11 +84,7 @@ export function applyPosePreset(
   // pose, which is a T-pose: the arms were pinned wide open for as long as the
   // preset was selected, wobbling slightly. Hence "it looks like it is about to
   // take off".
-  const animatedPresets = [
-    "idle", "walk", "walk_circle", "slow_run", "run", "dance",
-    "dance_samba", "agree", "disagree", "sad", "sneak",
-  ];
-  if (animatedPresets.includes(normalized)) {
+  if (ANIMATED_PRESETS.includes(normalized)) {
     if (animationController) {
       const clip = pickAnimationClip(normalized, idleClip, avatarClips, externalClips);
       if (clip) {
@@ -147,7 +153,7 @@ const KEYWORDS_BY_PRESET = {
 // A preset with no dedicated clip degrades to the next closest gait rather
 // than jumping straight to idle — "Run" with no run clip looks like jogging
 // (slow_run) or at worst walking, never like standing still.
-const ANIMATION_FALLBACK_CHAIN = {
+export const ANIMATION_FALLBACK_CHAIN = {
   run: ['slow_run', 'walk'],
   slow_run: ['walk'],
   walk_circle: ['walk'],

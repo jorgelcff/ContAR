@@ -22,7 +22,6 @@ import {
   createAvatarGLTFLoader,
   disposeObject3D,
   fitModelToGround,
-  loadAnimationManifest,
   getArUsableAvatarUrl,
   normalizeAvatarUrl,
   readSavedScale,
@@ -38,7 +37,7 @@ const SceneCanvas = lazy(() => import('../components/3d/SceneCanvas'));
 // every render would retrigger the narration-timeline effect for no reason.
 const EMPTY_SENTENCE_TIMELINE = [];
 
-function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativeAudioUrl, narrativeText, narrativeIsFallback, posePreset, displayMode, onBack }) {
+function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, language = '', narrativeAudioUrl, narrativeText, narrativeIsFallback, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   // Root handed to WebXR as the dom-overlay: transparent and click-through, so
@@ -90,13 +89,14 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
   const [avatarPlaced, setAvatarPlaced] = useState(false);
   const story = useARStory(storyId, {
     ready: arActive && !loadingModel && (avatarPlaced || Boolean(error)),
+    language,
   });
   const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
   const effectivePosePreset = resolveScenePosePreset(story, storyId, posePreset);
   effectivePoseRef.current = effectivePosePreset;
   const effectiveDisplayMode = resolveSceneDisplayMode(story, storyId, displayMode);
   const narrationText = storyId
-    ? (story.hasStarted ? pickNarration(story.currentScene?.content?.narrative, i18n.language).text : '')
+    ? (story.hasStarted ? story.narration.text : '')
     : (narrativeText || '');
   narrationTextRef.current = narrationText;
   // Real per-sentence timing, story mode only — a standalone shared scene
@@ -107,8 +107,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
     : EMPTY_SENTENCE_TIMELINE;
   sentenceTimelineRef.current = sentenceTimeline;
   const pseudoHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
-    [modelUrl, initialScale, storyId, sceneId]
+    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined, lang: language || undefined }),
+    [modelUrl, initialScale, storyId, sceneId, language]
   );
 
   // Set up Web Audio API once (must be called in a user-gesture handler)
@@ -529,9 +529,8 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
         rig.apply(effectivePoseRef.current);
         rig.setNarrationText(narrationTextRef.current);
         rig.setNarrationTimeline(sentenceTimelineRef.current);
-        loadAnimationManifest(loaderRef.current)
-          .then((clips) => { if (poseRigRef.current === rig) rig.setExternalClips(clips); })
-          .catch(() => {});
+        // Only the clips this pose needs — see utils/animationLibrary.js.
+        rig.usePreset(effectivePoseRef.current);
 
         setLoadingModel(false);
         setStatus(t('arMoveToDetect'));
@@ -548,6 +547,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, narrativ
   // Re-apply the pose when the scene's pose changes without the model changing.
   useEffect(() => {
     poseRigRef.current?.apply(effectivePosePreset);
+    poseRigRef.current?.usePreset(effectivePosePreset);
   }, [effectivePosePreset]);
 
   // ── Narration text (drives the speaker gesture layer's sentence-by-sentence
@@ -827,6 +827,8 @@ export default function ARPage() {
   // fetch the scene's own narration instead of relying on this browser's
   // localStorage — see the fetch effect below.
   const [sceneId, setSceneId] = useState(searchParams.get('sceneId') || '');
+  // The narration language the visitor chose in the story viewer, if any.
+  const narrationLanguageParam = searchParams.get('lang') || '';
   // null = checking, true/false = WebXR immersive-ar support result
   // (no navigator.xr at all means AR is definitely unsupported, no need to check)
   const [surfaceArSupported, setSurfaceArSupported] = useState(() => (navigator?.xr ? null : false));
@@ -864,7 +866,7 @@ export default function ARPage() {
   }, [effectiveSceneId]);
 
   const fetchedNarration = fetchedScene
-    ? pickNarration(fetchedScene.content?.narrative, i18n.language)
+    ? pickNarration(fetchedScene.content?.narrative, narrationLanguageParam || i18n.language)
     : null;
   const effectiveNarrativeAudioUrl = fetchedNarration?.audioUrl || storedNarrativeAudioUrl;
   const effectiveSpeechText = fetchedNarration?.text || storedSpeechText;
@@ -911,12 +913,12 @@ export default function ARPage() {
     && window.matchMedia('(pointer: coarse) and (hover: none)').matches;
 
   const surfaceHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'surface', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
-    [modelUrl, initialScale, storyId, sceneId]
+    () => buildQueryUrl('/ar', { mode: 'surface', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined, lang: narrationLanguageParam || undefined }),
+    [modelUrl, initialScale, storyId, sceneId, narrationLanguageParam]
   );
   const pseudoHref = useMemo(
-    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
-    [modelUrl, initialScale, storyId, sceneId]
+    () => buildQueryUrl('/ar', { mode: 'pseudo', modelUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined, lang: narrationLanguageParam || undefined }),
+    [modelUrl, initialScale, storyId, sceneId, narrationLanguageParam]
   );
   const markerHref = useMemo(
     () => buildQueryUrl('/ar', { mode: 'marker', modelUrl, markerUrl, scale: initialScale, storyId: storyId || undefined, sceneId: sceneId || undefined }),
@@ -931,6 +933,7 @@ export default function ARPage() {
         : readSavedScale();
     return (
       <SurfaceARScene
+        language={narrationLanguageParam}
         modelUrl={modelUrl}
         initialScale={startScale}
         storyId={searchParams.get("storyId") || ""}
@@ -953,6 +956,7 @@ export default function ARPage() {
         : readSavedScale();
     return (
       <PseudoARScene
+        language={narrationLanguageParam}
         modelUrl={modelUrl}
         initialScale={startScale}
         storyId={searchParams.get("storyId") || ""}

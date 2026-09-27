@@ -12,7 +12,6 @@ import {
   createAvatarGLTFLoader,
   disposeObject3D,
   fitModelToGround,
-  loadAnimationManifest,
   normalizeAvatarUrl,
   resolveSceneAvatarUrl,
   resolveSceneDisplayMode,
@@ -31,7 +30,7 @@ const EMPTY_SENTENCE_TIMELINE = [];
 // feed and drives the virtual camera's rotation from the device gyroscope, so
 // the avatar appears anchored as the user pans the phone. No marker and no
 // WebXR session required — works on iOS Safari and Android Chrome alike.
-export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, narrativeAudioUrl, narrativeText, narrativeIsFallback, posePreset, displayMode, onBack }) {
+export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, language = '', narrativeAudioUrl, narrativeText, narrativeIsFallback, posePreset, displayMode, onBack }) {
   const { t } = useTranslation();
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -67,7 +66,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   const [speechPlaying, setSpeechPlaying] = useState(false);
   // The avatar is in front of the camera once the camera is running and the
   // model has finished loading (or failed — a story must not stall on it).
-  const story = useARStory(storyId, { ready: arActive && !loadingModel });
+  const story = useARStory(storyId, { ready: arActive && !loadingModel, language });
 
   const cameraSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const effectiveModelUrl = resolveSceneAvatarUrl(story, storyId, modelUrl);
@@ -75,7 +74,9 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   effectivePoseRef.current = effectivePosePreset;
   const effectiveDisplayMode = resolveSceneDisplayMode(story, storyId, displayMode);
   const narrationText = storyId
-    ? (story.hasStarted ? (story.currentScene?.content?.narrative?.text || '') : '')
+    // The chosen language's text. This read the original's text directly, so
+    // a visitor hearing a translation read the subtitle in another language.
+    ? (story.hasStarted ? story.narration.text : '')
     : (narrativeText || '');
   narrationTextRef.current = narrationText;
   // Real per-sentence timing, story mode only — a standalone shared scene
@@ -358,9 +359,8 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
         rig.apply(effectivePoseRef.current);
         rig.setNarrationText(narrationTextRef.current);
         rig.setNarrationTimeline(sentenceTimelineRef.current);
-        loadAnimationManifest(loaderRef.current)
-          .then((clips) => { if (poseRigRef.current === rig) rig.setExternalClips(clips); })
-          .catch(() => {});
+        // Only the clips this pose needs — see utils/animationLibrary.js.
+        rig.usePreset(effectivePoseRef.current);
 
         setLoadingModel(false);
       },
@@ -377,6 +377,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, nar
   // (e.g. advancing to a story scene that reuses the same avatar).
   useEffect(() => {
     poseRigRef.current?.apply(effectivePosePreset);
+    poseRigRef.current?.usePreset(effectivePosePreset);
   }, [effectivePosePreset]);
 
   // ── Narration text (drives the speaker gesture layer's sentence-by-sentence

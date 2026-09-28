@@ -1122,7 +1122,12 @@ export default function ARPage() {
               </Link>
             </div>
 
-            {/* Surface AR */}
+            {/* Surface AR — hidden on a phone that cannot run it. Every iPhone,
+                and Android without ARCore, got a card saying "not supported":
+                a dead end for a visitor who scanned a QR code, with the one
+                mode that does work sitting beside it. On a computer the card
+                stays, since there it tells an author what their phone needs. */}
+            {!(onPhone && surfaceArSupported === false) && (
             <div className="rounded-2xl border border-gray-700/40 bg-gray-800/40 p-5 flex flex-col gap-4">
               <div>
                 <h2 className="text-lg font-bold text-white">{t('arSurfaceTitle')}</h2>
@@ -1147,6 +1152,7 @@ export default function ARPage() {
                 </Link>
               )}
             </div>
+            )}
 
             {/* Marker AR — switched off, see utils/features.js */}
             {MARKER_AR_ENABLED && (

@@ -60,6 +60,14 @@ export default function StoryViewerPage() {
   const [scale, setScale]               = useState(1);
   const [sceneProgress, setSceneProgress] = useState(0);
   const [loading, setLoading]           = useState(true);
+  // True once loading has run long enough to be a sleeping server waking up
+  // rather than an ordinary fetch.
+  const [slowLoad, setSlowLoad]         = useState(false);
+  useEffect(() => {
+    if (!loading) return undefined;
+    const id = setTimeout(() => setSlowLoad(true), 4000);
+    return () => clearTimeout(id);
+  }, [loading]);
   // The kind of failure, not its message: a story that is gone, a connection
   // that did not complete and a server that broke want different offers.
   const [error, setError]               = useState('');
@@ -408,10 +416,25 @@ export default function StoryViewerPage() {
       )}
 
       {loading ? (
-        <div className="flex-1 flex flex-col gap-4 p-6 animate-pulse">
-          <div className="h-6 w-48 rounded bg-gray-700/60" />
-          <div className="h-4 w-72 rounded bg-gray-700/40" />
-          <div className="flex-1 rounded-xl bg-gray-800/60" />
+        <div className="relative flex-1 flex flex-col gap-4 p-6">
+          <div className="flex-1 flex flex-col gap-4 animate-pulse">
+            <div className="h-6 w-48 rounded bg-gray-700/60" />
+            <div className="h-4 w-72 rounded bg-gray-700/40" />
+            <div className="flex-1 rounded-xl bg-gray-800/60" />
+          </div>
+          {/* The server sleeps when nobody has used it for a while, and the
+              first visitor after that waits about fifty seconds for it. That
+              wait used to be a silent pulsing skeleton — long enough for
+              someone who scanned a poster to decide it was broken and leave. */}
+          {slowLoad && (
+            <div className="absolute inset-0 flex items-center justify-center p-6" role="status">
+              <div className="max-w-xs rounded-2xl border border-white/10 bg-gray-900/90 px-5 py-4 text-center shadow-xl">
+                <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+                <p className="font-semibold text-white">{t('viewerWakingTitle')}</p>
+                <p className="mt-1 text-sm text-gray-300">{t('viewerWakingBody')}</p>
+              </div>
+            </div>
+          )}
         </div>
       ) : error ? (
         <ViewerError kind={error} onRetry={() => { setError(''); setReloadKey((n) => n + 1); }} />

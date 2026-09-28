@@ -4,6 +4,7 @@ import { normalizeAdvanceOn } from '../utils/sceneAdvance';
 import { pickPreviewSource } from '../utils/scenePreview';
 import { classifyViewerError, NOT_FOUND } from '../utils/viewerError';
 import { rememberDraft, readDraft, forgetDraft, shouldRestoreDraft } from '../utils/sceneDraft';
+import { retryDelay } from '../auth/sessionRecovery';
 import { useGuest, useGuestGuard } from '../auth/useGuest';
 import GuestInvitation from '../components/ui/GuestInvitation';
 import { Link } from 'react-router-dom';
@@ -234,7 +235,14 @@ export default function EditorPage() {
     pendingPayloadRef.current = payload;
     setIsDirty(true);
     clearTimeout(autosaveTimerRef.current);
-    autosaveTimerRef.current = setTimeout(async () => {
+    // A save that fails for a passing reason — no answer, the server waking
+    // up, a 5xx — is tried again on its own, backing off over about the fifty
+    // seconds a sleeping server takes to boot, then every thirty. It used to
+    // try once and wait for the next edit, so an author who typed a line, saw
+    // "check your connection" and stopped typing had a save that never ran.
+    // Any new edit cancels the chain (the cleanup below) and starts a fresh
+    // one with the new content.
+    const attempt = async (tryNumber) => {
       setAutosaveStatus('saving');
       try {
         const result = await saveScene({ ...payload, baseUpdatedAt: baseUpdatedAtRef.current });
@@ -256,6 +264,7 @@ export default function EditorPage() {
           autosaveEducatedRef.current = true;
           addToast(t('epAutosaveEducational'), 'info', 4000);
         }
+        if (tryNumber > 0) addToast(t('epAutosaveRecovered'), 'success', 4000);
       } catch (err) {
         setAutosaveStatus(null);
         const status = err?.response?.status;
@@ -273,10 +282,18 @@ export default function EditorPage() {
         } else {
           // "Check your connection" should not also mean "type it again".
           rememberDraft(payload);
-          addToast(t('epAutosaveFailed'), 'warning', 5000);
+          const passing = !status || status >= 500 || status === 408 || status === 429;
+          // Once, not on every retry — a warning per attempt is just noise.
+          if (tryNumber === 0) addToast(t('epAutosaveFailed'), 'warning', 5000);
+          // A 400 or a 413 will not fix itself; asking again only repeats it.
+          if (passing) {
+            const wait = retryDelay(tryNumber) ?? 30000;
+            autosaveTimerRef.current = setTimeout(() => attempt(tryNumber + 1), wait);
+          }
         }
       }
-    }, 5000);
+    };
+    autosaveTimerRef.current = setTimeout(() => attempt(0), 5000);
     return () => clearTimeout(autosaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatarUrl, speechText, sceneTitle, posePreset, transform, timelineBlocks, currentSceneId, narrativeAudioUrl, textDisplayMode, animSpeed, animLoopOnce, vrmExpression, vrmaUrl, saveConflict]);

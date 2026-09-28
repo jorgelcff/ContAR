@@ -7,6 +7,12 @@ import { initReactI18next } from 'react-i18next';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const en = {
+  epAutosaveRecovered: "Connection back — your changes are saved.",
+  viewerWakingTitle: "Waking the server up…",
+  viewerWakingBody: "After a quiet spell this takes up to a minute. Keep this page open — the story will appear by itself.",
+  qrSourcePoster: "Poster",
+  qrSourceSlide: "Slide",
+  qrSourceFlyer: "Flyer",
   viewerNotInYourLanguage: "This story isn't available in your language. You can listen in:",
   viewerListenIn: "Listen in {{language}}",
   durationSecondsFallback: "Seconds — used when this scene has no narration to wait for",
@@ -906,6 +912,12 @@ const en = {
 // PORTUGUESE (pt) — primary language
 // ─────────────────────────────────────────────────────────────────────────────
 const pt = {
+  epAutosaveRecovered: "A conexão voltou — suas alterações foram salvas.",
+  viewerWakingTitle: "Acordando o servidor…",
+  viewerWakingBody: "Depois de um tempo sem uso, isso leva até um minuto. Deixe esta página aberta — a história aparece sozinha.",
+  qrSourcePoster: "Pôster",
+  qrSourceSlide: "Slide",
+  qrSourceFlyer: "Panfleto",
   viewerNotInYourLanguage: "Esta história não está disponível no seu idioma. Você pode ouvir em:",
   viewerListenIn: "Ouvir em {{language}}",
   durationSecondsFallback: "Segundos — usado quando esta cena não tem narração para esperar",
@@ -1794,6 +1806,12 @@ const pt = {
 // SPANISH (es)
 // ─────────────────────────────────────────────────────────────────────────────
 const es = {
+  epAutosaveRecovered: "Volvió la conexión: tus cambios están guardados.",
+  viewerWakingTitle: "Despertando el servidor…",
+  viewerWakingBody: "Tras un rato sin uso, esto tarda hasta un minuto. Deja esta página abierta: la historia aparecerá sola.",
+  qrSourcePoster: "Póster",
+  qrSourceSlide: "Diapositiva",
+  qrSourceFlyer: "Folleto",
   viewerNotInYourLanguage: "Esta historia no está disponible en tu idioma. Puedes escucharla en:",
   viewerListenIn: "Escuchar en {{language}}",
   durationSecondsFallback: "Segundos — se usa cuando esta escena no tiene narración que esperar",
@@ -2535,6 +2553,12 @@ const es = {
 // FRENCH (fr)
 // ─────────────────────────────────────────────────────────────────────────────
 const fr = {
+  epAutosaveRecovered: "Connexion rétablie — vos modifications sont enregistrées.",
+  viewerWakingTitle: "Réveil du serveur…",
+  viewerWakingBody: "Après un moment d’inactivité, cela prend jusqu’à une minute. Gardez cette page ouverte : l’histoire s’affichera toute seule.",
+  qrSourcePoster: "Affiche",
+  qrSourceSlide: "Diapositive",
+  qrSourceFlyer: "Tract",
   viewerNotInYourLanguage: "Cette histoire n'est pas disponible dans votre langue. Vous pouvez l'écouter en :",
   viewerListenIn: "Écouter en {{language}}",
   durationSecondsFallback: "Secondes — utilisé quand cette scène n'a pas de narration à attendre",

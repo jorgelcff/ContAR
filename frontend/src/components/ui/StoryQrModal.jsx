@@ -6,6 +6,12 @@ import Icon from './Icon';
 // Modal that shows a printable/downloadable QR code for a published story.
 // Scanning the QR opens the story's public /story/:id page in a phone browser,
 // so the author can print it and stick it somewhere for end users to scan.
+const QUICK_SOURCES = [
+  { key: 'poster', labelKey: 'qrSourcePoster' },
+  { key: 'slide', labelKey: 'qrSourceSlide' },
+  { key: 'flyer', labelKey: 'qrSourceFlyer' },
+];
+
 export default function StoryQrModal({ url, title, onClose }) {
   const { t } = useTranslation();
   const canvasRef = useRef(null);
@@ -15,7 +21,10 @@ export default function StoryQrModal({ url, title, onClose }) {
   // so printing two codes tells you which one people actually scanned. Kept to
   // what the server will accept as a key rather than silently discarded there.
   const [source, setSource] = useState('');
-  const cleanSource = source.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24);
+  // Accents are folded, not dropped: the filter below keeps a-z only, so
+  // "pôster" used to become "pster" — a tag that matched nothing else.
+  const cleanSource = source.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]/g, '').slice(0, 24);
   const qrUrl = cleanSource ? `${url}?from=${cleanSource}` : url;
 
   const storyTitle = title?.trim() || t('qrModalTitle');
@@ -96,6 +105,23 @@ export default function StoryQrModal({ url, title, onClose }) {
           />
           <span className="text-[11px] text-gray-500">{t('qrSourceHint')}</span>
         </label>
+        {/* One tap for the usual places a code goes at an event, so the tags
+            come out spelled the same every time and add up in the dashboard. */}
+        <div className="flex w-full flex-wrap gap-1.5">
+          {QUICK_SOURCES.map(({ key, labelKey }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSource(cleanSource === key ? '' : key)}
+              aria-pressed={cleanSource === key}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                cleanSource === key ? 'bg-cyan-700 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              {t(labelKey)}
+            </button>
+          ))}
+        </div>
 
         {/* QR preview (also the source canvas for print/download) */}
         <div ref={canvasRef} className="rounded-2xl bg-white p-4">

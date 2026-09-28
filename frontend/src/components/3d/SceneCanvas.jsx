@@ -11,7 +11,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import SpeechBubble from './SpeechBubble';
-import { AnimationController, attachSourceRestPose } from '../../controllers/AnimationController';
+import { AnimationController } from '../../controllers/AnimationController';
 import { LipSyncController } from '../../controllers/LipSyncController';
 import { BoneMapper, STANDARD_BONES } from '../../utils/BoneMapper';
 import { applyPosePreset, captureRestPoseSnapshot, pickAnimationClip, ANIMATED_PRESETS } from '../../utils/posePresets';
@@ -562,29 +562,9 @@ export default function SceneCanvas({
     loaderRef.current = createAvatarLoader(dracoLoader);
     vrmaLoaderRef.current = createVRMALoader();
 
-    // Pre-load legacy idle clip (kept for backwards compatibility)
-    gltfLoader.load(
-      "/animation.glb",
-      (gltf) => {
-        if (gltf.animations?.length) {
-          idleClipRef.current = attachSourceRestPose(gltf.animations[0], gltf.scene);
-          if (avatarRef.current && animControllerRef.current) {
-            animControllerRef.current.addClips([idleClipRef.current]);
-            applyPosePreset(
-              avatarRef.current,
-              animControllerRef.current,
-              idleClipRef.current,
-              avatarClipsRef.current,
-              posePresetRef.current,
-              boneMapperRef.current,
-              externalClipsRef.current,
-            );
-          }
-        }
-      },
-      undefined,
-      () => {},
-    );
+    // The legacy /animation.glb idle used to be fetched here on every mount
+    // (0.23 MB). idle.glb from the manifest does the same job and is always
+    // part of what the animation library loads, so it went.
 
     // Animation clips are no longer fetched here all at once — see the
     // pose-driven effect below and utils/animationLibrary.js.

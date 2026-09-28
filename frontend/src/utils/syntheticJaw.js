@@ -11,6 +11,28 @@ const _dbg = () => import.meta.env.DEV;
 // ── Mouth position estimation ───────────────────────────────────────────────
 
 /**
+ * Where a vertex actually is, in world space, as the mesh draws it.
+ *
+ * Reading the raw position attribute and applying the mesh's matrix is only
+ * right when the geometry is stored at its real size. A compressed (quantized,
+ * KHR_mesh_quantization) avatar stores positions in a small integer range and
+ * puts the scale back through the skin's inverse bind matrices — so the raw
+ * read placed the default avatar's mouth at 0.91 m, its waist, instead of
+ * 1.76 m once the model was compressed, and the jaw hinged the wrong vertices.
+ * Applying the skin is right for both, and changes nothing for a model that
+ * was never compressed.
+ */
+function worldVertex(mesh, index, target = new THREE.Vector3()) {
+  if (mesh.isSkinnedMesh && typeof mesh.getVertexPosition === 'function') {
+    mesh.getVertexPosition(index, target);
+  } else {
+    target.fromBufferAttribute(mesh.geometry.attributes.position, index);
+  }
+  return mesh.localToWorld(target);
+}
+
+
+/**
  * Estimate the world-space position of the mouth from the mesh geometry.
  *
  * Strategy (by priority):
@@ -45,9 +67,7 @@ export function estimateMouthPosition(mesh, headBone, skeleton) {
         }
       }
       if (weightOnHead >= MIN_WEIGHT) {
-        const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
-        mesh.localToWorld(v);
-        headVerts.push(v);
+        headVerts.push(worldVertex(mesh, i));
       }
     }
   }
@@ -161,8 +181,7 @@ function _assignSkinWeights(mesh, mouthWorldPos, jawBoneIndex, headBoneIndex, ra
   let affected = 0;
 
   for (let i = 0; i < posAttr.count; i++) {
-    const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
-    mesh.localToWorld(v);
+    const v = worldVertex(mesh, i);
 
     const distSq = v.distanceToSquared(mouthWorldPos);
     if (distSq > radiusSq) continue;
@@ -286,6 +305,8 @@ export function createJawDebugVisuals(scene, jawBone, radius) {
  * @returns {{ jawBone: THREE.Bone, radius: number } | null}
  */
 export function injectSyntheticJaw(model, boneMapper) {
+  // Skinned vertex positions read the bones' world matrices.
+  model.updateMatrixWorld(true);
   const headBone = boneMapper?.get('head');
   if (!headBone) {
     if (_dbg()) console.log('[SyntheticJaw] no head bone found — skipping');
@@ -341,9 +362,7 @@ export function injectSyntheticJaw(model, boneMapper) {
         }
       }
       if (wt >= 0.3) {
-        const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
-        skinnedMesh.localToWorld(v);
-        headBbox.expandByPoint(v);
+        headBbox.expandByPoint(worldVertex(skinnedMesh, i));
       }
     }
   }
@@ -381,6 +400,7 @@ export function injectSyntheticJaw(model, boneMapper) {
  * @returns {{ radius: number, affected: number }}
  */
 export function repositionSyntheticJaw(model, jawBone, worldPos, boneMapper, customRadius) {
+  model.updateMatrixWorld(true);
   const headBone = boneMapper?.get('head');
   if (!headBone) return { radius: 0, affected: 0 };
 
@@ -435,9 +455,7 @@ export function repositionSyntheticJaw(model, jawBone, worldPos, boneMapper, cus
       if (skinIdx.getComponent(i, s) === headBoneIndex) wt += skinWt.getComponent(i, s);
     }
     if (wt >= 0.3) {
-      const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
-      skinnedMesh.localToWorld(v);
-      headBbox.expandByPoint(v);
+      headBbox.expandByPoint(worldVertex(skinnedMesh, i));
     }
   }
 

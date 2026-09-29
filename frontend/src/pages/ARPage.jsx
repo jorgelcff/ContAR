@@ -12,6 +12,7 @@ import Icon from '../components/ui/Icon';
 import { useSceneStore } from '../store/useSceneStore';
 import { getPublicStory, getScene } from '../api/sceneApi';
 import useAudio from '../hooks/useAudio';
+import { createNarrationMouth } from '../utils/narrationMouth';
 import PseudoARScene from './ar/PseudoARScene';
 import {
   ARNarration,
@@ -69,7 +70,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, language
   const lipSyncRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
-  const lipSyncDataRef = useRef(null);
+  const [narrationMouth] = useState(createNarrationMouth);
   const webAudioInitRef = useRef(false);
   const [supported, setSupported] = useState(null);
   const [arActive, setArActive] = useState(false);
@@ -420,25 +421,12 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, language
       // Drive pose animations (idle/walk/dance/…) + blink/breathing each frame.
       poseRigRef.current?.update(clockRef.current.getDelta());
 
-      // Amplitude-driven lip sync — uses mouth morphs, or the jaw bone as a
-      // fallback for avatars (many Avaturn exports) that ship without visemes.
-      if (analyserRef.current && lipSyncRef.current?.hasMouth) {
-        const binCount = analyserRef.current.frequencyBinCount;
-        if (!lipSyncDataRef.current || lipSyncDataRef.current.length !== binCount) {
-          lipSyncDataRef.current = new Uint8Array(binCount);
-        }
-        analyserRef.current.getByteTimeDomainData(lipSyncDataRef.current);
-        let sum = 0;
-        for (let i = 0; i < binCount; i++) {
-          const v = (lipSyncDataRef.current[i] - 128) / 128;
-          sum += v * v;
-        }
-        const mouthOpen = Math.min(1, Math.sqrt(sum / binCount) * 14);
-        if (mouthOpen > 0.04) {
-          lipSyncRef.current.setMouthOpen(mouthOpen);
-        } else {
-          lipSyncRef.current.resetMouth();
-        }
+      // Lip sync from the narration — see utils/narrationMouth.js for why this
+      // no longer reads the live analyser alone (silent on iPhone).
+      if (lipSyncRef.current?.hasMouth) {
+        const mouthOpen = narrationMouth.level(story.audioRef.current, analyserRef.current);
+        if (mouthOpen > 0) lipSyncRef.current.setMouthOpen(mouthOpen);
+        else lipSyncRef.current.resetMouth();
       }
 
       renderer.render(scene, camera);
@@ -708,7 +696,7 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, language
   );
 }
 
-function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId, narrativeAudioUrl, narrativeIsFallback }) {
+function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId, narrativeAudioUrl, narrativeIsFallback, backHref = '/ar' }) {
   const { t } = useTranslation();
   const { audioRef, ...story } = useARStory(storyId);
   const [speechPlaying, setSpeechPlaying] = useState(false);
@@ -759,9 +747,9 @@ function MarkerFrame({ modelUrl, markerUrl, useHiro, initialScale = 1, storyId, 
             {storyId ? t('arScenesCount', { count: story.scenes.length }) : t('arMarkerCustomHint')}
           </p>
         </div>
-        <Link to="/ar" className="rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600">
+        <a href={backHref} className="rounded-full bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600">
           {t('back')}
-        </Link>
+        </a>
       </div>
 
       <div className="flex-1 overflow-hidden bg-black relative">
@@ -924,6 +912,16 @@ export default function ARPage() {
     [markerUrl, modelUrl, initialScale, storyId, sceneId]
   );
 
+  // Back from a mode lands on the chooser for the same story, scene and
+  // language. It used to go to a bare /ar, so leaving a story's AR to try
+  // another mode dropped the story and the next mode opened with nothing.
+  const chooserHref = buildQueryUrl('/ar', {
+    modelUrl: searchParams.get('modelUrl') || undefined,
+    storyId: searchParams.get('storyId') || undefined,
+    sceneId: searchParams.get('sceneId') || undefined,
+    lang: narrationLanguageParam || undefined,
+  });
+
   if (mode === "surface") {
     const scaleParam = parseFloat(searchParams.get("scale"));
     const startScale =
@@ -942,7 +940,7 @@ export default function ARPage() {
         narrativeIsFallback={effectiveNarrativeIsFallback}
         posePreset={effectivePosePreset}
         displayMode={effectiveTextDisplayMode}
-        onBack={() => window.location.assign(`${import.meta.env.BASE_URL}ar`)}
+        onBack={() => window.location.assign(chooserHref)}
       />
     );
   }
@@ -964,7 +962,7 @@ export default function ARPage() {
         narrativeIsFallback={effectiveNarrativeIsFallback}
         posePreset={effectivePosePreset}
         displayMode={effectiveTextDisplayMode}
-        onBack={() => window.location.assign(`${import.meta.env.BASE_URL}ar`)}
+        onBack={() => window.location.assign(chooserHref)}
       />
     );
   }
@@ -981,6 +979,7 @@ export default function ARPage() {
         storyId={searchParams.get('storyId') || ''}
         narrativeAudioUrl={effectiveNarrativeAudioUrl}
         narrativeIsFallback={effectiveNarrativeIsFallback}
+        backHref={chooserHref}
       />
     );
   }

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import Header from '../../components/ui/Header';
 import Icon from '../../components/ui/Icon';
 import { useDeviceOrientation } from '../../hooks/useDeviceOrientation';
+import { createNarrationMouth } from '../../utils/narrationMouth';
 import {
   ARNarration,
   ARPoseRig,
@@ -51,7 +52,7 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, lan
   const lipSyncRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
-  const lipSyncDataRef = useRef(null);
+  const [narrationMouth] = useState(createNarrationMouth);
   const webAudioInitRef = useRef(false);
   const deviceOrientation = useDeviceOrientation();
 
@@ -262,21 +263,11 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, lan
       // Drive pose animations (idle/walk/dance/…) + blink/breathing each frame.
       poseRigRef.current?.update(clockRef.current.getDelta());
 
-      // Amplitude-driven lip sync — uses mouth morphs, or the jaw bone as a
-      // fallback for avatars (many Avaturn exports) that ship without visemes.
-      if (analyserRef.current && lipSyncRef.current?.hasMouth) {
-        const binCount = analyserRef.current.frequencyBinCount;
-        if (!lipSyncDataRef.current || lipSyncDataRef.current.length !== binCount) {
-          lipSyncDataRef.current = new Uint8Array(binCount);
-        }
-        analyserRef.current.getByteTimeDomainData(lipSyncDataRef.current);
-        let sum = 0;
-        for (let i = 0; i < binCount; i++) {
-          const v = (lipSyncDataRef.current[i] - 128) / 128;
-          sum += v * v;
-        }
-        const mouthOpen = Math.min(1, Math.sqrt(sum / binCount) * 14);
-        if (mouthOpen > 0.04) lipSyncRef.current.setMouthOpen(mouthOpen);
+      // Lip sync from the narration — see utils/narrationMouth.js for why this
+      // no longer reads the live analyser alone (silent on iPhone).
+      if (lipSyncRef.current?.hasMouth) {
+        const mouthOpen = narrationMouth.level(story.audioRef.current, analyserRef.current);
+        if (mouthOpen > 0) lipSyncRef.current.setMouthOpen(mouthOpen);
         else lipSyncRef.current.resetMouth();
       }
 

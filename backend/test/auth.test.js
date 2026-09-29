@@ -138,6 +138,22 @@ describe('GET /api/auth/me', () => {
     expect(res.status).toBe(200);
     expect(res.body.user.email).toBe('me@example.com');
   });
+
+  it('reports an unconfirmed account as confirmed while AUTO_VERIFY_EMAIL=1', async () => {
+    // Accounts made before the switch must stop seeing the confirm-email nudge
+    // too, not only the ones registered after it.
+    const user = await createAuthedUser({ emailVerified: false });
+    const before = await request(app).get('/api/auth/me').set('Authorization', user.authHeader);
+    expect(before.body.user.emailVerified).toBe(false);
+
+    process.env.AUTO_VERIFY_EMAIL = '1';
+    try {
+      const res = await request(app).get('/api/auth/me').set('Authorization', user.authHeader);
+      expect(res.body.user.emailVerified).toBe(true);
+    } finally {
+      delete process.env.AUTO_VERIFY_EMAIL;
+    }
+  });
 });
 
 describe('POST /api/auth/forgot-password', () => {

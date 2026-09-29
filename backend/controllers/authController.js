@@ -25,12 +25,21 @@ function signToken(user) {
   );
 }
 
+// Email confirmation switched off: every account reads as confirmed and no
+// confirmation mail goes out. Used by the disposable E2E backend (no mailbox
+// to click a link in — see scripts/serve-e2e.js) and at events, where accounts
+// made before the switch would otherwise keep nagging about a mail that the
+// server is not sending. Removing the flag brings the stored state back.
+function autoVerifyEmail() {
+  return process.env.AUTO_VERIFY_EMAIL === '1';
+}
+
 function sanitizeUser(user) {
   return {
     id: String(user._id),
     name: user.name || '',
     email: user.email,
-    emailVerified: Boolean(user.emailVerified),
+    emailVerified: autoVerifyEmail() || Boolean(user.emailVerified),
     avaturnUserId: user.avaturnUserId || '',
     createdAt: user.createdAt,
   };
@@ -113,13 +122,11 @@ async function register(req, res) {
       email,
       passwordHash,
       emailVerificationToken,
-      // Only ever set by the disposable E2E backend, which has no mailbox to
-      // click a confirmation link in (see scripts/serve-e2e.js).
-      emailVerified: process.env.AUTO_VERIFY_EMAIL === '1',
+      emailVerified: autoVerifyEmail(),
     });
 
     // Send verification email — non-blocking: registration succeeds even if email fails
-    if (emailConfigured()) {
+    if (emailConfigured() && !autoVerifyEmail()) {
       sendVerificationEmail(user, String(req.body?.language || '')).catch((err) =>
         console.error("Failed to send verification email:", err.message),
       );
@@ -270,7 +277,7 @@ async function resendVerification(req, res) {
     const userId = req.user?.userId;
     const user   = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.emailVerified) return res.json({ message: 'Email já verificado.' });
+    if (user.emailVerified || autoVerifyEmail()) return res.json({ message: 'Email já verificado.' });
 
     if (!user.emailVerificationToken) {
       user.emailVerificationToken = crypto.randomBytes(32).toString('hex');

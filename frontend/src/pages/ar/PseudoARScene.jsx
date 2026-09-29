@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import Header from '../../components/ui/Header';
 import Icon from '../../components/ui/Icon';
-import { LipSyncController } from '../../controllers/LipSyncController';
 import { useDeviceOrientation } from '../../hooks/useDeviceOrientation';
 import {
   ARNarration,
   ARPoseRig,
   StoryOverlay,
+  createARLipSync,
   createAvatarGLTFLoader,
   disposeObject3D,
   fitModelToGround,
@@ -348,14 +348,14 @@ export default function PseudoARScene({ modelUrl, initialScale = 1, storyId, lan
         fitModelToGround(model);
         modelRootRef.current.add(model);
         modelRootRef.current.scale.setScalar(scaleRef.current);
-        if (lipSyncRef.current) lipSyncRef.current.dispose();
-        lipSyncRef.current = new LipSyncController(model);
 
         // Pose/animation rig — apply the scene's pose, then load shared
         // animation clips and re-apply (so walk/dance/etc. animate).
         poseRigRef.current?.dispose();
         const rig = new ARPoseRig(gltf, model);
         poseRigRef.current = rig;
+        if (lipSyncRef.current) lipSyncRef.current.dispose();
+        lipSyncRef.current = createARLipSync(model, rig.boneMapper);
         rig.apply(effectivePoseRef.current);
         rig.setNarrationText(narrationTextRef.current);
         rig.setNarrationTimeline(sentenceTimelineRef.current);

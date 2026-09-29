@@ -12,6 +12,8 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { getPublicStory, getScene } from '../../api/sceneApi';
 import { BoneMapper } from '../../utils/BoneMapper';
+import { LipSyncController } from '../../controllers/LipSyncController';
+import { injectSyntheticJaw } from '../../utils/syntheticJaw';
 import { AnimationController } from '../../controllers/AnimationController';
 import { applyPosePreset, pickAnimationClip } from '../../utils/posePresets';
 import { loadClipsForPresets, presetMapFrom, preloadPresets } from '../../utils/animationLibrary';
@@ -135,6 +137,23 @@ export function ARNarration({ mode, text }) {
       </div>
     </div>
   );
+}
+
+// Lip sync for an AR avatar. Avatars with no mouth morphs and no jaw bone
+// (Meshy and other AI-generated rigs) get the same runtime jaw the editor
+// injects in SceneCanvas — without it the mouth moved in the preview but
+// stayed shut in AR, because hasMouth was false and the analyser loop skipped.
+// Call before posing the model, so the jaw is skinned against the rest pose.
+export function createARLipSync(model, boneMapper) {
+  const lipSync = new LipSyncController(model);
+  if (!lipSync.hasMouth) {
+    const result = injectSyntheticJaw(model, boneMapper);
+    if (result) {
+      lipSync._jawBone = result.jawBone;
+      lipSync._jawRestQuat = result.jawBone.quaternion.clone();
+    }
+  }
+  return lipSync;
 }
 
 // Wraps an avatar's BoneMapper + AnimationController and applies pose presets,

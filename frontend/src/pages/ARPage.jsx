@@ -10,7 +10,6 @@ import { QRCodeCanvas } from 'qrcode.react';
 import Header from '../components/ui/Header';
 import Icon from '../components/ui/Icon';
 import { useSceneStore } from '../store/useSceneStore';
-import { LipSyncController } from '../controllers/LipSyncController';
 import { getPublicStory, getScene } from '../api/sceneApi';
 import useAudio from '../hooks/useAudio';
 import PseudoARScene from './ar/PseudoARScene';
@@ -18,6 +17,7 @@ import {
   ARNarration,
   ARPoseRig,
   StoryOverlay,
+  createARLipSync,
   buildQueryUrl,
   createAvatarGLTFLoader,
   disposeObject3D,
@@ -517,15 +517,14 @@ function SurfaceARScene({ modelUrl, initialScale = 1, storyId, sceneId, language
         fitModelToGround(model);
         modelRootRef.current.add(model);
         modelRootRef.current.scale.setScalar(scaleRef.current);
-        // Init lip sync for this model
-        if (lipSyncRef.current) lipSyncRef.current.dispose();
-        lipSyncRef.current = new LipSyncController(model);
 
         // Pose/animation rig — apply the scene's pose, then load shared
         // animation clips and re-apply (so walk/dance/etc. animate).
         poseRigRef.current?.dispose();
         const rig = new ARPoseRig(gltf, model);
         poseRigRef.current = rig;
+        if (lipSyncRef.current) lipSyncRef.current.dispose();
+        lipSyncRef.current = createARLipSync(model, rig.boneMapper);
         rig.apply(effectivePoseRef.current);
         rig.setNarrationText(narrationTextRef.current);
         rig.setNarrationTimeline(sentenceTimelineRef.current);

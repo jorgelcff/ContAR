@@ -931,6 +931,7 @@ export default function EditorPage() {
                   speechText={speechText}
                   sentenceTimeline={audio.sentenceTimeline}
                   analyserRef={audio.analyserRef}
+                  narrationAudioUrl={audio.audioUrl}
                   lipSyncConfig={audio.lipSyncConfig}
                   visemeTimeline={audio.visemeTimeline}
                   audioCurrentTime={audio.audioCurrentTime}
@@ -949,14 +950,13 @@ export default function EditorPage() {
             </Suspense>
 
             {/* Over the canvas rather than in a side panel, so it is reachable
-                whichever tab is open and on a phone too — but in the corner,
-                not the middle. Narration captions are centred along the bottom
-                and grow upward, so a centred control sat underneath the text
-                the moment subtitles were switched on. The caption cannot be
-                narrowed to make room: SceneCanvas draws it for the public
-                viewer and AR as well. So the control moved, and became round
-                and label-less to fit beside a caption at any width. */}
-            <div className="pointer-events-none absolute bottom-20 right-4 md:bottom-4">
+                whichever tab is open and on a phone too. Top corner, above the
+                caption: narration captions span the full width along the bottom
+                and grow upward (up to 35vh), so on a phone even a bottom-corner
+                control ended up under the subtitle and its taps went to the
+                caption. The caption cannot be narrowed to make room: SceneCanvas
+                draws it for the public viewer and AR as well. */}
+            <div className="pointer-events-none absolute right-4 top-4 z-20">
               <button
                 onClick={runScene}
                 disabled={previewSource === 'none'}

@@ -135,6 +135,7 @@ export default function ViewerPage() {
               animLoopOnce={Boolean(scene?.content?.avatar?.animLoopOnce)}
               vrmExpression={scene?.content?.avatar?.vrmExpression || ''}
               analyserRef={audio.analyserRef}
+              narrationAudioUrl={audio.audioUrl}
               lipSyncConfig={audio.lipSyncConfig}
               visemeTimeline={audio.visemeTimeline}
               audioCurrentTime={audio.audioCurrentTime}

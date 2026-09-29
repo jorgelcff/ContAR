@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { pickMouthSource } from '../../utils/lipsyncSources';
+import { createNarrationMouth } from '../../utils/narrationMouth';
 import { lipsyncCapability } from '../../utils/lipsyncCapability';
 import { useTranslation } from 'react-i18next';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -188,6 +189,9 @@ function normalizeAvatarUrl(url) {
  *                      SentenceBoundary events), if this scene has it — see
  *                      AnimationController.setNarrationTimeline
  *   analyserRef – ref to a Web Audio API AnalyserNode used for real-time lip sync
+ *   narrationAudioUrl – URL of the audio behind analyserRef; lets the mouth
+ *                       follow the decoded file when the analyser hears
+ *                       nothing (iPhone — see utils/narrationMouth)
  */
 export default function SceneCanvas({
   avatarUrl,
@@ -196,6 +200,7 @@ export default function SceneCanvas({
   speechText,
   sentenceTimeline,
   analyserRef,
+  narrationAudioUrl = "",
   lipSyncConfig,
   visemeTimeline,
   audioCurrentTime,
@@ -294,6 +299,14 @@ export default function SceneCanvas({
     analyserRefLocal.current = analyserRef;
   }, [analyserRef]);
 
+  const narrationAudioUrlRef = useRef(narrationAudioUrl);
+  useEffect(() => {
+    narrationAudioUrlRef.current = narrationAudioUrl;
+  }, [narrationAudioUrl]);
+  // Whether the analyser has reported any sound for the current audio. On
+  // iPhone it never does, and the mouth then follows the decoded file instead.
+  const analyserHeardRef = useRef({ url: "", heard: false });
+  const narrationMouthRef = useRef(null);
   const isSpeakingRef = useRef(isSpeaking);
   useEffect(() => {
     isSpeakingRef.current = isSpeaking;
@@ -730,11 +743,30 @@ export default function SceneCanvas({
           prevOpen - maxDelta,
           prevOpen + maxDelta,
         );
-        const mouthOpen = THREE.MathUtils.clamp(
+        let mouthOpen = THREE.MathUtils.clamp(
           jawSmoothedOpenRef.current,
           0,
           1,
         );
+
+        // iPhone (WebKit) can feed this analyser pure silence while the audio
+        // plays, so the mouth never moved there. Until the analyser has heard
+        // anything for this audio, follow the decoded file's loudness instead.
+        const narrationUrl = narrationAudioUrlRef.current;
+        if (analyserHeardRef.current.url !== narrationUrl) {
+          analyserHeardRef.current = { url: narrationUrl, heard: false };
+        }
+        if (rms > 0.01) analyserHeardRef.current.heard = true;
+        if (narrationUrl && !analyserHeardRef.current.heard) {
+          if (!narrationMouthRef.current) narrationMouthRef.current = createNarrationMouth();
+          mouthOpen = narrationMouthRef.current.level({
+            src: narrationUrl,
+            currentSrc: narrationUrl,
+            paused: !isSpeakingRef.current,
+            ended: false,
+            currentTime: audioCurrentTimeRef.current,
+          }, null);
+        }
 
         if (effectiveConfig.visemeMode === "timeline" && hasMorphs) {
           const timelineCrossfadeSec =

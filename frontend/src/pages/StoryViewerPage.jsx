@@ -730,6 +730,7 @@ export default function StoryViewerPage() {
                         animLoopOnce={Boolean(sceneData?.content?.avatar?.animLoopOnce)}
                         vrmExpression={sceneData?.content?.avatar?.vrmExpression || ''}
                         analyserRef={audio.analyserRef}
+                        narrationAudioUrl={audio.audioUrl}
                         lipSyncConfig={audio.lipSyncConfig}
                         visemeTimeline={audio.visemeTimeline}
                         audioCurrentTime={audio.audioCurrentTime}

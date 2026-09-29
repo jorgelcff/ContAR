@@ -79,6 +79,27 @@ describe('how long a scene stays on screen', () => {
     })).toBe(6000);
   });
 
+  it('lets a narration longer than the give-up limit finish', () => {
+    // The viewer's give-up timer fires at 12s even after the length is known;
+    // a 17s recording must not be re-timed to the scene's 8 seconds.
+    expect(sceneAdvanceMs({
+      advanceOn: ADVANCE_ON_NARRATION,
+      durationSeconds: 8,
+      hasNarrationAudio: true,
+      audioDuration: 17.46,
+      audioUnavailable: true,
+      tailSeconds: 0,
+    })).toBeCloseTo(17460);
+  });
+
+  it('waits on a stream whose length is still unknown (Infinity)', () => {
+    expect(sceneAdvanceMs({
+      advanceOn: ADVANCE_ON_NARRATION,
+      hasNarrationAudio: true,
+      audioDuration: Infinity,
+    })).toBeNull();
+  });
+
   it('only counts the clock when a scene actually asks for it', () => {
     expect(normalizeAdvanceOn('time')).toBe(ADVANCE_ON_TIME);
     expect(normalizeAdvanceOn('TIME')).toBe(ADVANCE_ON_TIME);

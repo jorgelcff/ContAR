@@ -81,12 +81,20 @@ export function sceneAdvanceMs({
 } = {}) {
   if (normalizeAdvanceOn(advanceOn) === ADVANCE_ON_TIME) return timedMs(durationSeconds, text);
 
-  // Nothing to wait for, or waiting already failed — the configured seconds are
-  // the only answer left, and a story that stalls forever is worse than one
-  // that runs a little short.
-  if (!hasNarrationAudio || audioUnavailable) return timedMs(durationSeconds, text);
+  if (!hasNarrationAudio) return timedMs(durationSeconds, text);
 
-  if (!(Number(audioDuration) > 0)) return null;
+  // A known length wins over the give-up flag. The viewer's give-up timer runs
+  // from scene load and is never cancelled when the length arrives, so any
+  // narration longer than that limit was re-timed to the scene's seconds
+  // mid-line — the story viewer cut recordings the AR player let finish.
+  const seconds = Number(audioDuration);
+  if (seconds > 0 && Number.isFinite(seconds)) {
+    return (seconds + Math.max(0, Number(tailSeconds) || 0)) * 1000;
+  }
 
-  return (Number(audioDuration) + Math.max(0, Number(tailSeconds) || 0)) * 1000;
+  // Waiting already failed — the configured seconds are the only answer left,
+  // and a story that stalls forever is worse than one that runs a little short.
+  if (audioUnavailable) return timedMs(durationSeconds, text);
+
+  return null;
 }

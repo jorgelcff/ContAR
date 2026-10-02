@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/ui/Header';
 import ReachPanel from '../components/ui/ReachPanel';
+import UserListPanel from '../components/ui/UserListPanel';
 import DeleteAccountSection from '../components/ui/DeleteAccountSection';
 import { useAuth } from '../auth/AuthContext';
 import { updateAccount, changePassword, getStats } from '../api/sceneApi';
@@ -87,6 +88,8 @@ export default function AccountPage() {
         </div>
 
         <ReachPanel stats={stats} onRefresh={loadStats} />
+        {/* Same gate as the numbers: a non-null stats means this account is on ADMIN_EMAILS. */}
+        {stats && <UserListPanel />}
 
         {/* Nome */}
         <section className="rounded-2xl border border-gray-700 bg-gray-800 p-5 flex flex-col gap-4">

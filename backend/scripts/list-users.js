@@ -14,9 +14,7 @@
  */
 require('dotenv').config();
 const mongoose = require('mongoose');
-const User = require('../models/User');
-const Scene = require('../models/Scene');
-const Story = require('../models/Story');
+const { buildUserRows } = require('../controllers/statsController');
 
 const args = new Set(process.argv.slice(2));
 const asJson = args.has('--json');
@@ -45,38 +43,8 @@ function ago(date) {
   await mongoose.connect(uri);
   console.log(`Banco: ${describeTarget(uri)}\n`);
 
-  const users = await User.find({}, { email: 1, name: 1, emailVerified: 1, createdAt: 1 })
-    .sort({ createdAt: 1 })
-    .lean();
-
-  // One grouped count each rather than a query per user: a few hundred
-  // accounts would otherwise be a few hundred round trips.
-  const [sceneCounts, storyCounts, publicStories] = await Promise.all([
-    Scene.aggregate([{ $group: { _id: '$ownerId', n: { $sum: 1 } } }]),
-    Story.aggregate([{ $group: { _id: '$ownerId', n: { $sum: 1 } } }]),
-    Story.aggregate([
-      { $match: { isPublic: true } },
-      { $group: { _id: '$ownerId', n: { $sum: 1 }, views: { $sum: '$views' } } },
-    ]),
-  ]);
-  const byOwner = (rows) => new Map(rows.map((r) => [String(r._id), r]));
-  const scenes = byOwner(sceneCounts);
-  const stories = byOwner(storyCounts);
-  const published = byOwner(publicStories);
-
-  const rows = users.map((u) => {
-    const id = String(u._id);
-    return {
-      email: u.email,
-      name: u.name || '',
-      verified: Boolean(u.emailVerified),
-      createdAt: u.createdAt,
-      scenes: scenes.get(id)?.n || 0,
-      stories: stories.get(id)?.n || 0,
-      published: published.get(id)?.n || 0,
-      views: published.get(id)?.views || 0,
-    };
-  });
+  // Oldest first here, as this script always printed; the dashboard shows newest first.
+  const rows = (await buildUserRows()).reverse();
 
   const shown = onlyEmpty ? rows.filter((r) => !r.scenes && !r.stories) : rows;
 

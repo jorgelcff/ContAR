@@ -174,3 +174,52 @@ describe('content rate limits', () => {
     expect(Number(after.headers['ratelimit-remaining'])).toBe(remainingBefore - 1);
   });
 });
+
+// Real addresses: the list sits behind the same allow-list as the numbers.
+describe('GET /api/stats/users', () => {
+  const prev = process.env.ADMIN_EMAILS;
+  afterEach(() => { process.env.ADMIN_EMAILS = prev; });
+
+  it('rejects anonymous callers', async () => {
+    const res = await request(app).get('/api/stats/users');
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects an account that is not on the list, and everyone when none is set', async () => {
+    const user = await createAuthedUser();
+    process.env.ADMIN_EMAILS = 'someone.else@example.com';
+    expect((await request(app).get('/api/stats/users').set('Authorization', user.authHeader)).status).toBe(403);
+    delete process.env.ADMIN_EMAILS;
+    expect((await request(app).get('/api/stats/users').set('Authorization', user.authHeader)).status).toBe(403);
+  });
+
+  it('lists accounts newest first with what each one made', async () => {
+    const admin = await createAuthedUser({ name: 'Admin' });
+    const maker = await createAuthedUser({ name: 'Maker' });
+    process.env.ADMIN_EMAILS = admin.email;
+
+    await request(app).post('/api/scene').set('Authorization', maker.authHeader)
+      .send({ metadata: { title: 'S' }, content: {} });
+    const story = await request(app).post('/api/story').set('Authorization', maker.authHeader)
+      .send({ metadata: { title: 'T' }, scenes: [] });
+    await request(app).put(`/api/story/${story.body.storyId}/publish`)
+      .set('Authorization', maker.authHeader).send({ isPublic: true });
+
+    const res = await request(app).get('/api/stats/users').set('Authorization', admin.authHeader);
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+
+    const rows = res.body.users;
+    const mine = rows.find((r) => r.email === maker.email);
+    expect(mine).toMatchObject({ name: 'Maker', scenes: 1, stories: 1, published: 1 });
+    expect(mine.lastActiveAt).toBeTruthy();
+    expect(rows.find((r) => r.email === admin.email)).toMatchObject({ scenes: 0, stories: 0, lastActiveAt: null });
+
+    const dates = rows.map((r) => new Date(r.createdAt).getTime());
+    expect(dates).toEqual([...dates].sort((a, b) => b - a));
+    // Nothing that could log someone in leaves the server.
+    expect(Object.keys(mine).sort()).toEqual(
+      ['createdAt', 'email', 'lastActiveAt', 'name', 'published', 'scenes', 'stories', 'verified', 'views'],
+    );
+  });
+});

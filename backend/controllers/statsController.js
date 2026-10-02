@@ -102,4 +102,63 @@ async function getStats(req, res) {
   }
 }
 
-module.exports = { getStats };
+/**
+ * One row per account with what it did. Shared with scripts/list-users.js so
+ * the dashboard and the terminal can never disagree about who is in there.
+ * Grouped counts rather than a query per user: a few hundred accounts would
+ * otherwise be a few hundred round trips.
+ */
+async function buildUserRows() {
+  const [users, sceneRows, storyRows, publicRows] = await Promise.all([
+    User.find({}, { email: 1, name: 1, emailVerified: 1, createdAt: 1 }).sort({ createdAt: -1 }).lean(),
+    Scene.aggregate([{ $group: { _id: '$ownerId', n: { $sum: 1 }, last: { $max: '$updatedAt' } } }]),
+    Story.aggregate([{ $group: { _id: '$ownerId', n: { $sum: 1 }, last: { $max: '$updatedAt' } } }]),
+    Story.aggregate([
+      { $match: { isPublic: true } },
+      { $group: { _id: '$ownerId', n: { $sum: 1 }, views: { $sum: '$views' } } },
+    ]),
+  ]);
+  const byOwner = (rows) => new Map(rows.map((r) => [String(r._id), r]));
+  const scenes = byOwner(sceneRows);
+  const stories = byOwner(storyRows);
+  const published = byOwner(publicRows);
+
+  return users.map((u) => {
+    const id = String(u._id);
+    // Last time they saved anything — the only activity the data records.
+    // There is no login timestamp, so an account that only browses reads as
+    // inactive since sign-up.
+    const last = [scenes.get(id)?.last, stories.get(id)?.last]
+      .filter(Boolean)
+      .reduce((a, b) => (new Date(b) > new Date(a) ? b : a), null);
+    return {
+      email: u.email,
+      name: u.name || '',
+      verified: Boolean(u.emailVerified),
+      createdAt: u.createdAt,
+      lastActiveAt: last,
+      scenes: scenes.get(id)?.n || 0,
+      stories: stories.get(id)?.n || 0,
+      published: published.get(id)?.n || 0,
+      views: published.get(id)?.views || 0,
+    };
+  });
+}
+
+// GET /api/stats/users — who signed up, newest first, and how far each got.
+// Real people's addresses, so it sits behind the same allow-list as the numbers
+// and is only fetched when the panel asks for it.
+async function listUsers(req, res) {
+  try {
+    if (!isAdmin(req.user?.email)) {
+      return res.status(403).json({ error: 'Not available for this account' });
+    }
+    res.set('Cache-Control', 'no-store');
+    res.json({ users: await buildUserRows() });
+  } catch (err) {
+    console.error('listUsers error:', err);
+    res.status(500).json({ error: 'Failed to load users' });
+  }
+}
+
+module.exports = { getStats, listUsers, buildUserRows };
